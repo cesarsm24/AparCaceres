@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="https://URL-DEL-LOGO-AQUI" alt="Logo de AparCáceres" width="180" />
+<img width="1254" height="1254" alt="Logotipo AparCáceres" src="https://github.com/user-attachments/assets/7c7066e0-978d-4adb-9049-593985eb5e37" />
 
 # AparCáceres
 
@@ -62,4 +62,5 @@ Proyecto en fase inicial.
 
 ## Autores
 
-César Sánchez Montes, Miguel Ángel Campón Iglesias
+- César Sánchez Montes
+- Miguel Ángel Campón Iglesias
