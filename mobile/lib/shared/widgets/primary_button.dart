@@ -18,12 +18,15 @@ class PrimaryButton extends StatelessWidget {
       return ElevatedButton.icon(
         onPressed: onPressed,
         icon: Icon(icon, size: 18),
-        label: Text(label),
+        label: Text(label, textAlign: TextAlign.center),
       );
     }
     return ElevatedButton(
       onPressed: onPressed,
-      child: Text(label),
+      child: SizedBox(
+        width: double.infinity,
+        child: Text(label, textAlign: TextAlign.center),
+      ),
     );
   }
 }
