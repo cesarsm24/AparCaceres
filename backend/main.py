@@ -4,7 +4,8 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 
 import redis
-from fastapi import Depends, FastAPI, HTTPException, Request
+from fastapi import Depends, FastAPI, HTTPException, Query, Request
+from pydantic import BaseModel, Field
 
 logger = logging.getLogger(__name__)
 
@@ -12,21 +13,39 @@ logger = logging.getLogger(__name__)
 DATA_FILE = Path(__file__).parent / "data" / "aparcamientos.geojson"
 
 # Claves de Redis que usa la app:
-#   geo:parkings   -> sorted set geoespacial con todos los aparcamientos (comando GEOADD)
-#   parking:{id}   -> hash con los metadatos de cada aparcamiento (comando HSET)
+#   geo:parkings   -> sorted set geoespacial con todos los aparcamientos (GEOADD / GEOSEARCH)
+#   parking:{id}   -> hash con los metadatos de cada aparcamiento (HSET / HGETALL)
 GEO_KEY = "geo:parkings"
 PARKING_KEY_PREFIX = "parking:"
 
 
+# ---------- Modelos Pydantic ----------
+
+class Parking(BaseModel):
+    """Metadatos de un aparcamiento (corresponde al hash `parking:{id}` en Redis)."""
+
+    id: str
+    nombre: str
+    clase: str
+    direccion: str = ""
+    nucleo: str = ""
+    url: str = ""
+    lat: float
+    lon: float
+
+
+class ParkingNearby(Parking):
+    """Aparcamiento + distancia desde el punto de búsqueda (en metros)."""
+
+    distancia_metros: float = Field(..., description="Distancia al punto consultado, en metros")
+
+
+# ---------- Ciclo de vida / dependency ----------
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Abre la conexión a Redis al arrancar la app y la cierra al apagarla.
-
-    Usamos el patrón `lifespan` (sustituye a on_event) para que el cliente viva
-    durante toda la vida del proceso y se reutilice entre requests.
-    """
-    # decode_responses=True hace que Redis devuelva strings en lugar de bytes,
-    # más cómodo para serializar a JSON con FastAPI.
+    """Abre la conexión a Redis al arrancar la app y la cierra al apagarla."""
+    # decode_responses=True -> Redis devuelve strings en lugar de bytes.
     client = redis.Redis(
         host="localhost",
         port=6379,
@@ -34,9 +53,8 @@ async def lifespan(app: FastAPI):
         decode_responses=True,
     )
     try:
-        # PING: comprobación rápida de que el servidor responde. Si Redis no está
-        # levantado, lo avisamos por log pero dejamos que la app arranque igual
-        # (los endpoints fallarán con 503 cuando intenten usarlo).
+        # PING: comprobación rápida de que el servidor responde. Si falla, solo logueamos;
+        # los endpoints devolverán 503 cuando intenten usarlo.
         client.ping()
         logger.info("Conexión a Redis establecida en localhost:6379")
     except redis.ConnectionError as exc:
@@ -60,19 +78,21 @@ def get_redis(request: Request) -> redis.Redis:
     return request.app.state.redis
 
 
+def _raise_redis_503(exc: Exception) -> "HTTPException":
+    """Helper: convierte un fallo de conexión a Redis en HTTP 503."""
+    return HTTPException(status_code=503, detail=f"Redis no disponible: {exc}")
+
+
+# ---------- Endpoints ----------
+
 @app.get("/")
 def read_root():
     return {"status": "Backend configurado y listo"}
 
 
 @app.post("/import-parkings")
-def import_parkings(r: redis.Redis = Depends(get_redis)):
-    """Carga el dataset GeoJSON en Redis.
-
-    - Crea un índice geoespacial en `geo:parkings` (GEOADD).
-    - Guarda los metadatos de cada aparcamiento en un hash `parking:{id}` (HSET).
-    - Todo se manda en un pipeline para reducir round-trips a Redis.
-    """
+def import_parkings(rdb: redis.Redis = Depends(get_redis)):
+    """Carga el dataset GeoJSON en Redis (GEOADD + HSET por feature, en pipeline)."""
     if not DATA_FILE.exists():
         raise HTTPException(
             status_code=500,
@@ -84,17 +104,18 @@ def import_parkings(r: redis.Redis = Depends(get_redis)):
 
     features = geojson.get("features", [])
 
-    # El pipeline agrupa comandos y los envía en un único round-trip al ejecutar.
-    # Para N features pasamos de ~2N round-trips (GEOADD + HSET por cada uno) a 1.
-    pipe = r.pipeline()
+    # Pipeline: agrupa todos los comandos y los envía en un único round-trip.
+    pipe = rdb.pipeline()
 
-    # Idempotencia: borramos los datos del import anterior antes de reimportar.
-    # SCAN_ITER recorre las claves `parking:*` sin bloquear Redis (a diferencia de KEYS).
-    old_keys = list(r.scan_iter(match=f"{PARKING_KEY_PREFIX}*"))
+    # Idempotencia: borramos datos de un import previo antes de reimportar.
+    # SCAN_ITER recorre las claves `parking:*` sin bloquear Redis (al contrario que KEYS).
+    try:
+        old_keys = list(rdb.scan_iter(match=f"{PARKING_KEY_PREFIX}*"))
+    except redis.ConnectionError as exc:
+        raise _raise_redis_503(exc) from exc
+
     if old_keys:
-        # DEL borra todas las claves pasadas como argumentos en una sola operación.
         pipe.delete(*old_keys)
-    # También limpiamos el índice geo para que no queden miembros huérfanos.
     pipe.delete(GEO_KEY)
 
     imported = 0
@@ -104,24 +125,16 @@ def import_parkings(r: redis.Redis = Depends(get_redis)):
         coords = geometry.get("coordinates") or []
 
         if len(coords) < 2:
-            # Feature sin geometría válida -> lo saltamos sin romper el import.
             continue
 
-        # Ojo al orden: GeoJSON almacena [longitud, latitud].
+        # GeoJSON usa [longitud, latitud].
         lon, lat = float(coords[0]), float(coords[1])
-
-        # No hay un ID explícito en properties -> usamos el índice como identificador.
         parking_id = str(idx)
 
-        # GEOADD añade un miembro al sorted set geoespacial `geo:parkings`.
-        # Internamente Redis codifica (lon, lat) como un geohash y lo usa como score,
-        # lo que permite luego consultas GEOSEARCH / GEORADIUS por proximidad.
-        # Firma en redis-py: geoadd(name, values) donde values = (lon, lat, member, ...).
+        # GEOADD: añade el miembro al sorted set geoespacial.
         pipe.geoadd(GEO_KEY, (lon, lat, parking_id))
 
-        # HSET guarda los metadatos en un hash (estructura campo -> valor, tipo "fila").
-        # Pasando mapping=dict, redis-py manda un único HSET con todos los campos,
-        # en lugar de un HSET por campo.
+        # HSET con mapping=dict manda un único HSET con todos los campos.
         pipe.hset(
             f"{PARKING_KEY_PREFIX}{parking_id}",
             mapping={
@@ -135,21 +148,85 @@ def import_parkings(r: redis.Redis = Depends(get_redis)):
                 "lon": lon,
             },
         )
-
         imported += 1
 
-    # EXECUTE vacía la cola del pipeline y manda todos los comandos a Redis.
-    # Si Redis no está disponible, lanza redis.ConnectionError aquí.
     try:
         pipe.execute()
     except redis.ConnectionError as exc:
-        raise HTTPException(
-            status_code=503,
-            detail=f"Redis no disponible: {exc}",
-        ) from exc
+        raise _raise_redis_503(exc) from exc
 
-    return {
-        "status": "ok",
-        "imported": imported,
-        "geo_key": GEO_KEY,
-    }
+    return {"status": "ok", "imported": imported, "geo_key": GEO_KEY}
+
+
+# OJO con el orden de rutas: `/parkings/nearby` debe declararse ANTES que
+# `/parkings/{parking_id}`; si no, FastAPI capturaría "nearby" como un id.
+
+@app.get("/parkings/nearby", response_model=list[ParkingNearby])
+def get_parkings_nearby(
+    lat: float = Query(..., description="Latitud del punto de búsqueda"),
+    lng: float = Query(..., description="Longitud del punto de búsqueda"),
+    radius: float = Query(1000, ge=0, description="Radio en metros (por defecto 1000)"),
+    rdb: redis.Redis = Depends(get_redis),
+):
+    """Devuelve los aparcamientos dentro de `radius` metros, ordenados por distancia."""
+    try:
+        # GEOSEARCH: búsqueda por radio sobre el índice geoespacial.
+        #   - unit='m' -> distancias en metros.
+        #   - withdist=True -> incluye la distancia en el resultado.
+        #   - sort='ASC' -> ordena del más cercano al más lejano (lo hace Redis).
+        # Formato devuelto con withdist=True: [[member, distance], ...].
+        results = rdb.geosearch(
+            GEO_KEY,
+            longitude=lng,
+            latitude=lat,
+            radius=radius,
+            unit="m",
+            withdist=True,
+            sort="ASC",
+        )
+    except redis.ConnectionError as exc:
+        raise _raise_redis_503(exc) from exc
+
+    if not results:
+        return []
+
+    # Separamos ids y distancias preservando el orden de Redis.
+    ids = [row[0] for row in results]
+    distances = [float(row[1]) for row in results]
+
+    # Pipeline para recuperar todos los hashes en un único round-trip.
+    pipe = rdb.pipeline()
+    for parking_id in ids:
+        pipe.hgetall(f"{PARKING_KEY_PREFIX}{parking_id}")
+    try:
+        hashes = pipe.execute()
+    except redis.ConnectionError as exc:
+        raise _raise_redis_503(exc) from exc
+
+    out: list[ParkingNearby] = []
+    for parking_id, dist, data in zip(ids, distances, hashes):
+        if not data:
+            # Miembro presente en geo:parkings pero sin hash asociado -> lo saltamos.
+            logger.warning("parking:%s está en geo pero no tiene hash", parking_id)
+            continue
+        out.append(ParkingNearby(**data, distancia_metros=dist))
+
+    return out
+
+
+@app.get("/parkings/{parking_id}", response_model=Parking)
+def get_parking(parking_id: str, rdb: redis.Redis = Depends(get_redis)):
+    """Devuelve el detalle de un aparcamiento leyendo su hash `parking:{id}`."""
+    try:
+        # HGETALL: devuelve todos los campos del hash como dict (vacío si no existe).
+        data = rdb.hgetall(f"{PARKING_KEY_PREFIX}{parking_id}")
+    except redis.ConnectionError as exc:
+        raise _raise_redis_503(exc) from exc
+
+    if not data:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Aparcamiento {parking_id!r} no encontrado",
+        )
+
+    return Parking(**data)
