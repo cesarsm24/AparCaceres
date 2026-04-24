@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../shared/constants/app_strings.dart';
 import '../../../theme/app_colors.dart';
 import '../../home/presentation/home_screen.dart';
+import '../../settings/presentation/settings_screen.dart';
 import 'widgets/placeholder_tab.dart';
 
 class AppShell extends StatefulWidget {
@@ -22,10 +23,7 @@ class _AppShellState extends State<AppShell> {
       label: AppStrings.navFavorites,
       icon: Icons.favorite_border,
     ),
-    PlaceholderTab(
-      label: AppStrings.navSettings,
-      icon: Icons.settings_outlined,
-    ),
+    SettingsScreen(),
   ];
 
   @override
