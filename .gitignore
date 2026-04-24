@@ -26,6 +26,10 @@ build/
 .idea/
 *.iml
 
+# Claude Code
+CLAUDE.md
+.claude/
+
 # Data files opcionales
 *.sqlite3
 
