@@ -1,13 +1,20 @@
 import json
 import logging
+import os
 from contextlib import asynccontextmanager
 from pathlib import Path
 
 import redis
+from dotenv import load_dotenv
 from fastapi import Depends, FastAPI, HTTPException, Query, Request
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
 logger = logging.getLogger(__name__)
+
+# Carga variables desde backend/.env (si existe). Indicamos ruta absoluta para que
+# funcione sea cual sea el cwd desde el que se lance uvicorn.
+load_dotenv(Path(__file__).parent / ".env")
 
 # Dataset GeoJSON con los aparcamientos públicos de Cáceres (Open Data).
 DATA_FILE = Path(__file__).parent / "data" / "aparcamientos.geojson"
@@ -17,6 +24,13 @@ DATA_FILE = Path(__file__).parent / "data" / "aparcamientos.geojson"
 #   parking:{id}   -> hash con los metadatos de cada aparcamiento (HSET / HGETALL)
 GEO_KEY = "geo:parkings"
 PARKING_KEY_PREFIX = "parking:"
+
+# ---------- Config (env / .env, con defaults para desarrollo) ----------
+REDIS_HOST = os.getenv("REDIS_HOST", "localhost")
+REDIS_PORT = int(os.getenv("REDIS_PORT", "6379"))
+REDIS_DB = int(os.getenv("REDIS_DB", "0"))
+# CORS_ORIGINS: lista separada por comas. "*" = cualquier origen (solo dev).
+CORS_ORIGINS = [o.strip() for o in os.getenv("CORS_ORIGINS", "*").split(",") if o.strip()]
 
 
 # ---------- Modelos Pydantic ----------
@@ -47,16 +61,16 @@ async def lifespan(app: FastAPI):
     """Abre la conexión a Redis al arrancar la app y la cierra al apagarla."""
     # decode_responses=True -> Redis devuelve strings en lugar de bytes.
     client = redis.Redis(
-        host="localhost",
-        port=6379,
-        db=0,
+        host=REDIS_HOST,
+        port=REDIS_PORT,
+        db=REDIS_DB,
         decode_responses=True,
     )
     try:
         # PING: comprobación rápida de que el servidor responde. Si falla, solo logueamos;
         # los endpoints devolverán 503 cuando intenten usarlo.
         client.ping()
-        logger.info("Conexión a Redis establecida en localhost:6379")
+        logger.info("Conexión a Redis establecida en %s:%s (db=%s)", REDIS_HOST, REDIS_PORT, REDIS_DB)
     except redis.ConnectionError as exc:
         logger.warning("No se pudo conectar a Redis al arrancar: %s", exc)
 
@@ -70,6 +84,17 @@ app = FastAPI(
     description="API para localización de aparcamientos públicos en Cáceres usando RedisDB",
     version="0.1.0",
     lifespan=lifespan,
+)
+
+# CORS: permite que el cliente (Flutter web, navegador, etc.) llame a la API desde
+# otro origen. Con "*" y allow_credentials=False funciona para dev; en producción
+# conviene restringir CORS_ORIGINS a la URL real del cliente.
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=CORS_ORIGINS,
+    allow_credentials=False,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 
