@@ -24,6 +24,14 @@ class AppStrings {
 
   static const String favoritesEdit = 'Editar';
 
+  static const String detailType = 'Tipo';
+  static const String detailSchedule = 'Horario';
+  static const String detailRate = 'Tarifa';
+  static const String detailFreeSpots = 'Plazas libres';
+  static const String detailServices = 'Servicios';
+  static const String detailNavigate = 'Cómo llegar';
+  static const String detailSave = 'Guardar';
+
   static const String settingTheme = 'Tema';
   static const String settingThemeValue = 'Claro';
   static const String settingLocation = 'Ubicación';

@@ -5,6 +5,8 @@ import '../../../shared/widgets/app_top_bar.dart';
 import '../../../shared/widgets/section_title.dart';
 import '../../../theme/app_colors.dart';
 import '../../../theme/app_spacing.dart';
+import '../../parking_detail/data/parking_detail_mock_data.dart';
+import '../../parking_detail/presentation/parking_detail_screen.dart';
 import '../data/home_mock_data.dart';
 import 'widgets/home_search_bar.dart';
 import 'widgets/nearby_summary_card.dart';
@@ -51,7 +53,16 @@ class HomeScreen extends StatelessWidget {
                 ...kSuggestions.map(
                   (s) => Padding(
                     padding: const EdgeInsets.only(bottom: AppSpacing.md),
-                    child: SuggestionTile(suggestion: s),
+                    child: SuggestionTile(
+                      suggestion: s,
+                      onTap: () => Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => const ParkingDetailScreen(
+                            detail: kParkingDetailSample,
+                          ),
+                        ),
+                      ),
+                    ),
                   ),
                 ),
               ],

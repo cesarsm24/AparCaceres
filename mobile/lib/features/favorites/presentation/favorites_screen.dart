@@ -4,6 +4,8 @@ import '../../../shared/constants/app_strings.dart';
 import '../../../shared/widgets/app_top_bar.dart';
 import '../../../theme/app_colors.dart';
 import '../../../theme/app_spacing.dart';
+import '../../parking_detail/data/parking_detail_mock_data.dart';
+import '../../parking_detail/presentation/parking_detail_screen.dart';
 import '../data/favorites_mock_data.dart';
 import 'widgets/favorite_tile.dart';
 
@@ -40,7 +42,16 @@ class FavoritesScreen extends StatelessWidget {
               itemCount: kFavorites.length,
               separatorBuilder: (_, _) =>
                   const SizedBox(height: AppSpacing.md),
-              itemBuilder: (_, i) => FavoriteTile(favorite: kFavorites[i]),
+              itemBuilder: (_, i) => FavoriteTile(
+                favorite: kFavorites[i],
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => const ParkingDetailScreen(
+                      detail: kParkingDetailSample,
+                    ),
+                  ),
+                ),
+              ),
             ),
           ),
         ],
