@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import '../../../../shared/constants/app_strings.dart';
-import '../../../../theme/app_colors.dart';
+import '../../theme/app_colors.dart';
+import '../constants/app_strings.dart';
 
-class HomeAppBar extends StatelessWidget {
-  const HomeAppBar({super.key});
+class AppTopBar extends StatelessWidget {
+  const AppTopBar({super.key, this.title = AppStrings.appName, this.trailing});
+
+  final String title;
+  final Widget? trailing;
 
   @override
   Widget build(BuildContext context) {
@@ -22,24 +25,22 @@ class HomeAppBar extends StatelessWidget {
           child: Stack(
             alignment: Alignment.center,
             children: [
-              const Text(
-                AppStrings.appName,
-                style: TextStyle(
+              Text(
+                title,
+                style: const TextStyle(
                   color: AppColors.textOnPrimary,
                   fontSize: 20,
                   fontWeight: FontWeight.w700,
                 ),
               ),
-              Align(
-                alignment: Alignment.centerRight,
-                child: IconButton(
-                  onPressed: () {},
-                  icon: const Icon(
-                    Icons.notifications_none_rounded,
-                    color: AppColors.textOnPrimary,
+              if (trailing != null)
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: Padding(
+                    padding: const EdgeInsets.only(right: 4),
+                    child: trailing!,
                   ),
                 ),
-              ),
             ],
           ),
         ),
