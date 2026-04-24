@@ -6,19 +6,27 @@ import '../../../shared/widgets/primary_button.dart';
 import '../../../shared/widgets/secondary_button.dart';
 import '../../../theme/app_colors.dart';
 import '../../../theme/app_spacing.dart';
-import '../data/parking_detail_mock_data.dart';
+import '../../parking/domain/parking_place.dart';
+import '../../parking/presentation/parking_ui.dart';
+import '../../parking/presentation/widgets/regulation_badge.dart';
 import 'widgets/detail_header_image.dart';
 import 'widgets/detail_info_row.dart';
-import 'widgets/price_badge.dart';
-import 'widgets/service_chip.dart';
 
 class ParkingDetailScreen extends StatelessWidget {
-  const ParkingDetailScreen({super.key, required this.detail});
+  const ParkingDetailScreen({super.key, required this.place});
 
-  final ParkingDetail detail;
+  final ParkingPlace place;
 
   @override
   Widget build(BuildContext context) {
+    final street = _joinParts([place.streetType, place.streetName]);
+    final area = [place.neighborhood, place.district]
+        .where((part) => part != null && part.trim().isNotEmpty)
+        .cast<String>()
+        .join(' · ');
+    final location = street ?? (area.isEmpty ? null : area);
+    final spacesLabel = formatSpaces(place.totalSpaces);
+
     return Scaffold(
       backgroundColor: AppColors.background,
       body: Column(
@@ -44,7 +52,7 @@ class ParkingDetailScreen extends StatelessWidget {
             child: ListView(
               padding: EdgeInsets.zero,
               children: [
-                DetailHeaderImage(icon: detail.headerIcon),
+                DetailHeaderImage(place: place),
                 Padding(
                   padding: const EdgeInsets.fromLTRB(
                     AppSpacing.horizontalPadding,
@@ -56,87 +64,59 @@ class ParkingDetailScreen extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        detail.name,
+                        place.displayName,
                         style: const TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.w700,
                           color: AppColors.textPrimary,
                         ),
                       ),
-                      const SizedBox(height: AppSpacing.xs),
-                      Row(
-                        children: [
-                          const Icon(
-                            Icons.location_on_outlined,
-                            size: 16,
-                            color: AppColors.textSecondary,
-                          ),
-                          const SizedBox(width: AppSpacing.xs),
-                          Expanded(
-                            child: Text(
-                              detail.address,
-                              style: const TextStyle(
-                                fontSize: 13,
-                                color: AppColors.textSecondary,
+                      if (location != null) ...[
+                        const SizedBox(height: AppSpacing.xs),
+                        Row(
+                          children: [
+                            const Icon(
+                              Icons.location_on_outlined,
+                              size: 16,
+                              color: AppColors.textSecondary,
+                            ),
+                            const SizedBox(width: AppSpacing.xs),
+                            Expanded(
+                              child: Text(
+                                location,
+                                style: const TextStyle(
+                                  fontSize: 13,
+                                  color: AppColors.textSecondary,
+                                ),
                               ),
                             ),
-                          ),
-                        ],
-                      ),
+                          ],
+                        ),
+                      ],
                       const SizedBox(height: AppSpacing.md),
                       DetailInfoRow(
                         label: AppStrings.detailType,
-                        value: PriceBadge(
-                          label: detail.type,
-                          isPaid: detail.isPaid,
-                        ),
+                        value: _ValueText(place.category.label),
                       ),
                       DetailInfoRow(
-                        label: AppStrings.detailSchedule,
-                        value: Text(
-                          detail.schedule,
-                          style: const TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.textPrimary,
-                          ),
-                        ),
+                        label: AppStrings.detailRegulation,
+                        value: RegulationBadge(regulation: place.regulation),
                       ),
-                      DetailInfoRow(
-                        label: AppStrings.detailRate,
-                        value: Text(
-                          detail.rate,
-                          textAlign: TextAlign.right,
-                          style: const TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.textPrimary,
-                          ),
+                      if (spacesLabel != null)
+                        DetailInfoRow(
+                          label: AppStrings.detailSpaces,
+                          value: _ValueText(spacesLabel),
                         ),
-                      ),
-                      DetailInfoRow(
-                        label: AppStrings.detailFreeSpots,
-                        value: Text(
-                          '${detail.freeSpots} / ${detail.totalSpots}',
-                          style: const TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w700,
-                            color: AppColors.success,
-                          ),
+                      if (street != null)
+                        DetailInfoRow(
+                          label: AppStrings.detailStreet,
+                          value: _ValueText(street),
                         ),
-                      ),
-                      DetailInfoRow(
-                        label: AppStrings.detailServices,
-                        value: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            for (final s in detail.services) ...[
-                              ServiceChip(icon: s),
-                              const SizedBox(width: AppSpacing.xs),
-                            ],
-                          ],
+                      if (area.isNotEmpty)
+                        DetailInfoRow(
+                          label: AppStrings.detailArea,
+                          value: _ValueText(area),
                         ),
-                      ),
                       const SizedBox(height: AppSpacing.lg),
                       Row(
                         children: [
@@ -164,6 +144,34 @@ class ParkingDetailScreen extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+String? _joinParts(List<String?> parts) {
+  final clean = parts
+      .where((part) => part != null && part.trim().isNotEmpty)
+      .cast<String>()
+      .toList();
+  if (clean.isEmpty) return null;
+  return clean.join(' ');
+}
+
+class _ValueText extends StatelessWidget {
+  const _ValueText(this.text);
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      text,
+      textAlign: TextAlign.right,
+      style: const TextStyle(
+        fontSize: 14,
+        fontWeight: FontWeight.w600,
+        color: AppColors.textPrimary,
       ),
     );
   }

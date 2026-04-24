@@ -30,6 +30,9 @@ class QuickAccessCard extends StatelessWidget {
           const SizedBox(height: AppSpacing.sm),
           Text(
             label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            textAlign: TextAlign.center,
             style: const TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w500,

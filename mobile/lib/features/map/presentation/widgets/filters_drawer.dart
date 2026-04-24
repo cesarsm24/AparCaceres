@@ -5,39 +5,64 @@ import '../../../../shared/widgets/primary_button.dart';
 import '../../../../shared/widgets/secondary_button.dart';
 import '../../../../theme/app_colors.dart';
 import '../../../../theme/app_spacing.dart';
+import '../../../parking/data/parking_constants.dart';
+import '../../../parking/domain/parking_place.dart';
+import '../../../parking/domain/parking_query.dart';
+import '../../../parking/presentation/parking_ui.dart';
 
 class MapFilters {
-  const MapFilters({
-    this.radiusMeters = 500,
-    this.freeSelected = true,
-    this.paidSelected = true,
-    this.onlyCovered = false,
-    this.onlyAccessible = false,
-    this.minAvailableSpots = 1,
-  });
+  MapFilters({
+    this.radiusMeters = 1000,
+    Set<ParkingVehicleType>? vehicleTypes,
+    Set<ParkingCategory>? categories,
+    Set<ParkingRegulation>? regulations,
+    this.minSpaces = 0,
+  }) : vehicleTypes = vehicleTypes ?? ParkingVehicleType.values.toSet(),
+       categories = categories ?? ParkingCategory.values.toSet(),
+       regulations = regulations ?? ParkingRegulation.values.toSet();
 
   final int radiusMeters;
-  final bool freeSelected;
-  final bool paidSelected;
-  final bool onlyCovered;
-  final bool onlyAccessible;
-  final int minAvailableSpots;
+  final Set<ParkingVehicleType> vehicleTypes;
+  final Set<ParkingCategory> categories;
+  final Set<ParkingRegulation> regulations;
+  final int minSpaces;
+
+  ParkingQuery toQuery() {
+    return ParkingQuery(
+      center: kMockUserLocation,
+      radiusMeters: radiusMeters,
+      vehicleTypes: vehicleTypes,
+      categories: categories,
+      regulations: regulations,
+      minSpaces: minSpaces,
+    );
+  }
 
   MapFilters copyWith({
     int? radiusMeters,
-    bool? freeSelected,
-    bool? paidSelected,
-    bool? onlyCovered,
-    bool? onlyAccessible,
-    int? minAvailableSpots,
+    Set<ParkingVehicleType>? vehicleTypes,
+    Set<ParkingCategory>? categories,
+    Set<ParkingRegulation>? regulations,
+    int? minSpaces,
   }) {
     return MapFilters(
       radiusMeters: radiusMeters ?? this.radiusMeters,
-      freeSelected: freeSelected ?? this.freeSelected,
-      paidSelected: paidSelected ?? this.paidSelected,
-      onlyCovered: onlyCovered ?? this.onlyCovered,
-      onlyAccessible: onlyAccessible ?? this.onlyAccessible,
-      minAvailableSpots: minAvailableSpots ?? this.minAvailableSpots,
+      vehicleTypes: vehicleTypes ?? this.vehicleTypes,
+      categories: categories ?? this.categories,
+      regulations: regulations ?? this.regulations,
+      minSpaces: minSpaces ?? this.minSpaces,
+    );
+  }
+
+  static MapFilters forVehicle(ParkingVehicleType vehicleType) {
+    return MapFilters(vehicleTypes: {vehicleType});
+  }
+
+  static MapFilters forAccessible() {
+    return MapFilters(
+      vehicleTypes: {ParkingVehicleType.car},
+      categories: {ParkingCategory.accessible},
+      regulations: {ParkingRegulation.reserved},
     );
   }
 }
@@ -66,12 +91,30 @@ class _FiltersDrawerState extends State<FiltersDrawer> {
   }
 
   void _reset() {
-    setState(() => _filters = const MapFilters());
+    setState(() => _filters = MapFilters());
   }
 
   void _apply() {
     widget.onApply(_filters);
     Navigator.of(context).pop();
+  }
+
+  void _toggleVehicle(ParkingVehicleType value) {
+    final next = Set<ParkingVehicleType>.of(_filters.vehicleTypes);
+    next.contains(value) ? next.remove(value) : next.add(value);
+    setState(() => _filters = _filters.copyWith(vehicleTypes: next));
+  }
+
+  void _toggleCategory(ParkingCategory value) {
+    final next = Set<ParkingCategory>.of(_filters.categories);
+    next.contains(value) ? next.remove(value) : next.add(value);
+    setState(() => _filters = _filters.copyWith(categories: next));
+  }
+
+  void _toggleRegulation(ParkingRegulation value) {
+    final next = Set<ParkingRegulation>.of(_filters.regulations);
+    next.contains(value) ? next.remove(value) : next.add(value);
+    setState(() => _filters = _filters.copyWith(regulations: next));
   }
 
   @override
@@ -91,43 +134,45 @@ class _FiltersDrawerState extends State<FiltersDrawer> {
                 children: [
                   _RadiusSection(
                     value: _filters.radiusMeters,
-                    onChanged: (v) =>
-                        setState(() => _filters = _filters.copyWith(radiusMeters: v)),
-                  ),
-                  const SizedBox(height: AppSpacing.lg),
-                  _TypeSection(
-                    freeSelected: _filters.freeSelected,
-                    paidSelected: _filters.paidSelected,
-                    onFreeChanged: (v) => setState(
-                      () => _filters = _filters.copyWith(freeSelected: v),
-                    ),
-                    onPaidChanged: (v) => setState(
-                      () => _filters = _filters.copyWith(paidSelected: v),
-                    ),
-                  ),
-                  const SizedBox(height: AppSpacing.lg),
-                  _SwitchSection(
-                    title: AppStrings.filtersCovered,
-                    hint: AppStrings.filtersCoveredHint,
-                    value: _filters.onlyCovered,
                     onChanged: (v) => setState(
-                      () => _filters = _filters.copyWith(onlyCovered: v),
+                      () => _filters = _filters.copyWith(radiusMeters: v),
                     ),
                   ),
                   const SizedBox(height: AppSpacing.lg),
-                  _SwitchSection(
-                    title: AppStrings.filtersAccessible,
-                    hint: AppStrings.filtersAccessibleHint,
-                    value: _filters.onlyAccessible,
-                    onChanged: (v) => setState(
-                      () => _filters = _filters.copyWith(onlyAccessible: v),
-                    ),
+                  _MultiChipSection<ParkingVehicleType>(
+                    title: AppStrings.filtersVehicle,
+                    values: ParkingVehicleType.values,
+                    selected: _filters.vehicleTypes,
+                    labelOf: (v) => v.label,
+                    iconOf: (v) => v.icon,
+                    colorOf: (_) => AppColors.primary,
+                    onToggle: _toggleVehicle,
                   ),
                   const SizedBox(height: AppSpacing.lg),
-                  _AvailableSpotsSection(
-                    value: _filters.minAvailableSpots,
+                  _MultiChipSection<ParkingCategory>(
+                    title: AppStrings.filtersCategory,
+                    values: ParkingCategory.values,
+                    selected: _filters.categories,
+                    labelOf: (v) => v.label,
+                    iconOf: (v) => v.icon,
+                    colorOf: (v) => v.color,
+                    onToggle: _toggleCategory,
+                  ),
+                  const SizedBox(height: AppSpacing.lg),
+                  _MultiChipSection<ParkingRegulation>(
+                    title: AppStrings.filtersRegulation,
+                    values: ParkingRegulation.values,
+                    selected: _filters.regulations,
+                    labelOf: (v) => v.label,
+                    iconOf: (_) => Icons.label_outline,
+                    colorOf: (v) => v.color,
+                    onToggle: _toggleRegulation,
+                  ),
+                  const SizedBox(height: AppSpacing.lg),
+                  _SpacesSection(
+                    value: _filters.minSpaces,
                     onChanged: (v) => setState(
-                      () => _filters = _filters.copyWith(minAvailableSpots: v),
+                      () => _filters = _filters.copyWith(minSpaces: v),
                     ),
                   ),
                 ],
@@ -244,21 +289,22 @@ class _RadiusSection extends StatelessWidget {
   final int value;
   final ValueChanged<int> onChanged;
 
-  static const List<int> _presets = [300, 500, 1000];
+  static const List<int> _presets = [500, 1000, 2000];
 
   @override
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const _SectionHeader('1. ${AppStrings.filtersRadius}'),
+        const _SectionHeader(AppStrings.filtersRadius),
         Wrap(
           spacing: AppSpacing.sm,
           children: _presets
               .map(
-                (m) => _RadiusChip(
+                (m) => _FilterChip(
                   label: m >= 1000 ? '${m ~/ 1000} km' : '$m m',
                   selected: value == m,
+                  color: AppColors.primary,
                   onTap: () => onChanged(m),
                 ),
               )
@@ -267,163 +313,38 @@ class _RadiusSection extends StatelessWidget {
         const SizedBox(height: AppSpacing.sm),
         Slider(
           min: 100,
-          max: 2000,
-          divisions: 19,
+          max: 3000,
+          divisions: 29,
           value: value.toDouble(),
-          label: value >= 1000 ? '${(value / 1000).toStringAsFixed(1)} km' : '$value m',
+          label: value >= 1000
+              ? '${(value / 1000).toStringAsFixed(1)} km'
+              : '$value m',
           activeColor: AppColors.primary,
           onChanged: (v) => onChanged(v.round()),
         ),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: const [
-            Text(
-              '100 m',
-              style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
-            ),
-            Text(
-              '2 km',
-              style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
-            ),
-          ],
-        ),
       ],
     );
   }
 }
 
-class _RadiusChip extends StatelessWidget {
-  const _RadiusChip({
-    required this.label,
-    required this.selected,
-    required this.onTap,
-  });
-
-  final String label;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return ChoiceChip(
-      label: Text(label),
-      selected: selected,
-      showCheckmark: false,
-      onSelected: (_) => onTap(),
-      selectedColor: AppColors.primary,
-      backgroundColor: AppColors.surfaceMuted,
-      labelStyle: TextStyle(
-        color: selected ? AppColors.textOnPrimary : AppColors.textPrimary,
-        fontWeight: FontWeight.w600,
-      ),
-      side: BorderSide(
-        color: selected ? AppColors.primary : AppColors.border,
-      ),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AppSpacing.radiusPill),
-      ),
-    );
-  }
-}
-
-class _TypeSection extends StatelessWidget {
-  const _TypeSection({
-    required this.freeSelected,
-    required this.paidSelected,
-    required this.onFreeChanged,
-    required this.onPaidChanged,
-  });
-
-  final bool freeSelected;
-  final bool paidSelected;
-  final ValueChanged<bool> onFreeChanged;
-  final ValueChanged<bool> onPaidChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        const _SectionHeader('2. ${AppStrings.filtersType}'),
-        Row(
-          children: [
-            Expanded(
-              child: _TypeButton(
-                label: AppStrings.filtersTypeFree,
-                selected: freeSelected,
-                onTap: () => onFreeChanged(!freeSelected),
-              ),
-            ),
-            const SizedBox(width: AppSpacing.sm),
-            Expanded(
-              child: _TypeButton(
-                label: AppStrings.filtersTypePaid,
-                selected: paidSelected,
-                onTap: () => onPaidChanged(!paidSelected),
-              ),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-}
-
-class _TypeButton extends StatelessWidget {
-  const _TypeButton({
-    required this.label,
-    required this.selected,
-    required this.onTap,
-  });
-
-  final String label;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: selected ? AppColors.primary : AppColors.surface,
-      borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-        child: Container(
-          height: 48,
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-            border: Border.all(
-              color: selected ? AppColors.primary : AppColors.border,
-              width: 1.4,
-            ),
-          ),
-          child: Text(
-            label,
-            style: TextStyle(
-              color: selected ? AppColors.textOnPrimary : AppColors.textPrimary,
-              fontSize: 15,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _SwitchSection extends StatelessWidget {
-  const _SwitchSection({
+class _MultiChipSection<T> extends StatelessWidget {
+  const _MultiChipSection({
     required this.title,
-    required this.hint,
-    required this.value,
-    required this.onChanged,
+    required this.values,
+    required this.selected,
+    required this.labelOf,
+    required this.iconOf,
+    required this.colorOf,
+    required this.onToggle,
   });
 
   final String title;
-  final String hint;
-  final bool value;
-  final ValueChanged<bool> onChanged;
+  final List<T> values;
+  final Set<T> selected;
+  final String Function(T value) labelOf;
+  final IconData Function(T value) iconOf;
+  final Color Function(T value) colorOf;
+  final ValueChanged<T> onToggle;
 
   @override
   Widget build(BuildContext context) {
@@ -431,31 +352,71 @@ class _SwitchSection extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         _SectionHeader(title),
-        Row(
-          children: [
-            Expanded(
-              child: Text(
-                hint,
-                style: const TextStyle(
-                  fontSize: 14,
-                  color: AppColors.textSecondary,
+        Wrap(
+          spacing: AppSpacing.sm,
+          runSpacing: AppSpacing.xs,
+          children: values
+              .map(
+                (value) => _FilterChip(
+                  label: labelOf(value),
+                  icon: iconOf(value),
+                  selected: selected.contains(value),
+                  color: colorOf(value),
+                  onTap: () => onToggle(value),
                 ),
-              ),
-            ),
-            Switch(
-              value: value,
-              onChanged: onChanged,
-              activeThumbColor: AppColors.primary,
-            ),
-          ],
+              )
+              .toList(),
         ),
       ],
     );
   }
 }
 
-class _AvailableSpotsSection extends StatelessWidget {
-  const _AvailableSpotsSection({required this.value, required this.onChanged});
+class _FilterChip extends StatelessWidget {
+  const _FilterChip({
+    required this.label,
+    required this.selected,
+    required this.color,
+    required this.onTap,
+    this.icon,
+  });
+
+  final String label;
+  final bool selected;
+  final Color color;
+  final VoidCallback onTap;
+  final IconData? icon;
+
+  @override
+  Widget build(BuildContext context) {
+    return ChoiceChip(
+      avatar: icon == null
+          ? null
+          : Icon(
+              icon,
+              size: 16,
+              color: selected ? AppColors.textOnPrimary : color,
+            ),
+      label: Text(label),
+      selected: selected,
+      showCheckmark: false,
+      onSelected: (_) => onTap(),
+      selectedColor: color,
+      backgroundColor: AppColors.surfaceMuted,
+      labelStyle: TextStyle(
+        color: selected ? AppColors.textOnPrimary : AppColors.textPrimary,
+        fontWeight: FontWeight.w600,
+      ),
+      side: BorderSide(color: selected ? color : AppColors.border),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppSpacing.radiusPill),
+      ),
+    );
+  }
+}
+
+class _SpacesSection extends StatelessWidget {
+  const _SpacesSection({required this.value, required this.onChanged});
 
   final int value;
   final ValueChanged<int> onChanged;
@@ -467,11 +428,9 @@ class _AvailableSpotsSection extends StatelessWidget {
       children: [
         Row(
           children: [
-            const Expanded(
-              child: _SectionHeader('5. ${AppStrings.filtersAvailable}'),
-            ),
+            const Expanded(child: _SectionHeader(AppStrings.filtersSpaces)),
             Text(
-              '$value+',
+              value == 0 ? 'Todas' : '$value+',
               style: const TextStyle(
                 fontSize: 15,
                 fontWeight: FontWeight.w700,
@@ -481,26 +440,13 @@ class _AvailableSpotsSection extends StatelessWidget {
           ],
         ),
         Slider(
-          min: 1,
-          max: 10,
-          divisions: 9,
+          min: 0,
+          max: 20,
+          divisions: 20,
           value: value.toDouble(),
-          label: '$value+',
+          label: value == 0 ? 'Todas' : '$value+',
           activeColor: AppColors.primary,
           onChanged: (v) => onChanged(v.round()),
-        ),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: const [
-            Text(
-              '1+',
-              style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
-            ),
-            Text(
-              '10+',
-              style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
-            ),
-          ],
         ),
       ],
     );

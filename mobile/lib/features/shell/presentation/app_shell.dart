@@ -5,6 +5,7 @@ import '../../../theme/app_colors.dart';
 import '../../favorites/presentation/favorites_screen.dart';
 import '../../home/presentation/home_screen.dart';
 import '../../map/presentation/map_screen.dart';
+import '../../map/presentation/widgets/filters_drawer.dart';
 import '../../settings/presentation/settings_screen.dart';
 
 class AppShell extends StatefulWidget {
@@ -16,18 +17,28 @@ class AppShell extends StatefulWidget {
 
 class _AppShellState extends State<AppShell> {
   int _index = 0;
+  int _mapRequestVersion = 0;
+  MapFilters _mapFilters = MapFilters();
 
-  static const _tabs = <Widget>[
-    HomeScreen(),
-    MapScreen(),
-    FavoritesScreen(),
-    SettingsScreen(),
-  ];
+  void _openMapFromHome(MapFilters filters) {
+    setState(() {
+      _mapFilters = filters;
+      _mapRequestVersion++;
+      _index = 1;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
+    final tabs = <Widget>[
+      HomeScreen(onOpenMap: _openMapFromHome),
+      MapScreen(key: ValueKey(_mapRequestVersion), initialFilters: _mapFilters),
+      const FavoritesScreen(),
+      const SettingsScreen(),
+    ];
+
     return Scaffold(
-      body: _tabs[_index],
+      body: tabs[_index],
       bottomNavigationBar: NavigationBar(
         selectedIndex: _index,
         onDestinationSelected: (i) => setState(() => _index = i),
