@@ -10,9 +10,17 @@ Localizador de aparcamientos públicos de Cáceres por proximidad.
 
 ## Descripción
 
-AparCáceres es una aplicación web que permite buscar los aparcamientos públicos más cercanos a una ubicación dentro de la ciudad de Cáceres.
+AparCáceres es una aplicación móvil que permite buscar los aparcamientos públicos más cercanos a una ubicación dentro de la ciudad de Cáceres.
 
 El proyecto utiliza datos abiertos municipales y pone el foco en el uso de **RedisDB** como base de datos principal para realizar consultas geoespaciales rápidas y eficientes.
+
+## Estructura del repositorio
+
+```
+AparCaceres/
+├── backend/    API REST en FastAPI + RedisDB
+└── mobile/     Cliente móvil en Flutter (Material 3)
+```
 
 ## Objetivo
 
@@ -27,12 +35,11 @@ Permitir al usuario:
 - Open Data Cáceres  
   https://opendata.caceres.es/datosabiertos/catalogo/dataset/aparcamientos-y-parking
 
-## Tecnologías previstas
+## Tecnologías
 
 - **RedisDB** para almacenamiento geoespacial
-- Backend con Node.js / Express o FastAPI
-- Frontend web
-- Leaflet para el mapa
+- Backend en **FastAPI** (Python)
+- Cliente móvil en **Flutter** (Material 3)
 - Datos en GeoJSON o CSV
 
 ## RedisDB en el proyecto
