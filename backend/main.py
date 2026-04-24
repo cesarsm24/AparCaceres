@@ -6,7 +6,7 @@ from pathlib import Path
 
 import redis
 from dotenv import load_dotenv
-from fastapi import Depends, FastAPI, HTTPException, Query, Request
+from fastapi import Depends, FastAPI, HTTPException, Query, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
@@ -20,10 +20,12 @@ load_dotenv(Path(__file__).parent / ".env")
 DATA_FILE = Path(__file__).parent / "data" / "aparcamientos.geojson"
 
 # Claves de Redis que usa la app:
-#   geo:parkings   -> sorted set geoespacial con todos los aparcamientos (GEOADD / GEOSEARCH)
-#   parking:{id}   -> hash con los metadatos de cada aparcamiento (HSET / HGETALL)
+#   geo:parkings          -> sorted set geoespacial con todos los aparcamientos (GEOADD / GEOSEARCH)
+#   parking:{id}          -> hash con los metadatos de cada aparcamiento (HSET / HGETALL)
+#   cache:nearby:{lat}:{lng}:{radius} -> JSON cacheado del resultado de /parkings/nearby (SETEX)
 GEO_KEY = "geo:parkings"
 PARKING_KEY_PREFIX = "parking:"
+CACHE_NEARBY_PREFIX = "cache:nearby:"
 
 # ---------- Config (env / .env, con defaults para desarrollo) ----------
 REDIS_HOST = os.getenv("REDIS_HOST", "localhost")
@@ -31,6 +33,8 @@ REDIS_PORT = int(os.getenv("REDIS_PORT", "6379"))
 REDIS_DB = int(os.getenv("REDIS_DB", "0"))
 # CORS_ORIGINS: lista separada por comas. "*" = cualquier origen (solo dev).
 CORS_ORIGINS = [o.strip() for o in os.getenv("CORS_ORIGINS", "*").split(",") if o.strip()]
+# TTL de la caché de /parkings/nearby en segundos. 0 = caché desactivada.
+CACHE_NEARBY_TTL = int(os.getenv("CACHE_NEARBY_TTL", "60"))
 
 
 # ---------- Modelos Pydantic ----------
@@ -180,7 +184,23 @@ def import_parkings(rdb: redis.Redis = Depends(get_redis)):
     except redis.ConnectionError as exc:
         raise _raise_redis_503(exc) from exc
 
-    return {"status": "ok", "imported": imported, "geo_key": GEO_KEY}
+    # Invalidación de caché: al reimportar, los resultados anteriores de /parkings/nearby
+    # dejan de ser válidos. Borramos todas las claves cache:nearby:* en un único pipeline.
+    try:
+        cache_keys = list(rdb.scan_iter(match=f"{CACHE_NEARBY_PREFIX}*"))
+        if cache_keys:
+            rdb.delete(*cache_keys)
+    except redis.ConnectionError:
+        # No bloqueamos el import si la invalidación falla; el TTL se encargará.
+        logger.warning("No se pudo invalidar cache:nearby:* al reimportar")
+        cache_keys = []
+
+    return {
+        "status": "ok",
+        "imported": imported,
+        "geo_key": GEO_KEY,
+        "cache_invalidated": len(cache_keys),
+    }
 
 
 # OJO con el orden de rutas: `/parkings/nearby` debe declararse ANTES que
@@ -188,12 +208,41 @@ def import_parkings(rdb: redis.Redis = Depends(get_redis)):
 
 @app.get("/parkings/nearby", response_model=list[ParkingNearby])
 def get_parkings_nearby(
+    response: Response,
     lat: float = Query(..., description="Latitud del punto de búsqueda"),
     lng: float = Query(..., description="Longitud del punto de búsqueda"),
     radius: float = Query(1000, ge=0, description="Radio en metros (por defecto 1000)"),
     rdb: redis.Redis = Depends(get_redis),
 ):
-    """Devuelve los aparcamientos dentro de `radius` metros, ordenados por distancia."""
+    """Devuelve los aparcamientos dentro de `radius` metros, ordenados por distancia.
+
+    Cacheado en Redis con clave `cache:nearby:{lat}:{lng}:{radius}` y TTL
+    `CACHE_NEARBY_TTL` (segundos). Se redondean lat/lng a 4 decimales (~10m) para
+    que peticiones casi-iguales reutilicen la misma entrada de caché.
+    """
+    # Clave de caché estable: redondeo controlado de los parámetros.
+    cache_key = f"{CACHE_NEARBY_PREFIX}{lat:.4f}:{lng:.4f}:{int(radius)}"
+    cache_enabled = CACHE_NEARBY_TTL > 0
+
+    # --- Intento de HIT (look-aside) ---
+    if cache_enabled:
+        try:
+            # GET devuelve el string cacheado (None si no hay clave o ha expirado).
+            cached = rdb.get(cache_key)
+        except redis.ConnectionError:
+            # Degradación suave: si Redis no responde al leer caché, seguimos al cómputo.
+            cached = None
+
+        if cached is not None:
+            # Fast path: devolvemos el JSON tal cual, saltando Pydantic/response_model.
+            # Añadimos X-Cache para que sea fácil ver en dev si pegó caché.
+            return Response(
+                content=cached,
+                media_type="application/json",
+                headers={"X-Cache": "HIT"},
+            )
+
+    # --- MISS: calculamos el resultado desde Redis ---
     try:
         # GEOSEARCH: búsqueda por radio sobre el índice geoespacial.
         #   - unit='m' -> distancias en metros.
@@ -212,30 +261,41 @@ def get_parkings_nearby(
     except redis.ConnectionError as exc:
         raise _raise_redis_503(exc) from exc
 
-    if not results:
-        return []
+    if results:
+        # Separamos ids y distancias preservando el orden de Redis.
+        ids = [row[0] for row in results]
+        distances = [float(row[1]) for row in results]
 
-    # Separamos ids y distancias preservando el orden de Redis.
-    ids = [row[0] for row in results]
-    distances = [float(row[1]) for row in results]
+        # Pipeline para recuperar todos los hashes en un único round-trip.
+        pipe = rdb.pipeline()
+        for parking_id in ids:
+            pipe.hgetall(f"{PARKING_KEY_PREFIX}{parking_id}")
+        try:
+            hashes = pipe.execute()
+        except redis.ConnectionError as exc:
+            raise _raise_redis_503(exc) from exc
 
-    # Pipeline para recuperar todos los hashes en un único round-trip.
-    pipe = rdb.pipeline()
-    for parking_id in ids:
-        pipe.hgetall(f"{PARKING_KEY_PREFIX}{parking_id}")
-    try:
-        hashes = pipe.execute()
-    except redis.ConnectionError as exc:
-        raise _raise_redis_503(exc) from exc
+        out: list[ParkingNearby] = []
+        for parking_id, dist, data in zip(ids, distances, hashes):
+            if not data:
+                # Miembro presente en geo:parkings pero sin hash asociado -> lo saltamos.
+                logger.warning("parking:%s está en geo pero no tiene hash", parking_id)
+                continue
+            out.append(ParkingNearby(**data, distancia_metros=dist))
+    else:
+        out = []
 
-    out: list[ParkingNearby] = []
-    for parking_id, dist, data in zip(ids, distances, hashes):
-        if not data:
-            # Miembro presente en geo:parkings pero sin hash asociado -> lo saltamos.
-            logger.warning("parking:%s está en geo pero no tiene hash", parking_id)
-            continue
-        out.append(ParkingNearby(**data, distancia_metros=dist))
+    # --- Guardar en caché (best-effort) ---
+    if cache_enabled:
+        try:
+            payload = json.dumps([p.model_dump() for p in out])
+            # SETEX key ttl value -> SET con TTL en segundos atómicamente.
+            rdb.setex(cache_key, CACHE_NEARBY_TTL, payload)
+        except redis.ConnectionError:
+            # No bloqueamos la respuesta si falla escribir la caché.
+            logger.warning("No se pudo escribir en caché %s (Redis no disponible)", cache_key)
 
+    response.headers["X-Cache"] = "MISS" if cache_enabled else "BYPASS"
     return out
 
 
