@@ -5,9 +5,15 @@ import '../../theme/app_colors.dart';
 import '../constants/app_strings.dart';
 
 class AppTopBar extends StatelessWidget {
-  const AppTopBar({super.key, this.title = AppStrings.appName, this.trailing});
+  const AppTopBar({
+    super.key,
+    this.title = AppStrings.appName,
+    this.leading,
+    this.trailing,
+  });
 
   final String title;
+  final Widget? leading;
   final Widget? trailing;
 
   @override
@@ -35,6 +41,14 @@ class AppTopBar extends StatelessWidget {
                   fontWeight: FontWeight.w700,
                 ),
               ),
+              if (leading != null)
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Padding(
+                    padding: const EdgeInsets.only(left: 4),
+                    child: leading!,
+                  ),
+                ),
               if (trailing != null)
                 Align(
                   alignment: Alignment.centerRight,
