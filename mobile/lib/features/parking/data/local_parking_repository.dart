@@ -6,20 +6,17 @@ import 'package:latlong2/latlong.dart';
 import '../domain/parking_place.dart';
 import '../domain/parking_query.dart';
 import '../domain/parking_repository.dart';
+import 'favorites_store.dart';
 
 class LocalParkingRepository implements ParkingRepository {
-  LocalParkingRepository({AssetBundle? bundle})
-    : _bundle = bundle ?? rootBundle;
+  LocalParkingRepository({AssetBundle? bundle, FavoritesStore? favorites})
+    : _bundle = bundle ?? rootBundle,
+      _favorites = favorites ?? favoritesStore;
 
   static const String _fixturePath = 'assets/mock/parking_places.json';
-  static const List<String> _favoriteIds = [
-    'parking-obispo-galarza',
-    'zona-azul-rodriguez-ledesma',
-    'pmr-avenida-arenas',
-    'parking-bicis-colon',
-  ];
 
   final AssetBundle _bundle;
+  final FavoritesStore _favorites;
   List<ParkingPlace>? _cache;
 
   @override
@@ -81,16 +78,8 @@ class LocalParkingRepository implements ParkingRepository {
   @override
   Future<List<ParkingPlace>> getFavorites() async {
     final places = await _loadPlaces();
-    final favorites = <ParkingPlace>[];
-    for (final id in _favoriteIds) {
-      for (final place in places) {
-        if (place.id == id) {
-          favorites.add(place);
-          break;
-        }
-      }
-    }
-    return favorites;
+    final ids = _favorites.ids;
+    return places.where((place) => ids.contains(place.id)).toList();
   }
 
   Future<List<ParkingPlace>> _loadPlaces() async {
