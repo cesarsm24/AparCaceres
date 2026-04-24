@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../shared/constants/app_strings.dart';
 import '../../../theme/app_colors.dart';
+import '../../favorites/presentation/favorites_screen.dart';
 import '../../home/presentation/home_screen.dart';
 import '../../settings/presentation/settings_screen.dart';
 import 'widgets/placeholder_tab.dart';
@@ -19,10 +20,7 @@ class _AppShellState extends State<AppShell> {
   static const _tabs = <Widget>[
     HomeScreen(),
     PlaceholderTab(label: AppStrings.navMap, icon: Icons.map_outlined),
-    PlaceholderTab(
-      label: AppStrings.navFavorites,
-      icon: Icons.favorite_border,
-    ),
+    FavoritesScreen(),
     SettingsScreen(),
   ];
 

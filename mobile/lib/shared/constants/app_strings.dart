@@ -22,6 +22,8 @@ class AppStrings {
 
   static const String comingSoon = 'Próximamente';
 
+  static const String favoritesEdit = 'Editar';
+
   static const String settingTheme = 'Tema';
   static const String settingThemeValue = 'Claro';
   static const String settingLocation = 'Ubicación';
