@@ -45,4 +45,12 @@ class AppTextStyles {
     color: AppColors.textOnPrimary,
     letterSpacing: 0.2,
   );
+
+  static const TextStyle subtitle = TextStyle(
+    fontFamily: _fontFamily,
+    fontSize: 20,
+    fontWeight: FontWeight.w500,
+    color: AppColors.textSecondary,
+    height: 1.35,
+  );
 }

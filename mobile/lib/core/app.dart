@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../features/welcome/presentation/welcome_screen.dart';
 import '../shared/constants/app_strings.dart';
 import '../theme/app_theme.dart';
 
@@ -12,7 +13,7 @@ class AparCaceresApp extends StatelessWidget {
       title: AppStrings.appName,
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light,
-      home: const Scaffold(),
+      home: const WelcomeScreen(),
     );
   }
 }
