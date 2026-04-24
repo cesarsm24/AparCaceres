@@ -308,6 +308,7 @@ class _RadiusChip extends StatelessWidget {
     return ChoiceChip(
       label: Text(label),
       selected: selected,
+      showCheckmark: false,
       onSelected: (_) => onTap(),
       selectedColor: AppColors.primary,
       backgroundColor: AppColors.surfaceMuted,
