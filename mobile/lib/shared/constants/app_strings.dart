@@ -21,4 +21,17 @@ class AppStrings {
   static const String navSettings = 'Ajustes';
 
   static const String comingSoon = 'Próximamente';
+
+  static const String settingTheme = 'Tema';
+  static const String settingThemeValue = 'Claro';
+  static const String settingLocation = 'Ubicación';
+  static const String settingLocationValue = 'Siempre';
+  static const String settingLanguage = 'Idioma';
+  static const String settingLanguageValue = 'Español';
+  static const String settingNotifications = 'Notificaciones';
+  static const String settingDistance = 'Unidades de distancia';
+  static const String settingDistanceValue = 'Kilómetros';
+  static const String settingHelp = 'Ayuda y soporte';
+  static const String settingAbout = 'Acerca de AparCáceres';
+  static const String settingAboutValue = 'v1.0.0';
 }
