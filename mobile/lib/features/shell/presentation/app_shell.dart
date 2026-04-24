@@ -4,8 +4,8 @@ import '../../../shared/constants/app_strings.dart';
 import '../../../theme/app_colors.dart';
 import '../../favorites/presentation/favorites_screen.dart';
 import '../../home/presentation/home_screen.dart';
+import '../../map/presentation/map_screen.dart';
 import '../../settings/presentation/settings_screen.dart';
-import 'widgets/placeholder_tab.dart';
 
 class AppShell extends StatefulWidget {
   const AppShell({super.key});
@@ -19,7 +19,7 @@ class _AppShellState extends State<AppShell> {
 
   static const _tabs = <Widget>[
     HomeScreen(),
-    PlaceholderTab(label: AppStrings.navMap, icon: Icons.map_outlined),
+    MapScreen(),
     FavoritesScreen(),
     SettingsScreen(),
   ];
