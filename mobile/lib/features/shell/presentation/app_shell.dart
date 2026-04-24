@@ -20,28 +20,59 @@ class _AppShellState extends State<AppShell> {
   int _mapRequestVersion = 0;
   MapFilters _mapFilters = MapFilters();
 
+  final GlobalKey<NavigatorState> _homeNav = GlobalKey<NavigatorState>();
+  GlobalKey<NavigatorState> _mapNav = GlobalKey<NavigatorState>();
+  final GlobalKey<NavigatorState> _favoritesNav = GlobalKey<NavigatorState>();
+  final GlobalKey<NavigatorState> _settingsNav = GlobalKey<NavigatorState>();
+
+  List<GlobalKey<NavigatorState>> get _navKeys =>
+      [_homeNav, _mapNav, _favoritesNav, _settingsNav];
+
   void _openMapFromHome(MapFilters filters) {
     setState(() {
       _mapFilters = filters;
       _mapRequestVersion++;
+      _mapNav = GlobalKey<NavigatorState>();
       _index = 1;
     });
   }
 
+  void _onDestinationSelected(int i) {
+    if (i == _index) {
+      _navKeys[i].currentState?.popUntil((route) => route.isFirst);
+      return;
+    }
+    setState(() => _index = i);
+  }
+
   @override
   Widget build(BuildContext context) {
-    final tabs = <Widget>[
-      HomeScreen(onOpenMap: _openMapFromHome),
-      MapScreen(key: ValueKey(_mapRequestVersion), initialFilters: _mapFilters),
-      const FavoritesScreen(),
-      const SettingsScreen(),
-    ];
-
     return Scaffold(
-      body: tabs[_index],
+      body: IndexedStack(
+        index: _index,
+        children: [
+          _TabNavigator(
+            navigatorKey: _homeNav,
+            root: HomeScreen(onOpenMap: _openMapFromHome),
+          ),
+          _TabNavigator(
+            key: ValueKey(_mapRequestVersion),
+            navigatorKey: _mapNav,
+            root: MapScreen(initialFilters: _mapFilters),
+          ),
+          _TabNavigator(
+            navigatorKey: _favoritesNav,
+            root: const FavoritesScreen(),
+          ),
+          _TabNavigator(
+            navigatorKey: _settingsNav,
+            root: const SettingsScreen(),
+          ),
+        ],
+      ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _index,
-        onDestinationSelected: (i) => setState(() => _index = i),
+        onDestinationSelected: _onDestinationSelected,
         backgroundColor: AppColors.surface,
         indicatorColor: AppColors.surfaceMuted,
         labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
@@ -67,6 +98,31 @@ class _AppShellState extends State<AppShell> {
             label: AppStrings.navSettings,
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _TabNavigator extends StatelessWidget {
+  const _TabNavigator({
+    super.key,
+    required this.navigatorKey,
+    required this.root,
+  });
+
+  final GlobalKey<NavigatorState> navigatorKey;
+  final Widget root;
+
+  @override
+  Widget build(BuildContext context) {
+    return NavigatorPopHandler(
+      onPopWithResult: (_) => navigatorKey.currentState?.maybePop(),
+      child: Navigator(
+        key: navigatorKey,
+        onGenerateRoute: (settings) => MaterialPageRoute(
+          settings: settings,
+          builder: (_) => root,
+        ),
       ),
     );
   }
