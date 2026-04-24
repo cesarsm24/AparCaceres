@@ -16,4 +16,8 @@ class AppColors {
   static const Color textOnPrimary = Color(0xFFFFFFFF);
 
   static const Color border = Color(0xFFE5E7EB);
+  static const Color surfaceMuted = Color(0xFFF3F4F6);
+  static const Color pageBackground = Color(0xFFF9FAFB);
+
+  static const Color success = Color(0xFF10B981);
 }
