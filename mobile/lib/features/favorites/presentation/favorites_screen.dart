@@ -5,6 +5,7 @@ import '../../../shared/constants/app_strings.dart';
 import '../../../shared/widgets/app_top_bar.dart';
 import '../../../theme/app_colors.dart';
 import '../../../theme/app_spacing.dart';
+import '../../parking/data/favorites_store.dart';
 import '../../parking/data/parking_constants.dart';
 import '../../parking/data/parking_repository_provider.dart';
 import '../../parking/domain/parking_place.dart';
@@ -34,44 +35,54 @@ class FavoritesScreen extends StatelessWidget {
             ),
           ),
           Expanded(
-            child: FutureBuilder<List<ParkingPlace>>(
-              future: parkingRepository.getFavorites(),
-              builder: (context, snapshot) {
-                final favorites = snapshot.data ?? const <ParkingPlace>[];
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator());
-                }
-                if (favorites.isEmpty) {
-                  return const Center(
-                    child: Text(
-                      'Todavia no hay favoritos.',
-                      style: TextStyle(color: AppColors.textSecondary),
-                    ),
-                  );
-                }
-                return ListView.separated(
-                  padding: const EdgeInsets.fromLTRB(
-                    AppSpacing.horizontalPadding,
-                    AppSpacing.md,
-                    AppSpacing.horizontalPadding,
-                    AppSpacing.lg,
-                  ),
-                  itemCount: favorites.length,
-                  separatorBuilder: (_, _) =>
-                      const SizedBox(height: AppSpacing.md),
-                  itemBuilder: (_, i) {
-                    final place = favorites[i];
-                    return FavoriteTile(
-                      place: place,
-                      distanceMeters: const Distance()(
-                        kMockUserLocation,
-                        place.position,
-                      ),
-                      onTap: () => Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) => ParkingDetailScreen(place: place),
+            child: ListenableBuilder(
+              listenable: favoritesStore,
+              builder: (context, _) {
+                return FutureBuilder<List<ParkingPlace>>(
+                  future: parkingRepository.getFavorites(),
+                  builder: (context, snapshot) {
+                    final favorites =
+                        snapshot.data ?? const <ParkingPlace>[];
+                    if (snapshot.connectionState ==
+                        ConnectionState.waiting) {
+                      return const Center(child: CircularProgressIndicator());
+                    }
+                    if (favorites.isEmpty) {
+                      return const Center(
+                        child: Text(
+                          AppStrings.favoritesEmpty,
+                          style: TextStyle(color: AppColors.textSecondary),
                         ),
+                      );
+                    }
+                    return ListView.separated(
+                      padding: const EdgeInsets.fromLTRB(
+                        AppSpacing.horizontalPadding,
+                        AppSpacing.md,
+                        AppSpacing.horizontalPadding,
+                        AppSpacing.lg,
                       ),
+                      itemCount: favorites.length,
+                      separatorBuilder: (_, _) =>
+                          const SizedBox(height: AppSpacing.md),
+                      itemBuilder: (_, i) {
+                        final place = favorites[i];
+                        return FavoriteTile(
+                          place: place,
+                          distanceMeters: const Distance()(
+                            kMockUserLocation,
+                            place.position,
+                          ),
+                          onTap: () => Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) =>
+                                  ParkingDetailScreen(place: place),
+                            ),
+                          ),
+                          onToggleFavorite: () =>
+                              favoritesStore.toggle(place.id),
+                        );
+                      },
                     );
                   },
                 );

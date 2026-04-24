@@ -32,6 +32,8 @@ class AppStrings {
   static const String detailArea = 'Zona';
   static const String detailNavigate = 'Cómo llegar';
   static const String detailSave = 'Guardar';
+  static const String detailSaved = 'Guardado';
+  static const String favoritesEmpty = 'Todavía no hay favoritos.';
 
   static const String settingTheme = 'Tema';
   static const String settingThemeValue = 'Claro';

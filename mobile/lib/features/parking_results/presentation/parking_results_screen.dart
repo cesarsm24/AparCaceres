@@ -23,23 +23,13 @@ class ParkingResultsScreen extends StatefulWidget {
 }
 
 class _ParkingResultsScreenState extends State<ParkingResultsScreen> {
-  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
-  late MapFilters _filters;
   late Future<List<ParkingPlace>> _placesFuture;
   ResultsSortMode _sort = ResultsSortMode.distance;
 
   @override
   void initState() {
     super.initState();
-    _filters = widget.filters;
-    _placesFuture = parkingRepository.getNearby(_filters.toQuery());
-  }
-
-  void _applyFilters(MapFilters filters) {
-    setState(() {
-      _filters = filters;
-      _placesFuture = parkingRepository.getNearby(_filters.toQuery());
-    });
+    _placesFuture = parkingRepository.getNearby(widget.filters.toQuery());
   }
 
   List<ParkingPlace> _sortPlaces(List<ParkingPlace> places) {
@@ -66,12 +56,7 @@ class _ParkingResultsScreenState extends State<ParkingResultsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      key: _scaffoldKey,
       backgroundColor: AppColors.pageBackground,
-      endDrawer: FiltersDrawer(
-        initialFilters: _filters,
-        onApply: _applyFilters,
-      ),
       body: Column(
         children: [
           AppTopBar(
@@ -82,10 +67,6 @@ class _ParkingResultsScreenState extends State<ParkingResultsScreen> {
                 color: AppColors.textOnPrimary,
                 size: 28,
               ),
-            ),
-            trailing: IconButton(
-              onPressed: () => _scaffoldKey.currentState?.openEndDrawer(),
-              icon: const Icon(Icons.tune, color: AppColors.textOnPrimary),
             ),
           ),
           Expanded(

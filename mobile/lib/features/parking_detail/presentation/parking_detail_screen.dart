@@ -6,6 +6,7 @@ import '../../../shared/widgets/primary_button.dart';
 import '../../../shared/widgets/secondary_button.dart';
 import '../../../theme/app_colors.dart';
 import '../../../theme/app_spacing.dart';
+import '../../parking/data/favorites_store.dart';
 import '../../parking/domain/parking_place.dart';
 import '../../parking/presentation/parking_ui.dart';
 import '../../parking/presentation/widgets/regulation_badge.dart';
@@ -31,22 +32,28 @@ class ParkingDetailScreen extends StatelessWidget {
       backgroundColor: AppColors.background,
       body: Column(
         children: [
-          AppTopBar(
-            leading: IconButton(
-              onPressed: () => Navigator.of(context).maybePop(),
-              icon: const Icon(
-                Icons.chevron_left,
-                color: AppColors.textOnPrimary,
-                size: 28,
-              ),
-            ),
-            trailing: IconButton(
-              onPressed: () {},
-              icon: const Icon(
-                Icons.favorite_border,
-                color: AppColors.textOnPrimary,
-              ),
-            ),
+          ListenableBuilder(
+            listenable: favoritesStore,
+            builder: (context, _) {
+              final isFavorite = favoritesStore.contains(place.id);
+              return AppTopBar(
+                leading: IconButton(
+                  onPressed: () => Navigator.of(context).maybePop(),
+                  icon: const Icon(
+                    Icons.chevron_left,
+                    color: AppColors.textOnPrimary,
+                    size: 28,
+                  ),
+                ),
+                trailing: IconButton(
+                  onPressed: () => favoritesStore.toggle(place.id),
+                  icon: Icon(
+                    isFavorite ? Icons.favorite : Icons.favorite_border,
+                    color: AppColors.textOnPrimary,
+                  ),
+                ),
+              );
+            },
           ),
           Expanded(
             child: ListView(
@@ -129,10 +136,22 @@ class ParkingDetailScreen extends StatelessWidget {
                           ),
                           const SizedBox(width: AppSpacing.md),
                           Expanded(
-                            child: PrimaryButton(
-                              label: AppStrings.detailSave,
-                              icon: Icons.favorite,
-                              onPressed: () {},
+                            child: ListenableBuilder(
+                              listenable: favoritesStore,
+                              builder: (context, _) {
+                                final isFavorite =
+                                    favoritesStore.contains(place.id);
+                                return PrimaryButton(
+                                  label: isFavorite
+                                      ? AppStrings.detailSaved
+                                      : AppStrings.detailSave,
+                                  icon: isFavorite
+                                      ? Icons.check
+                                      : Icons.favorite,
+                                  onPressed: () =>
+                                      favoritesStore.toggle(place.id),
+                                );
+                              },
                             ),
                           ),
                         ],
