@@ -18,10 +18,12 @@ class AppTopBar extends StatelessWidget {
         statusBarColor: AppColors.primary,
       ),
       child: Container(
+        width: double.infinity,
         color: AppColors.primary,
         padding: EdgeInsets.only(top: topPadding),
         child: SizedBox(
           height: 60,
+          width: double.infinity,
           child: Stack(
             alignment: Alignment.center,
             children: [
