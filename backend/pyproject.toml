@@ -1,0 +1,7 @@
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+addopts = "-q"
+# `app/` vive en backend/, que es el rootdir cuando pytest encuentra este pyproject.
+# Lo añadimos a sys.path para que `from app.xxx import ...` funcione desde los tests.
+pythonpath = ["."]
