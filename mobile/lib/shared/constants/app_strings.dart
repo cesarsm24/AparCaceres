@@ -44,4 +44,21 @@ class AppStrings {
   static const String settingHelp = 'Ayuda y soporte';
   static const String settingAbout = 'Acerca de AparCáceres';
   static const String settingAboutValue = 'v1.0.0';
+
+  static const String mapResultsFound = 'aparcamientos encontrados';
+  static const String mapRadiusPrefix = 'Radio';
+  static const String mapFreeAndPaid = 'Gratis y de pago';
+
+  static const String filtersTitle = 'Filtros';
+  static const String filtersRadius = 'Radio';
+  static const String filtersType = 'Tipo';
+  static const String filtersTypeFree = 'Gratis';
+  static const String filtersTypePaid = 'De pago';
+  static const String filtersCovered = 'Cubierto';
+  static const String filtersCoveredHint = 'Solo aparcamientos cubiertos';
+  static const String filtersAccessible = 'Accesible';
+  static const String filtersAccessibleHint = 'Solo aparcamientos accesibles';
+  static const String filtersAvailable = 'Plazas disponibles';
+  static const String filtersClear = 'Limpiar';
+  static const String filtersApply = 'Aplicar filtros';
 }
