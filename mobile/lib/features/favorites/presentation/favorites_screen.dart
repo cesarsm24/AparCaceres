@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:latlong2/latlong.dart';
 
 import '../../../shared/constants/app_strings.dart';
 import '../../../shared/widgets/app_top_bar.dart';
 import '../../../theme/app_colors.dart';
 import '../../../theme/app_spacing.dart';
-import '../../parking_detail/data/parking_detail_mock_data.dart';
+import '../../parking/data/parking_constants.dart';
+import '../../parking/data/parking_repository_provider.dart';
+import '../../parking/domain/parking_place.dart';
 import '../../parking_detail/presentation/parking_detail_screen.dart';
-import '../data/favorites_mock_data.dart';
 import 'widgets/favorite_tile.dart';
 
 class FavoritesScreen extends StatelessWidget {
@@ -32,26 +34,48 @@ class FavoritesScreen extends StatelessWidget {
             ),
           ),
           Expanded(
-            child: ListView.separated(
-              padding: const EdgeInsets.fromLTRB(
-                AppSpacing.horizontalPadding,
-                AppSpacing.md,
-                AppSpacing.horizontalPadding,
-                AppSpacing.lg,
-              ),
-              itemCount: kFavorites.length,
-              separatorBuilder: (_, _) =>
-                  const SizedBox(height: AppSpacing.md),
-              itemBuilder: (_, i) => FavoriteTile(
-                favorite: kFavorites[i],
-                onTap: () => Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => const ParkingDetailScreen(
-                      detail: kParkingDetailSample,
+            child: FutureBuilder<List<ParkingPlace>>(
+              future: parkingRepository.getFavorites(),
+              builder: (context, snapshot) {
+                final favorites = snapshot.data ?? const <ParkingPlace>[];
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                if (favorites.isEmpty) {
+                  return const Center(
+                    child: Text(
+                      'Todavia no hay favoritos.',
+                      style: TextStyle(color: AppColors.textSecondary),
                     ),
+                  );
+                }
+                return ListView.separated(
+                  padding: const EdgeInsets.fromLTRB(
+                    AppSpacing.horizontalPadding,
+                    AppSpacing.md,
+                    AppSpacing.horizontalPadding,
+                    AppSpacing.lg,
                   ),
-                ),
-              ),
+                  itemCount: favorites.length,
+                  separatorBuilder: (_, _) =>
+                      const SizedBox(height: AppSpacing.md),
+                  itemBuilder: (_, i) {
+                    final place = favorites[i];
+                    return FavoriteTile(
+                      place: place,
+                      distanceMeters: const Distance()(
+                        kMockUserLocation,
+                        place.position,
+                      ),
+                      onTap: () => Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => ParkingDetailScreen(place: place),
+                        ),
+                      ),
+                    );
+                  },
+                );
+              },
             ),
           ),
         ],

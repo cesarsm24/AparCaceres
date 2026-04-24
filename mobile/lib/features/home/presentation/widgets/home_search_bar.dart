@@ -5,13 +5,15 @@ import '../../../../theme/app_colors.dart';
 import '../../../../theme/app_spacing.dart';
 
 class HomeSearchBar extends StatelessWidget {
-  const HomeSearchBar({super.key});
+  const HomeSearchBar({super.key, this.onTap});
+
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
     return TextField(
       readOnly: true,
-      onTap: () {},
+      onTap: onTap,
       decoration: InputDecoration(
         hintText: AppStrings.searchHint,
         hintStyle: const TextStyle(color: AppColors.textSecondary),

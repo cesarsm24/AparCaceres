@@ -2,27 +2,27 @@ import 'package:flutter/material.dart';
 
 import '../../../../theme/app_colors.dart';
 import '../../../../theme/app_spacing.dart';
+import '../../domain/parking_place.dart';
+import '../parking_ui.dart';
 
-class PriceBadge extends StatelessWidget {
-  const PriceBadge({super.key, required this.label, required this.isPaid});
+class RegulationBadge extends StatelessWidget {
+  const RegulationBadge({super.key, required this.regulation});
 
-  final String label;
-  final bool isPaid;
+  final ParkingRegulation regulation;
 
   @override
   Widget build(BuildContext context) {
-    final color = isPaid ? AppColors.primary : AppColors.success;
     return Container(
       padding: const EdgeInsets.symmetric(
         horizontal: AppSpacing.md,
         vertical: 6,
       ),
       decoration: BoxDecoration(
-        color: color,
+        color: regulation.color,
         borderRadius: BorderRadius.circular(AppSpacing.radiusPill),
       ),
       child: Text(
-        label,
+        regulation.label,
         style: const TextStyle(
           color: AppColors.textOnPrimary,
           fontSize: 13,

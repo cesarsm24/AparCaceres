@@ -3,35 +3,43 @@ import 'package:flutter/material.dart';
 import '../../../../shared/widgets/app_card.dart';
 import '../../../../theme/app_colors.dart';
 import '../../../../theme/app_spacing.dart';
-import '../../data/favorites_mock_data.dart';
+import '../../../parking/domain/parking_place.dart';
+import '../../../parking/presentation/parking_ui.dart';
+import '../../../parking/presentation/widgets/parking_thumbnail.dart';
 
 class FavoriteTile extends StatelessWidget {
   const FavoriteTile({
     super.key,
-    required this.favorite,
+    required this.place,
+    required this.distanceMeters,
     this.onTap,
     this.onToggleFavorite,
   });
 
-  final FavoriteParking favorite;
+  final ParkingPlace place;
+  final double distanceMeters;
   final VoidCallback? onTap;
   final VoidCallback? onToggleFavorite;
 
   @override
   Widget build(BuildContext context) {
+    final color = place.category.color;
+    final spacesLabel = formatSpaces(place.totalSpaces);
     return AppCard(
       onTap: onTap,
       padding: const EdgeInsets.all(AppSpacing.sm),
       child: Row(
         children: [
-          _Thumbnail(icon: favorite.thumbnailIcon),
+          ParkingThumbnail(place: place),
           const SizedBox(width: AppSpacing.md),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  favorite.name,
+                  place.displayName,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.w700,
@@ -40,21 +48,27 @@ class FavoriteTile extends StatelessWidget {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  '${favorite.distance}  ·  ${favorite.priceLabel}',
+                  '${formatDistance(distanceMeters)}  ·  ${place.category.label}',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
                     fontSize: 13,
                     color: AppColors.textSecondary,
                   ),
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  '${favorite.freeSpots} plazas libres',
-                  style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.success,
+                if (spacesLabel != null) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    spacesLabel,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: color,
+                    ),
                   ),
-                ),
+                ],
               ],
             ),
           ),
@@ -64,25 +78,6 @@ class FavoriteTile extends StatelessWidget {
           ),
         ],
       ),
-    );
-  }
-}
-
-class _Thumbnail extends StatelessWidget {
-  const _Thumbnail({required this.icon});
-
-  final IconData icon;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 72,
-      height: 72,
-      decoration: BoxDecoration(
-        color: AppColors.surfaceMuted,
-        borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-      ),
-      child: Icon(icon, color: AppColors.accent, size: 32),
     );
   }
 }

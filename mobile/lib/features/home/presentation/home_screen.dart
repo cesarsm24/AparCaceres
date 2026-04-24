@@ -1,20 +1,29 @@
 import 'package:flutter/material.dart';
+import 'package:latlong2/latlong.dart';
 
 import '../../../shared/constants/app_strings.dart';
 import '../../../shared/widgets/app_top_bar.dart';
 import '../../../shared/widgets/section_title.dart';
 import '../../../theme/app_colors.dart';
 import '../../../theme/app_spacing.dart';
-import '../../parking_detail/data/parking_detail_mock_data.dart';
+import '../../map/presentation/widgets/filters_drawer.dart';
+import '../../parking/data/parking_constants.dart';
+import '../../parking/data/parking_repository_provider.dart';
+import '../../parking/domain/parking_place.dart';
+import '../../parking/domain/parking_query.dart';
 import '../../parking_detail/presentation/parking_detail_screen.dart';
-import '../data/home_mock_data.dart';
+import '../../search/presentation/search_screen.dart';
 import 'widgets/home_search_bar.dart';
 import 'widgets/nearby_summary_card.dart';
 import 'widgets/quick_access_row.dart';
 import 'widgets/suggestion_tile.dart';
 
 class HomeScreen extends StatelessWidget {
-  const HomeScreen({super.key});
+  const HomeScreen({super.key, required this.onOpenMap});
+
+  final ValueChanged<MapFilters> onOpenMap;
+
+  static const int _radiusMeters = 1000;
 
   @override
   Widget build(BuildContext context) {
@@ -32,43 +41,105 @@ class HomeScreen extends StatelessWidget {
             ),
           ),
           Expanded(
-            child: ListView(
-              padding: const EdgeInsets.fromLTRB(
-                AppSpacing.horizontalPadding,
-                AppSpacing.md,
-                AppSpacing.horizontalPadding,
-                AppSpacing.lg,
+            child: FutureBuilder<List<ParkingPlace>>(
+              future: parkingRepository.getNearby(
+                const ParkingQuery(
+                  center: kMockUserLocation,
+                  radiusMeters: _radiusMeters,
+                ),
               ),
-              children: [
-                const HomeSearchBar(),
-                const SizedBox(height: AppSpacing.lg),
-                const SectionTitle(AppStrings.sectionQuickAccess),
-                const SizedBox(height: AppSpacing.md),
-                const QuickAccessRow(),
-                const SizedBox(height: AppSpacing.lg),
-                const NearbySummaryCard(summary: kNearbySummary),
-                const SizedBox(height: AppSpacing.lg),
-                const SectionTitle(AppStrings.sectionSuggestions),
-                const SizedBox(height: AppSpacing.md),
-                ...kSuggestions.map(
-                  (s) => Padding(
-                    padding: const EdgeInsets.only(bottom: AppSpacing.md),
-                    child: SuggestionTile(
-                      suggestion: s,
+              builder: (context, snapshot) {
+                final places = snapshot.data ?? const <ParkingPlace>[];
+                final suggestions = places.take(4).toList();
+                return ListView(
+                  padding: const EdgeInsets.fromLTRB(
+                    AppSpacing.horizontalPadding,
+                    AppSpacing.md,
+                    AppSpacing.horizontalPadding,
+                    AppSpacing.lg,
+                  ),
+                  children: [
+                    HomeSearchBar(
                       onTap: () => Navigator.of(context).push(
                         MaterialPageRoute(
-                          builder: (_) => const ParkingDetailScreen(
-                            detail: kParkingDetailSample,
-                          ),
+                          builder: (_) => const SearchScreen(),
                         ),
                       ),
                     ),
-                  ),
-                ),
-              ],
+                    const SizedBox(height: AppSpacing.lg),
+                    const SectionTitle(AppStrings.sectionQuickAccess),
+                    const SizedBox(height: AppSpacing.md),
+                    QuickAccessRow(
+                      onVehicleSelected: (vehicleType) =>
+                          onOpenMap(MapFilters.forVehicle(vehicleType)),
+                      onAccessibleSelected: () =>
+                          onOpenMap(MapFilters.forAccessible()),
+                    ),
+                    const SizedBox(height: AppSpacing.lg),
+                    NearbySummaryCard(
+                      places: places,
+                      radiusMeters: _radiusMeters,
+                      onTap: () => onOpenMap(MapFilters()),
+                    ),
+                    const SizedBox(height: AppSpacing.lg),
+                    const SectionTitle(AppStrings.sectionSuggestions),
+                    const SizedBox(height: AppSpacing.md),
+                    if (snapshot.connectionState == ConnectionState.waiting)
+                      const _LoadingState()
+                    else if (suggestions.isEmpty)
+                      const _EmptyState()
+                    else
+                      ...suggestions.map(
+                        (place) => Padding(
+                          padding: const EdgeInsets.only(bottom: AppSpacing.md),
+                          child: SuggestionTile(
+                            place: place,
+                            distanceMeters: const Distance()(
+                              kMockUserLocation,
+                              place.position,
+                            ),
+                            onTap: () => Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) =>
+                                    ParkingDetailScreen(place: place),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
+                );
+              },
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _LoadingState extends StatelessWidget {
+  const _LoadingState();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Padding(
+      padding: EdgeInsets.symmetric(vertical: AppSpacing.lg),
+      child: Center(child: CircularProgressIndicator()),
+    );
+  }
+}
+
+class _EmptyState extends StatelessWidget {
+  const _EmptyState();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Padding(
+      padding: EdgeInsets.symmetric(vertical: AppSpacing.lg),
+      child: Text(
+        'No hay resultados cerca con los datos actuales.',
+        style: TextStyle(color: AppColors.textSecondary),
       ),
     );
   }

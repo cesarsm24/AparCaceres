@@ -11,9 +11,10 @@ class AppStrings {
   static const String sectionNearby = 'Cerca de ti';
   static const String sectionSuggestions = 'Sugerencias para ti';
 
-  static const String quickMap = 'Mapa';
-  static const String quickNearby = 'Cercanos';
-  static const String quickFavorites = 'Favoritos';
+  static const String quickCar = 'Coche';
+  static const String quickMotorbike = 'Moto';
+  static const String quickBike = 'Bici';
+  static const String quickAccessible = 'PMR';
 
   static const String navHome = 'Inicio';
   static const String navMap = 'Mapa';
@@ -25,10 +26,10 @@ class AppStrings {
   static const String favoritesEdit = 'Editar';
 
   static const String detailType = 'Tipo';
-  static const String detailSchedule = 'Horario';
-  static const String detailRate = 'Tarifa';
-  static const String detailFreeSpots = 'Plazas libres';
-  static const String detailServices = 'Servicios';
+  static const String detailRegulation = 'Regulación';
+  static const String detailSpaces = 'Plazas';
+  static const String detailStreet = 'Calle';
+  static const String detailArea = 'Zona';
   static const String detailNavigate = 'Cómo llegar';
   static const String detailSave = 'Guardar';
 
@@ -45,20 +46,28 @@ class AppStrings {
   static const String settingAbout = 'Acerca de AparCáceres';
   static const String settingAboutValue = 'v1.0.0';
 
-  static const String mapResultsFound = 'aparcamientos encontrados';
+  static const String mapResultsFound = 'resultados encontrados';
   static const String mapRadiusPrefix = 'Radio';
-  static const String mapFreeAndPaid = 'Gratis y de pago';
+  static const String mapAllTypes = 'Todos los tipos';
 
   static const String filtersTitle = 'Filtros';
   static const String filtersRadius = 'Radio';
-  static const String filtersType = 'Tipo';
-  static const String filtersTypeFree = 'Gratis';
-  static const String filtersTypePaid = 'De pago';
-  static const String filtersCovered = 'Cubierto';
-  static const String filtersCoveredHint = 'Solo aparcamientos cubiertos';
-  static const String filtersAccessible = 'Accesible';
-  static const String filtersAccessibleHint = 'Solo aparcamientos accesibles';
-  static const String filtersAvailable = 'Plazas disponibles';
+  static const String filtersVehicle = 'Vehículo';
+  static const String filtersCategory = 'Categoría';
+  static const String filtersRegulation = 'Regulación';
+  static const String filtersSpaces = 'Plazas mínimas';
   static const String filtersClear = 'Limpiar';
   static const String filtersApply = 'Aplicar filtros';
+
+  static const String resultsSort = 'Ordenar';
+  static const String resultsCountOne = 'resultado';
+  static const String resultsCountMany = 'resultados';
+  static const String resultsEmpty = 'No hay aparcamientos con estos filtros.';
+  static const String sortByDistance = 'Distancia';
+  static const String sortByName = 'Nombre';
+  static const String sortBySpaces = 'Plazas registradas';
+
+  static const String searchFieldHint = 'Buscar por nombre o calle';
+  static const String searchEmpty = 'Escribe para buscar aparcamientos en Cáceres.';
+  static const String searchNoResults = 'Sin resultados para tu búsqueda.';
 }

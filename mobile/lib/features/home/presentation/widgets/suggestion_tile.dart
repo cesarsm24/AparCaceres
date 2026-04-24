@@ -3,29 +3,41 @@ import 'package:flutter/material.dart';
 import '../../../../shared/widgets/app_card.dart';
 import '../../../../theme/app_colors.dart';
 import '../../../../theme/app_spacing.dart';
-import '../../data/home_mock_data.dart';
+import '../../../parking/domain/parking_place.dart';
+import '../../../parking/presentation/parking_ui.dart';
+import '../../../parking/presentation/widgets/parking_thumbnail.dart';
 
 class SuggestionTile extends StatelessWidget {
-  const SuggestionTile({super.key, required this.suggestion, this.onTap});
+  const SuggestionTile({
+    super.key,
+    required this.place,
+    required this.distanceMeters,
+    this.onTap,
+  });
 
-  final ParkingSuggestion suggestion;
+  final ParkingPlace place;
+  final double distanceMeters;
   final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
+    final color = place.category.color;
+    final spacesLabel = formatSpaces(place.totalSpaces);
     return AppCard(
       onTap: onTap,
       padding: const EdgeInsets.all(AppSpacing.sm),
       child: Row(
         children: [
-          _Thumbnail(icon: suggestion.thumbnailIcon),
+          ParkingThumbnail(place: place, size: 64),
           const SizedBox(width: AppSpacing.md),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  suggestion.name,
+                  place.displayName,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.w700,
@@ -34,56 +46,41 @@ class SuggestionTile extends StatelessWidget {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  '${suggestion.distance}  ·  ${suggestion.priceLabel}',
+                  '${formatDistance(distanceMeters)}  ·  ${place.category.label}',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
                     fontSize: 13,
                     color: AppColors.textSecondary,
                   ),
                 ),
-                const SizedBox(height: 4),
-                Row(
-                  children: [
-                    const Icon(
-                      Icons.directions_car_outlined,
-                      size: 14,
-                      color: AppColors.success,
-                    ),
-                    const SizedBox(width: AppSpacing.xs),
-                    Text(
-                      '${suggestion.freeSpots} plazas libres',
-                      style: const TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.success,
+                if (spacesLabel != null) ...[
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      Icon(place.vehicleType.icon, size: 14, color: color),
+                      const SizedBox(width: AppSpacing.xs),
+                      Expanded(
+                        child: Text(
+                          spacesLabel,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: color,
+                          ),
+                        ),
                       ),
-                    ),
-                  ],
-                ),
+                    ],
+                  ),
+                ],
               ],
             ),
           ),
           const Icon(Icons.chevron_right, color: AppColors.textSecondary),
         ],
       ),
-    );
-  }
-}
-
-class _Thumbnail extends StatelessWidget {
-  const _Thumbnail({required this.icon});
-
-  final IconData icon;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 64,
-      height: 64,
-      decoration: BoxDecoration(
-        color: AppColors.surfaceMuted,
-        borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-      ),
-      child: Icon(icon, color: AppColors.accent, size: 28),
     );
   }
 }

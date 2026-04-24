@@ -4,16 +4,33 @@ import '../../../../shared/constants/app_strings.dart';
 import '../../../../shared/widgets/app_card.dart';
 import '../../../../theme/app_colors.dart';
 import '../../../../theme/app_spacing.dart';
-import '../../data/home_mock_data.dart';
+import '../../../parking/domain/parking_place.dart';
+import '../../../parking/presentation/parking_ui.dart';
 
 class NearbySummaryCard extends StatelessWidget {
-  const NearbySummaryCard({super.key, required this.summary});
+  const NearbySummaryCard({
+    super.key,
+    required this.places,
+    required this.radiusMeters,
+    this.onTap,
+  });
 
-  final NearbySummary summary;
+  final List<ParkingPlace> places;
+  final int radiusMeters;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
+    final totalSpaces = places.fold<int>(
+      0,
+      (sum, place) => sum + (place.totalSpaces ?? 0),
+    );
+    final accent = places.isEmpty
+        ? AppColors.primary
+        : places.first.category.color;
+
     return AppCard(
+      onTap: onTap,
       padding: const EdgeInsets.all(AppSpacing.md),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -28,7 +45,7 @@ class NearbySummaryCard extends StatelessWidget {
           ),
           const SizedBox(height: AppSpacing.xs),
           Text(
-            'Radio: ${summary.radiusMeters} m',
+            'Radio: $radiusMeters m',
             style: const TextStyle(
               fontSize: 13,
               color: AppColors.textSecondary,
@@ -43,7 +60,7 @@ class NearbySummaryCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      '${summary.availableParkings}',
+                      '${places.length}',
                       style: const TextStyle(
                         fontSize: 40,
                         fontWeight: FontWeight.w700,
@@ -53,72 +70,83 @@ class NearbySummaryCard extends StatelessWidget {
                     ),
                     const SizedBox(height: AppSpacing.xs),
                     const Text(
-                      'aparcamientos\ndisponibles',
+                      'resultados cerca de ti',
                       style: TextStyle(
                         fontSize: 14,
                         color: AppColors.textSecondary,
                         height: 1.3,
                       ),
                     ),
-                    const SizedBox(height: AppSpacing.sm),
-                    Row(
-                      children: [
-                        const Icon(
-                          Icons.directions_car_outlined,
-                          size: 16,
-                          color: AppColors.success,
-                        ),
-                        const SizedBox(width: AppSpacing.xs),
-                        Text(
-                          '${summary.freeSpots} plazas libres',
-                          style: const TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.success,
-                          ),
-                        ),
-                      ],
-                    ),
                   ],
                 ),
               ),
-              _OccupancyIndicator(progress: summary.occupancy),
+              _MapShortcutIcon(color: accent),
             ],
           ),
+          if (totalSpaces > 0) ...[
+            const SizedBox(height: AppSpacing.sm),
+            Row(
+              children: [
+                Icon(Icons.local_parking_outlined, size: 16, color: accent),
+                const SizedBox(width: AppSpacing.xs),
+                Expanded(
+                  child: Text(
+                    formatSpaces(totalSpaces)!,
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: accent,
+                    ),
+                  ),
+                ),
+                const Icon(Icons.chevron_right, color: AppColors.textSecondary),
+              ],
+            ),
+          ] else
+            const Align(
+              alignment: Alignment.centerRight,
+              child: Icon(Icons.chevron_right, color: AppColors.textSecondary),
+            ),
         ],
       ),
     );
   }
 }
 
-class _OccupancyIndicator extends StatelessWidget {
-  const _OccupancyIndicator({required this.progress});
+class _MapShortcutIcon extends StatelessWidget {
+  const _MapShortcutIcon({required this.color});
 
-  final double progress;
+  final Color color;
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      width: 76,
-      height: 76,
+    return Container(
+      width: 64,
+      height: 64,
+      decoration: BoxDecoration(
+        color: AppColors.surfaceMuted,
+        borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+        border: Border.all(color: AppColors.border),
+      ),
       child: Stack(
         alignment: Alignment.center,
         children: [
-          SizedBox.expand(
-            child: CircularProgressIndicator(
-              value: progress,
-              strokeWidth: 6,
-              backgroundColor: AppColors.border,
-              valueColor: const AlwaysStoppedAnimation(AppColors.success),
-              strokeCap: StrokeCap.round,
-            ),
-          ),
-          const Text(
-            'P',
-            style: TextStyle(
-              fontSize: 28,
-              fontWeight: FontWeight.w700,
-              color: AppColors.primary,
+          Icon(Icons.map_outlined, color: color, size: 30),
+          Positioned(
+            right: 8,
+            bottom: 8,
+            child: Container(
+              width: 18,
+              height: 18,
+              decoration: const BoxDecoration(
+                color: AppColors.surface,
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.arrow_forward,
+                size: 12,
+                color: AppColors.textSecondary,
+              ),
             ),
           ),
         ],

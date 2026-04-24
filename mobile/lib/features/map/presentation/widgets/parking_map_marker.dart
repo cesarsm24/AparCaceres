@@ -1,25 +1,35 @@
 import 'package:flutter/material.dart';
 
 import '../../../../theme/app_colors.dart';
+import '../../../parking/domain/parking_place.dart';
+import '../../../parking/presentation/parking_ui.dart';
 
 class ParkingMapMarker extends StatelessWidget {
-  const ParkingMapMarker({super.key, this.isPaid = true});
+  const ParkingMapMarker({
+    super.key,
+    required this.category,
+    this.isSelected = false,
+  });
 
-  final bool isPaid;
+  final ParkingCategory category;
+  final bool isSelected;
 
   @override
   Widget build(BuildContext context) {
-    final color = isPaid ? AppColors.primary : AppColors.success;
+    final color = category.color;
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
         Container(
-          width: 36,
-          height: 36,
+          width: isSelected ? 42 : 36,
+          height: isSelected ? 42 : 36,
           decoration: BoxDecoration(
             color: color,
             shape: BoxShape.circle,
-            border: Border.all(color: AppColors.textOnPrimary, width: 2),
+            border: Border.all(
+              color: AppColors.textOnPrimary,
+              width: isSelected ? 3 : 2,
+            ),
             boxShadow: const [
               BoxShadow(
                 color: Color(0x33000000),
@@ -28,14 +38,11 @@ class ParkingMapMarker extends StatelessWidget {
               ),
             ],
           ),
-          child: const Center(
-            child: Text(
-              'P',
-              style: TextStyle(
-                color: AppColors.textOnPrimary,
-                fontSize: 16,
-                fontWeight: FontWeight.w800,
-              ),
+          child: Center(
+            child: Icon(
+              category.icon,
+              color: AppColors.textOnPrimary,
+              size: isSelected ? 22 : 19,
             ),
           ),
         ),
