@@ -10,6 +10,7 @@ import '../../parking/data/parking_repository_provider.dart';
 import '../../parking/domain/parking_place.dart';
 import '../../parking/presentation/parking_ui.dart';
 import '../../parking_detail/presentation/parking_detail_screen.dart';
+import '../../parking_results/presentation/parking_results_screen.dart';
 import '../../search/presentation/search_screen.dart';
 import 'widgets/filters_drawer.dart';
 import 'widgets/map_controls.dart';
@@ -167,6 +168,13 @@ class _MapScreenState extends State<MapScreen> {
                           ? MapResultsSheet(
                               resultCount: places.length,
                               radiusMeters: _filters.radiusMeters,
+                              onTap: () => Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder: (_) => ParkingResultsScreen(
+                                    filters: _filters,
+                                  ),
+                                ),
+                              ),
                             )
                           : ParkingPreviewSheet(
                               place: selected,
