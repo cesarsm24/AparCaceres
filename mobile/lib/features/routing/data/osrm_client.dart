@@ -16,11 +16,15 @@ class OsrmClient {
   final http.Client _client;
   final String _userAgent;
 
-  Future<RoutePath> walkingRoute(LatLng origin, LatLng destination) async {
+  Future<RoutePath> route(
+    String profile,
+    LatLng origin,
+    LatLng destination,
+  ) async {
     final coords =
         '${origin.longitude},${origin.latitude};'
         '${destination.longitude},${destination.latitude}';
-    final uri = Uri.https(_host, '/route/v1/foot/$coords', {
+    final uri = Uri.https(_host, '/route/v1/$profile/$coords', {
       'overview': 'full',
       'geometries': 'geojson',
       'alternatives': 'false',
