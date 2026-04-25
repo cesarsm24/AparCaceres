@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:latlong2/latlong.dart';
 
 import '../../../../shared/constants/app_strings.dart';
 import '../../../../shared/widgets/primary_button.dart';
@@ -17,6 +18,8 @@ class MapFilters {
     Set<ParkingCategory>? categories,
     Set<ParkingRegulation>? regulations,
     this.minSpaces = 0,
+    this.center,
+    this.centerLabel,
   }) : vehicleTypes = vehicleTypes ?? ParkingVehicleType.values.toSet(),
        categories = categories ?? ParkingCategory.values.toSet(),
        regulations = regulations ?? ParkingRegulation.values.toSet();
@@ -26,10 +29,12 @@ class MapFilters {
   final Set<ParkingCategory> categories;
   final Set<ParkingRegulation> regulations;
   final int minSpaces;
+  final LatLng? center;
+  final String? centerLabel;
 
   ParkingQuery toQuery() {
     return ParkingQuery(
-      center: kMockUserLocation,
+      center: center ?? kMockUserLocation,
       radiusMeters: radiusMeters,
       vehicleTypes: vehicleTypes,
       categories: categories,
@@ -44,6 +49,8 @@ class MapFilters {
     Set<ParkingCategory>? categories,
     Set<ParkingRegulation>? regulations,
     int? minSpaces,
+    LatLng? center,
+    String? centerLabel,
   }) {
     return MapFilters(
       radiusMeters: radiusMeters ?? this.radiusMeters,
@@ -51,6 +58,8 @@ class MapFilters {
       categories: categories ?? this.categories,
       regulations: regulations ?? this.regulations,
       minSpaces: minSpaces ?? this.minSpaces,
+      center: center ?? this.center,
+      centerLabel: centerLabel ?? this.centerLabel,
     );
   }
 
@@ -64,6 +73,10 @@ class MapFilters {
       categories: {ParkingCategory.accessible},
       regulations: {ParkingRegulation.reserved},
     );
+  }
+
+  static MapFilters atLocation(LatLng center, {String? label}) {
+    return MapFilters(center: center, centerLabel: label);
   }
 }
 
