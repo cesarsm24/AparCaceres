@@ -5,7 +5,7 @@ import 'package:latlong2/latlong.dart';
 import '../../../shared/constants/app_strings.dart';
 import '../../../theme/app_colors.dart';
 import '../../../theme/app_spacing.dart';
-import '../../parking/data/parking_constants.dart';
+import '../../location/data/location_service.dart';
 import '../../parking/data/parking_repository_provider.dart';
 import '../../parking/domain/parking_place.dart';
 import '../../parking/domain/parking_query.dart';
@@ -91,7 +91,7 @@ class _SearchScreenState extends State<SearchScreen> {
                   itemBuilder: (_, i) {
                     final place = results[i];
                     final distanceMeters = const Distance()(
-                      kMockUserLocation,
+                      locationService.position.value,
                       place.position,
                     );
                     return SearchResultTile(

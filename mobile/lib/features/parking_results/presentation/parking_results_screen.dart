@@ -5,8 +5,8 @@ import '../../../shared/constants/app_strings.dart';
 import '../../../shared/widgets/app_top_bar.dart';
 import '../../../theme/app_colors.dart';
 import '../../../theme/app_spacing.dart';
+import '../../location/data/location_service.dart';
 import '../../map/presentation/widgets/filters_drawer.dart';
-import '../../parking/data/parking_constants.dart';
 import '../../parking/data/parking_repository_provider.dart';
 import '../../parking/domain/parking_place.dart';
 import '../../parking_detail/presentation/parking_detail_screen.dart';
@@ -102,7 +102,8 @@ class _ParkingResultsScreenState extends State<ParkingResultsScreen> {
                               itemBuilder: (_, i) {
                                 final place = places[i];
                                 final origin =
-                                    widget.filters.center ?? kMockUserLocation;
+                                    widget.filters.center ??
+                                    locationService.position.value;
                                 final distanceMeters = const Distance()(
                                   origin,
                                   place.position,
