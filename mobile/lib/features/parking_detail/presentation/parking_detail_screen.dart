@@ -132,12 +132,8 @@ class ParkingDetailScreen extends StatelessWidget {
                             child: SecondaryButton(
                               label: AppStrings.detailNavigate,
                               icon: Icons.send_outlined,
-                              onPressed: () {
-                                routeRequest.requestRoute(place);
-                                Navigator.of(
-                                  context,
-                                ).popUntil((route) => route.isFirst);
-                              },
+                              onPressed: () =>
+                                  routeRequest.requestRoute(place),
                             ),
                           ),
                           const SizedBox(width: AppSpacing.md),
