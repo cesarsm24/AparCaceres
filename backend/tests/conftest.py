@@ -1,22 +1,44 @@
 """Fixtures compartidos para los tests.
 
 `fake_redis` es una implementación minimalista en memoria del subset de la
-API de `redis-py` que usa el importador. No pretende ser un sustituto general
-de Redis: solo cubre los comandos que se ejercitan en el flujo de import
-(`scan_iter`, `delete`, `geoadd`, `hset`, `pipeline`, `hgetall`, `setex`,
-`get`, `zscore`).
+API de `redis-py` que usan el importador y los routers (`scan_iter`, `delete`,
+`geoadd`, `geosearch`, `hset`, `pipeline`, `hgetall`, `setex`, `get`, `zscore`).
 
 Mantenerla aquí (en lugar de añadir `fakeredis` como dependencia) tiene dos
 ventajas:
 - los tests no dependen de un paquete extra,
 - el comportamiento queda explícito y auditable cuando algún test falla.
+
+`api_client` arma un `FastAPI` minimal (sin lifespan) con el `FakeRedis`
+inyectado en `app.state.redis`, y devuelve un `TestClient` listo para hacer
+requests contra los endpoints reales.
 """
 
 from __future__ import annotations
 
+import math
 from typing import Iterator
 
 import pytest
+from fastapi import FastAPI
+from fastapi.testclient import TestClient
+
+
+# Radio de la Tierra en metros — usado por la implementación haversine de
+# `geosearch`. No buscamos exactitud al milímetro: nos basta con que ordene
+# correctamente y respete el radio en los tests.
+_EARTH_RADIUS_M = 6_371_000.0
+
+
+def _haversine_m(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
+    phi1, phi2 = math.radians(lat1), math.radians(lat2)
+    dphi = math.radians(lat2 - lat1)
+    dlamb = math.radians(lon2 - lon1)
+    a = (
+        math.sin(dphi / 2) ** 2
+        + math.cos(phi1) * math.cos(phi2) * math.sin(dlamb / 2) ** 2
+    )
+    return _EARTH_RADIUS_M * 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
 
 
 class FakeRedis:
@@ -119,6 +141,42 @@ class FakeRedis:
         # para los asserts del test.
         return 1.0
 
+    def geosearch(
+        self,
+        key: str,
+        *,
+        longitude: float,
+        latitude: float,
+        radius: float,
+        unit: str = "m",
+        withdist: bool = False,
+        sort: str | None = None,
+    ):
+        """Subset de `GEOSEARCH FROMLONLAT BYRADIUS`.
+
+        Solo soporta `unit='m'`, suficiente para los tests del backend (los
+        endpoints siempre piden metros). `withdist=True` devuelve `[member, dist]`
+        en cada fila; `sort='ASC'` ordena por distancia ascendente.
+        """
+        if unit != "m":
+            raise NotImplementedError("FakeRedis.geosearch solo soporta unit='m'")
+
+        bucket = self.geo.get(key, {})
+        rows: list[tuple[str, float]] = []
+        for member, (mlon, mlat) in bucket.items():
+            dist = _haversine_m(latitude, longitude, mlat, mlon)
+            if dist <= radius:
+                rows.append((member, dist))
+
+        if sort == "ASC":
+            rows.sort(key=lambda r: r[1])
+        elif sort == "DESC":
+            rows.sort(key=lambda r: r[1], reverse=True)
+
+        if withdist:
+            return [[member, dist] for member, dist in rows]
+        return [member for member, _ in rows]
+
     # ---------- Pipeline ----------
 
     def pipeline(self) -> "FakePipeline":
@@ -149,6 +207,10 @@ class FakePipeline:
         self._cmds.append(("hset", key, mapping))
         return self
 
+    def hgetall(self, key: str) -> "FakePipeline":
+        self._cmds.append(("hgetall", key))
+        return self
+
     def execute(self) -> list:
         results = []
         for cmd in self._cmds:
@@ -158,6 +220,8 @@ class FakePipeline:
                 results.append(self.parent.geoadd(cmd[1], cmd[2]))
             elif cmd[0] == "hset":
                 results.append(self.parent.hset(cmd[1], mapping=cmd[2]))
+            elif cmd[0] == "hgetall":
+                results.append(self.parent.hgetall(cmd[1]))
         self._cmds.clear()
         return results
 
@@ -165,3 +229,186 @@ class FakePipeline:
 @pytest.fixture
 def fake_redis() -> FakeRedis:
     return FakeRedis()
+
+
+# ============================================================
+# Fixtures de FastAPI: TestClient con FakeRedis inyectado
+# ============================================================
+
+def _build_test_app(fake_redis: FakeRedis) -> FastAPI:
+    """Monta una app FastAPI mínima sin lifespan, lista para `TestClient`.
+
+    Importamos los routers DENTRO de la función para que cada test arranque
+    desde un estado limpio y no haya efectos colaterales del orden de imports.
+    """
+    from app.routers import health, imports, parkings
+
+    app = FastAPI()
+    app.state.redis = fake_redis
+    app.include_router(health.router)
+    app.include_router(imports.router)
+    app.include_router(parkings.router)
+    return app
+
+
+@pytest.fixture
+def api_client(fake_redis: FakeRedis) -> Iterator[TestClient]:
+    """`TestClient` contra una app vacía (sin datos en Redis).
+
+    Útil para probar respuestas con catálogo vacío o errores antes de seed.
+    """
+    app = _build_test_app(fake_redis)
+    with TestClient(app) as client:
+        yield client
+
+
+# ============================================================
+# Dataset sintético para los tests de API
+# ============================================================
+#
+# Mezcla los 3 tipos de geometría + variedad de category/regulation/vehicleType
+# y de campos opcionales (totalSpaces, accent-insensitive en `name`/`district`).
+# Diseñado para ejercitar los filtros de los endpoints sin necesidad de leer
+# ficheros reales.
+
+_API_FEATURES: list[dict] = [
+    {  # POINT, parking público gratuito, sin totalSpaces.
+        "type": "Feature",
+        "geometry": {"type": "Point", "coordinates": [-6.34204232, 39.47848638]},
+        "properties": {
+            "NOMBRE": "Escuela Politécnica",
+            "NUCLEO": "CÁCERES",
+            "URL": "http://sig.caceres.es/serweb/fichasig/fichatoponimia.php?mslink=1903",
+        },
+    },
+    {  # POINT, paid_parking en el centro.
+        "type": "Feature",
+        "geometry": {"type": "Point", "coordinates": [-6.3743148782, 39.4757325603]},
+        "properties": {
+            "name": "Obispo Galarza",
+            "category": "paid_parking",
+            "vehicleType": "car",
+            "regulation": "paid",
+            "streetName": "OBISPO GALARZA",
+            "streetType": "CALLE",
+            "district": "CENTRO",
+            "neighborhood": "CENTRO",
+            "URL": "?mslink=2001",
+        },
+    },
+    {  # POLYGON, street_line con totalSpaces.
+        "type": "Feature",
+        "geometry": {
+            "type": "Polygon",
+            "coordinates": [
+                [
+                    [-6.3994515, 39.4670139],
+                    [-6.3991710, 39.4663191],
+                    [-6.3991416, 39.4663258],
+                    [-6.3994238, 39.4670207],
+                    [-6.3994515, 39.4670139],
+                ]
+            ],
+        },
+        "properties": {
+            "name": "Calle Dalia",
+            "category": "street_line",
+            "vehicleType": "car",
+            "regulation": "free",
+            "totalSpaces": 16,
+            "streetName": "DALIA",
+            "streetType": "CALLE",
+            "district": "OESTE",
+            "neighborhood": "EL JUNQUILLO",
+            "URL": "?mslink=5500",
+        },
+    },
+    {  # LINE_STRING.
+        "type": "Feature",
+        "geometry": {
+            "type": "LineString",
+            "coordinates": [
+                [-6.4022597, 39.4775947],
+                [-6.4022522, 39.4775983],
+                [-6.4022077, 39.4776199],
+            ],
+        },
+        "properties": {
+            "name": "Superficie Esquiladores",
+            "category": "street_line",
+            "regulation": "free",
+            "URL": "?mslink=7700",
+        },
+    },
+    {  # POLYGON, blue_zone con muchas plazas.
+        "type": "Feature",
+        "geometry": {
+            "type": "Polygon",
+            "coordinates": [
+                [
+                    [-6.3828, 39.4711],
+                    [-6.3825, 39.4714],
+                    [-6.3824, 39.4714],
+                    [-6.3828, 39.4711],
+                ]
+            ],
+        },
+        "properties": {
+            "name": "Rodriguez de Ledesma",
+            "category": "blue_zone",
+            "vehicleType": "car",
+            "regulation": "blue_zone",
+            "totalSpaces": 19,
+            "streetName": "RODRIGUEZ DE LEDESMA",
+            "district": "OESTE",
+            "URL": "?mslink=9001",
+        },
+    },
+    {  # POINT, parking de motos.
+        "type": "Feature",
+        "geometry": {"type": "Point", "coordinates": [-6.38917, 39.46839]},
+        "properties": {
+            "name": "Calle Londres",
+            "category": "motorbike",
+            "vehicleType": "motorbike",
+            "regulation": "reserved",
+            "totalSpaces": 15,
+            "streetName": "LONDRES",
+            "URL": "?mslink=9100",
+        },
+    },
+    {  # POINT, parking de bicis.
+        "type": "Feature",
+        "geometry": {"type": "Point", "coordinates": [-6.3729966, 39.4707513]},
+        "properties": {
+            "name": "Calle Colon",
+            "category": "bicycle",
+            "vehicleType": "bike",
+            "regulation": "reserved",
+            "totalSpaces": 5,
+            "streetName": "COLON",
+            "district": "CENTRO",
+            "URL": "?mslink=9200",
+        },
+    },
+]
+
+
+@pytest.fixture
+def api_features() -> list[dict]:
+    """Devuelve copias frescas (los tests no comparten mutación entre sí)."""
+    import copy
+    return copy.deepcopy(_API_FEATURES)
+
+
+@pytest.fixture
+def seeded_client(
+    fake_redis: FakeRedis, api_features: list[dict]
+) -> Iterator[TestClient]:
+    """`TestClient` con el dataset sintético ya importado en Redis."""
+    from app.importer import run_import
+
+    run_import(api_features, fake_redis)
+    app = _build_test_app(fake_redis)
+    with TestClient(app) as client:
+        yield client
