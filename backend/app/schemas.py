@@ -1,20 +1,13 @@
-"""Schemas Pydantic.
+"""Schemas Pydantic alineados 1:1 con el cliente Flutter.
 
-Dos familias conviviendo:
+Wire format:
+- Campos en camelCase.
+- Enums como string en snake_case (ver `app/enums.py`).
+- Optional[...] = `null` (no cadena vacía).
+- Geometrías GeoJSON `[lon, lat]`.
 
-1. **Legacy** (`Parking`, `ParkingNearby`) — schemas usados por los endpoints
-   actuales (`/parkings/{id}`, `/parkings/nearby`). Campos en castellano,
-   reflejan el hash actual de Redis. Se mantienen para no romper el contrato
-   en producción mientras se migra.
-
-2. **Mobile contract** (`ParkingPlaceOut`, `ParkingPlaceNearbyOut`,
-   `ParkingQueryFilters`) — alineados 1:1 con el cliente Flutter. Wire format:
-   - Campos en camelCase.
-   - Enums como string en snake_case (ver `app/enums.py`).
-   - Optional[...] = `null` (no cadena vacía).
-   - Geometrías GeoJSON `[lon, lat]`.
-
-Los endpoints e importador se migrarán a esta segunda familia en PRs posteriores.
+Toda la API de lectura (`/parkings`, `/parkings/nearby`, `/parkings/{id}`,
+`/parkings/categories`) y el importador serializan a través de estos modelos.
 """
 
 from __future__ import annotations
@@ -39,29 +32,6 @@ from .normalization import (
     coerce_regulation,
     coerce_vehicle_type,
 )
-
-
-# ============================================================
-# Legacy (NO TOCAR sin migrar también los endpoints)
-# ============================================================
-
-class Parking(BaseModel):
-    """Metadatos de un aparcamiento (corresponde al hash `parking:{id}` en Redis)."""
-
-    id: str
-    nombre: str
-    clase: str
-    direccion: str = ""
-    nucleo: str = ""
-    url: str = ""
-    lat: float
-    lon: float
-
-
-class ParkingNearby(Parking):
-    """Aparcamiento + distancia desde el punto de búsqueda (en metros)."""
-
-    distancia_metros: float = Field(..., description="Distancia al punto consultado, en metros")
 
 
 # ============================================================
