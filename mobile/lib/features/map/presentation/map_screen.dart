@@ -24,9 +24,14 @@ import 'widgets/map_results_sheet.dart';
 import 'widgets/parking_map_marker.dart';
 
 class MapScreen extends StatefulWidget {
-  const MapScreen({super.key, this.initialFilters});
+  const MapScreen({
+    super.key,
+    this.initialFilters,
+    this.initialFocused = false,
+  });
 
   final MapFilters? initialFilters;
+  final bool initialFocused;
 
   @override
   State<MapScreen> createState() => _MapScreenState();
@@ -248,7 +253,9 @@ class _MapScreenState extends State<MapScreen> {
                       mapController: _mapController,
                       options: MapOptions(
                         initialCenter: _filters.center ?? kCaceresCenter,
-                        initialZoom: _initialZoom,
+                        initialZoom: widget.initialFocused
+                            ? _focusedZoom
+                            : _initialZoom,
                         minZoom: _minZoom,
                         maxZoom: _maxZoom,
                         interactionOptions: const InteractionOptions(
@@ -342,7 +349,7 @@ class _MapScreenState extends State<MapScreen> {
                               ),
                               onOpenDetail: () => _openDetail(selected),
                               onClose: _clearSelection,
-                              onOpenInMaps: _route == null
+                              onOpenInMaps: _routeOrigin == null
                                   ? null
                                   : _launchGoogleMaps,
                             ),
