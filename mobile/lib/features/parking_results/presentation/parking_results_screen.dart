@@ -101,8 +101,10 @@ class _ParkingResultsScreenState extends State<ParkingResultsScreen> {
                                   const SizedBox(height: AppSpacing.md),
                               itemBuilder: (_, i) {
                                 final place = places[i];
+                                final origin =
+                                    widget.filters.center ?? kMockUserLocation;
                                 final distanceMeters = const Distance()(
-                                  kMockUserLocation,
+                                  origin,
                                   place.position,
                                 );
                                 return ParkingResultTile(

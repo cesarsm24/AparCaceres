@@ -5,13 +5,17 @@ import 'package:latlong2/latlong.dart';
 import '../../../shared/widgets/app_top_bar.dart';
 import '../../../theme/app_colors.dart';
 import '../../../theme/app_spacing.dart';
+import '../../location_picker/domain/place_suggestion.dart';
+import '../../location_picker/presentation/location_picker_screen.dart';
 import '../../parking/data/parking_constants.dart';
 import '../../parking/data/parking_repository_provider.dart';
 import '../../parking/domain/parking_place.dart';
 import '../../parking/presentation/parking_ui.dart';
 import '../../parking_detail/presentation/parking_detail_screen.dart';
 import '../../parking_results/presentation/parking_results_screen.dart';
-import '../../search/presentation/search_screen.dart';
+import '../../routing/data/osrm_client.dart';
+import '../../routing/data/route_request.dart';
+import '../../routing/domain/route_path.dart';
 import 'widgets/filters_drawer.dart';
 import 'widgets/map_controls.dart';
 import 'widgets/map_results_sheet.dart';
@@ -29,6 +33,7 @@ class MapScreen extends StatefulWidget {
 class _MapScreenState extends State<MapScreen> {
   final MapController _mapController = MapController();
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+  late final OsrmClient _osrm = OsrmClient();
 
   static const double _minZoom = 10;
   static const double _maxZoom = 18;
@@ -37,23 +42,97 @@ class _MapScreenState extends State<MapScreen> {
   late MapFilters _filters;
   late Future<List<ParkingPlace>> _placesFuture;
   ParkingPlace? _selectedPlace;
+  RoutePath? _route;
+  bool _loadingRoute = false;
+
+  LatLng get _activeCenter => _filters.center ?? kMockUserLocation;
 
   @override
   void initState() {
     super.initState();
     _filters = widget.initialFilters ?? MapFilters();
     _placesFuture = parkingRepository.getNearby(_filters.toQuery());
+    routeRequest.addListener(_onRouteRequested);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (routeRequest.request != null && mounted) _onRouteRequested();
+    });
+  }
+
+  @override
+  void dispose() {
+    routeRequest.removeListener(_onRouteRequested);
+    _mapController.dispose();
+    _osrm.close();
+    super.dispose();
+  }
+
+  void _onRouteRequested() {
+    final place = routeRequest.request;
+    if (place == null) return;
+    routeRequest.consume();
+    final origin = _activeCenter;
+    setState(() {
+      _selectedPlace = place;
+      _route = null;
+      _loadingRoute = true;
+    });
+    _mapController.move(place.position, _initialZoom);
+    _fetchRoute(origin, place.position);
+  }
+
+  Future<void> _fetchRoute(LatLng origin, LatLng destination) async {
+    try {
+      final route = await _osrm.walkingRoute(origin, destination);
+      if (!mounted) return;
+      setState(() {
+        _route = route;
+        _loadingRoute = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _route = null;
+        _loadingRoute = false;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No se pudo calcular la ruta.')),
+      );
+    }
   }
 
   void _applyFilters(MapFilters filters) {
     setState(() {
       _filters = filters;
       _selectedPlace = null;
+      _route = null;
       _placesFuture = parkingRepository.getNearby(_filters.toQuery());
     });
   }
 
+  Future<void> _pickLocation() async {
+    final suggestion = await Navigator.of(context).push<PlaceSuggestion>(
+      MaterialPageRoute(builder: (_) => const LocationPickerScreen()),
+    );
+    if (suggestion == null || !mounted) return;
+    setState(() {
+      _filters = _filters.copyWith(
+        center: suggestion.position,
+        centerLabel: suggestion.shortName,
+      );
+      _selectedPlace = null;
+      _route = null;
+      _placesFuture = parkingRepository.getNearby(_filters.toQuery());
+    });
+    _mapController.move(suggestion.position, _initialZoom);
+  }
+
   void _centerOnUser() {
+    setState(() {
+      _filters = _filters.withoutCenter();
+      _selectedPlace = null;
+      _route = null;
+      _placesFuture = parkingRepository.getNearby(_filters.toQuery());
+    });
     _mapController.move(kMockUserLocation, _initialZoom);
   }
 
@@ -67,16 +146,24 @@ class _MapScreenState extends State<MapScreen> {
     _mapController.move(_mapController.camera.center, z);
   }
 
+  void _selectPlace(ParkingPlace place) {
+    setState(() {
+      _selectedPlace = place;
+      _route = null;
+    });
+  }
+
+  void _clearSelection() {
+    setState(() {
+      _selectedPlace = null;
+      _route = null;
+    });
+  }
+
   void _openDetail(ParkingPlace place) {
     Navigator.of(context).push(
       MaterialPageRoute(builder: (_) => ParkingDetailScreen(place: place)),
     );
-  }
-
-  @override
-  void dispose() {
-    _mapController.dispose();
-    super.dispose();
   }
 
   @override
@@ -95,11 +182,7 @@ class _MapScreenState extends State<MapScreen> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 IconButton(
-                  onPressed: () => Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) => const SearchScreen(),
-                    ),
-                  ),
+                  onPressed: _pickLocation,
                   icon: const Icon(
                     Icons.search,
                     color: AppColors.textOnPrimary,
@@ -118,6 +201,7 @@ class _MapScreenState extends State<MapScreen> {
               builder: (context, snapshot) {
                 final places = snapshot.data ?? const <ParkingPlace>[];
                 final selected = _selectedPlace;
+                final activeCenter = _activeCenter;
                 return Stack(
                   children: [
                     FlutterMap(
@@ -140,6 +224,18 @@ class _MapScreenState extends State<MapScreen> {
                         ),
                         PolygonLayer(polygons: _buildPolygons(places)),
                         PolylineLayer(polylines: _buildLines(places)),
+                        if (_route != null)
+                          PolylineLayer(
+                            polylines: [
+                              Polyline(
+                                points: _route!.coordinates,
+                                color: AppColors.primary,
+                                strokeWidth: 5,
+                                borderColor: Colors.white,
+                                borderStrokeWidth: 1.5,
+                              ),
+                            ],
+                          ),
                         MarkerLayer(markers: _buildMarkers(places)),
                       ],
                     ),
@@ -147,7 +243,10 @@ class _MapScreenState extends State<MapScreen> {
                       left: AppSpacing.md,
                       right: 88,
                       top: AppSpacing.md,
-                      child: _MapLegend(places: places),
+                      child: _MapLegend(
+                        places: places,
+                        centerLabel: _filters.centerLabel,
+                      ),
                     ),
                     Positioned(
                       right: AppSpacing.md,
@@ -158,6 +257,13 @@ class _MapScreenState extends State<MapScreen> {
                         onZoomOut: _zoomOut,
                       ),
                     ),
+                    if (_loadingRoute)
+                      const Positioned(
+                        top: AppSpacing.md,
+                        left: 0,
+                        right: 0,
+                        child: Center(child: _RouteLoadingPill()),
+                      ),
                     if (snapshot.connectionState == ConnectionState.waiting)
                       const Center(child: CircularProgressIndicator()),
                     Positioned(
@@ -179,12 +285,11 @@ class _MapScreenState extends State<MapScreen> {
                           : ParkingPreviewSheet(
                               place: selected,
                               distanceMeters: const Distance()(
-                                kMockUserLocation,
+                                activeCenter,
                                 selected.position,
                               ),
                               onOpenDetail: () => _openDetail(selected),
-                              onClose: () =>
-                                  setState(() => _selectedPlace = null),
+                              onClose: _clearSelection,
                             ),
                     ),
                     const Positioned(
@@ -238,41 +343,122 @@ class _MapScreenState extends State<MapScreen> {
   }
 
   List<Marker> _buildMarkers(List<ParkingPlace> places) {
-    return [
-      const Marker(
-        point: kMockUserLocation,
-        width: 22,
-        height: 22,
-        child: UserLocationMarker(),
-      ),
-      ...places.map(
-        (place) => Marker(
+    final markers = <Marker>[];
+    final pickedCenter = _filters.center;
+
+    if (pickedCenter == null) {
+      markers.add(
+        const Marker(
+          point: kMockUserLocation,
+          width: 22,
+          height: 22,
+          child: UserLocationMarker(),
+        ),
+      );
+    } else {
+      markers.add(
+        Marker(
+          point: pickedCenter,
+          width: 36,
+          height: 44,
+          alignment: Alignment.topCenter,
+          child: const DestinationPinMarker(),
+        ),
+      );
+    }
+
+    final placeIds = <String>{};
+    for (final place in places) {
+      placeIds.add(place.id);
+      markers.add(
+        Marker(
           point: place.position,
           width: 46,
           height: 54,
           alignment: Alignment.topCenter,
           child: GestureDetector(
-            onTap: () => setState(() => _selectedPlace = place),
+            onTap: () => _selectPlace(place),
             child: ParkingMapMarker(
               category: place.category,
               isSelected: _selectedPlace?.id == place.id,
             ),
           ),
         ),
+      );
+    }
+
+    final selected = _selectedPlace;
+    if (selected != null && !placeIds.contains(selected.id)) {
+      markers.add(
+        Marker(
+          point: selected.position,
+          width: 46,
+          height: 54,
+          alignment: Alignment.topCenter,
+          child: GestureDetector(
+            onTap: () => _selectPlace(selected),
+            child: ParkingMapMarker(
+              category: selected.category,
+              isSelected: true,
+            ),
+          ),
+        ),
+      );
+    }
+
+    return markers;
+  }
+}
+
+class _RouteLoadingPill extends StatelessWidget {
+  const _RouteLoadingPill();
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: AppColors.surface.withValues(alpha: 0.95),
+      borderRadius: BorderRadius.circular(AppSpacing.radiusPill),
+      child: const Padding(
+        padding: EdgeInsets.symmetric(
+          horizontal: AppSpacing.md,
+          vertical: 6,
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SizedBox(
+              width: 14,
+              height: 14,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            ),
+            SizedBox(width: AppSpacing.sm),
+            Text(
+              'Calculando ruta…',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: AppColors.textPrimary,
+              ),
+            ),
+          ],
+        ),
       ),
-    ];
+    );
   }
 }
 
 class _MapLegend extends StatelessWidget {
-  const _MapLegend({required this.places});
+  const _MapLegend({required this.places, this.centerLabel});
 
   final List<ParkingPlace> places;
+  final String? centerLabel;
 
   @override
   Widget build(BuildContext context) {
     final categories = places.map((p) => p.category).toSet().take(5).toList();
-    if (categories.isEmpty) return const SizedBox.shrink();
+    if (categories.isEmpty && centerLabel == null) {
+      return const SizedBox.shrink();
+    }
 
     return Material(
       color: AppColors.surface.withValues(alpha: 0.92),
@@ -282,11 +468,46 @@ class _MapLegend extends StatelessWidget {
           horizontal: AppSpacing.sm,
           vertical: AppSpacing.xs,
         ),
-        child: Wrap(
-          spacing: AppSpacing.sm,
-          runSpacing: 2,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            for (final category in categories) _LegendItem(category: category),
+            if (centerLabel != null)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 2),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(
+                      Icons.place,
+                      size: 12,
+                      color: AppColors.primary,
+                    ),
+                    const SizedBox(width: 3),
+                    Flexible(
+                      child: Text(
+                        centerLabel!,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.textPrimary,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            if (categories.isNotEmpty)
+              Wrap(
+                spacing: AppSpacing.sm,
+                runSpacing: 2,
+                children: [
+                  for (final category in categories)
+                    _LegendItem(category: category),
+                ],
+              ),
           ],
         ),
       ),

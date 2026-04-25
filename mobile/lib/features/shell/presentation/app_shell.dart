@@ -6,6 +6,7 @@ import '../../favorites/presentation/favorites_screen.dart';
 import '../../home/presentation/home_screen.dart';
 import '../../map/presentation/map_screen.dart';
 import '../../map/presentation/widgets/filters_drawer.dart';
+import '../../routing/data/route_request.dart';
 import '../../settings/presentation/settings_screen.dart';
 
 class AppShell extends StatefulWidget {
@@ -28,6 +29,18 @@ class _AppShellState extends State<AppShell> {
   List<GlobalKey<NavigatorState>> get _navKeys =>
       [_homeNav, _mapNav, _favoritesNav, _settingsNav];
 
+  @override
+  void initState() {
+    super.initState();
+    routeRequest.addListener(_onRouteRequested);
+  }
+
+  @override
+  void dispose() {
+    routeRequest.removeListener(_onRouteRequested);
+    super.dispose();
+  }
+
   void _openMapFromHome(MapFilters filters) {
     setState(() {
       _mapFilters = filters;
@@ -35,6 +48,12 @@ class _AppShellState extends State<AppShell> {
       _mapNav = GlobalKey<NavigatorState>();
       _index = 1;
     });
+  }
+
+  void _onRouteRequested() {
+    if (routeRequest.request == null) return;
+    if (_index == 1) return;
+    setState(() => _index = 1);
   }
 
   void _onDestinationSelected(int i) {
