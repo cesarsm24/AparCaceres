@@ -21,19 +21,7 @@ class FavoritesScreen extends StatelessWidget {
       color: AppColors.pageBackground,
       child: Column(
         children: [
-          AppTopBar(
-            trailing: TextButton(
-              onPressed: () {},
-              child: const Text(
-                AppStrings.favoritesEdit,
-                style: TextStyle(
-                  color: AppColors.textOnPrimary,
-                  fontSize: 15,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-          ),
+          const AppTopBar(),
           Expanded(
             child: ListenableBuilder(
               listenable: favoritesStore,
