@@ -102,3 +102,44 @@ class UserLocationMarker extends StatelessWidget {
     );
   }
 }
+
+class DestinationPinMarker extends StatelessWidget {
+  const DestinationPinMarker({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 30,
+          height: 30,
+          decoration: BoxDecoration(
+            color: AppColors.primary,
+            shape: BoxShape.circle,
+            border: Border.all(color: AppColors.textOnPrimary, width: 2),
+            boxShadow: const [
+              BoxShadow(
+                color: Color(0x33000000),
+                blurRadius: 4,
+                offset: Offset(0, 2),
+              ),
+            ],
+          ),
+          child: const Icon(
+            Icons.place,
+            color: AppColors.textOnPrimary,
+            size: 18,
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.only(top: 1),
+          child: CustomPaint(
+            size: const Size(8, 7),
+            painter: _MarkerTipPainter(AppColors.primary),
+          ),
+        ),
+      ],
+    );
+  }
+}

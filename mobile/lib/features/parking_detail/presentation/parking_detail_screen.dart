@@ -10,6 +10,7 @@ import '../../parking/data/favorites_store.dart';
 import '../../parking/domain/parking_place.dart';
 import '../../parking/presentation/parking_ui.dart';
 import '../../parking/presentation/widgets/regulation_badge.dart';
+import '../../routing/data/route_request.dart';
 import 'widgets/detail_header_image.dart';
 import 'widgets/detail_info_row.dart';
 
@@ -131,7 +132,10 @@ class ParkingDetailScreen extends StatelessWidget {
                             child: SecondaryButton(
                               label: AppStrings.detailNavigate,
                               icon: Icons.send_outlined,
-                              onPressed: () {},
+                              onPressed: () {
+                                routeRequest.requestRoute(place);
+                                Navigator.of(context).maybePop();
+                              },
                             ),
                           ),
                           const SizedBox(width: AppSpacing.md),

@@ -78,6 +78,16 @@ class MapFilters {
   static MapFilters atLocation(LatLng center, {String? label}) {
     return MapFilters(center: center, centerLabel: label);
   }
+
+  MapFilters withoutCenter() {
+    return MapFilters(
+      radiusMeters: radiusMeters,
+      vehicleTypes: vehicleTypes,
+      categories: categories,
+      regulations: regulations,
+      minSpaces: minSpaces,
+    );
+  }
 }
 
 class FiltersDrawer extends StatefulWidget {
