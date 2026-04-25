@@ -329,35 +329,43 @@ class _MapScreenState extends State<MapScreen> {
                       left: 0,
                       right: 0,
                       bottom: 0,
-                      child: selected == null
-                          ? MapResultsSheet(
-                              resultCount: places.length,
-                              radiusMeters: _filters.radiusMeters,
-                              onTap: () => Navigator.of(context).push(
-                                MaterialPageRoute(
-                                  builder: (_) => ParkingResultsScreen(
-                                    filters: _filters,
-                                  ),
-                                ),
-                              ),
-                            )
-                          : ParkingPreviewSheet(
-                              place: selected,
-                              distanceMeters: const Distance()(
-                                activeCenter,
-                                selected.position,
-                              ),
-                              onOpenDetail: () => _openDetail(selected),
-                              onClose: _clearSelection,
-                              onOpenInMaps: _routeOrigin == null
-                                  ? null
-                                  : _launchGoogleMaps,
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Padding(
+                            padding: EdgeInsets.only(
+                              left: AppSpacing.md,
+                              bottom: 4,
                             ),
-                    ),
-                    const Positioned(
-                      left: AppSpacing.md,
-                      bottom: AppSpacing.sm,
-                      child: _OsmAttribution(),
+                            child: _OsmAttribution(),
+                          ),
+                          selected == null
+                              ? MapResultsSheet(
+                                  resultCount: places.length,
+                                  radiusMeters: _filters.radiusMeters,
+                                  onTap: () => Navigator.of(context).push(
+                                    MaterialPageRoute(
+                                      builder: (_) => ParkingResultsScreen(
+                                        filters: _filters,
+                                      ),
+                                    ),
+                                  ),
+                                )
+                              : ParkingPreviewSheet(
+                                  place: selected,
+                                  distanceMeters: const Distance()(
+                                    activeCenter,
+                                    selected.position,
+                                  ),
+                                  onOpenDetail: () => _openDetail(selected),
+                                  onClose: _clearSelection,
+                                  onOpenInMaps: _routeOrigin == null
+                                      ? null
+                                      : _launchGoogleMaps,
+                                ),
+                        ],
+                      ),
                     ),
                   ],
                 );
