@@ -1,0 +1,2127 @@
+{
+	"type" : "FeatureCollection",
+	"name" : "carga_descarga",
+	"features" : [
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Polygon",
+				"coordinates" : [
+					[
+						[ -6.3826828736, 39.4708762748 ],
+						[ -6.382734028, 39.4708433945 ],
+						[ -6.3826929484, 39.4708050418 ],
+						[ -6.3826440835, 39.4708372738 ],
+						[ -6.3826828736, 39.4708762748 ]
+					]
+				]
+			},
+			"properties" : {
+				"TIPO" : "ZONA AZUL",
+				"PLAZAS" : "2",
+				"CODIGOVIA" : "1125",
+				"TIPOVIA" : "AVDA",
+				"NOMBREVIA" : "RODRIGUEZ DE LEDESMA",
+				"URL" : "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=1125",
+				"DISTRITO" : "OESTE",
+				"BARRIO" : "PARQUE DEL PRINCIPE",
+				"CODBARRIO" : 49
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Polygon",
+				"coordinates" : [
+					[
+						[ -6.3839836207, 39.4697592769 ],
+						[ -6.3841047979, 39.4698015603 ],
+						[ -6.3841201322, 39.4697775079 ],
+						[ -6.3839969554, 39.4697331793 ],
+						[ -6.3839836207, 39.4697592769 ]
+					]
+				]
+			},
+			"properties" : {
+				"TIPO" : "EN LINEA",
+				"PLAZAS" : "2",
+				"CODIGOVIA" : "1901",
+				"TIPOVIA" : "AVDA",
+				"NOMBREVIA" : "RUTA DE LA PLATA",
+				"URL" : "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=1901",
+				"DISTRITO" : "OESTE",
+				"BARRIO" : "PARQUE DEL PRINCIPE",
+				"CODBARRIO" : 49
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Polygon",
+				"coordinates" : [
+					[
+						[ -6.3797506788, 39.4732353562 ],
+						[ -6.3800431181, 39.4733672794 ],
+						[ -6.380058866, 39.4733457195 ],
+						[ -6.379764419, 39.473216274 ],
+						[ -6.3797506788, 39.4732353562 ]
+					]
+				]
+			},
+			"properties" : {
+				"TIPO" : "EN LINEA",
+				"PLAZAS" : "3",
+				"CODIGOVIA" : "3449",
+				"TIPOVIA" : "CALLE",
+				"NOMBREVIA" : "BERLIN",
+				"URL" : "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=3449",
+				"DISTRITO" : "OESTE",
+				"BARRIO" : "LA MADRILA",
+				"CODBARRIO" : 33
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Polygon",
+				"coordinates" : [
+					[
+						[ -6.3753893322, 39.4731758535 ],
+						[ -6.3753793022, 39.4731710759 ],
+						[ -6.3753460108, 39.4731980279 ],
+						[ -6.3753125149, 39.4732233212 ],
+						[ -6.3752765335, 39.473247318 ],
+						[ -6.3752540318, 39.4732604549 ],
+						[ -6.3752642657, 39.4732713184 ],
+						[ -6.3752840086, 39.4732609073 ],
+						[ -6.3752941803, 39.4732555435 ],
+						[ -6.3752963971, 39.4732543745 ],
+						[ -6.375309229, 39.4732462921 ],
+						[ -6.3753187074, 39.4732401215 ],
+						[ -6.3753386047, 39.4732257912 ],
+						[ -6.3753695865, 39.4732023801 ],
+						[ -6.3753878423, 39.4731885853 ],
+						[ -6.3753893322, 39.4731758535 ]
+					]
+				]
+			},
+			"properties" : {
+				"TIPO" : "EN LINEA",
+				"PLAZAS" : "3",
+				"CODIGOVIA" : "1161",
+				"TIPOVIA" : "CALLE",
+				"NOMBREVIA" : "SAN ANTON",
+				"URL" : "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=1161",
+				"DISTRITO" : "CENTRO",
+				"BARRIO" : "SAN JUAN",
+				"CODBARRIO" : 66
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Polygon",
+				"coordinates" : [
+					[
+						[ -6.3758794934, 39.4738593305 ],
+						[ -6.3758770181, 39.4738818867 ],
+						[ -6.375991695, 39.4738038856 ],
+						[ -6.3759779534, 39.4737916313 ],
+						[ -6.3758794934, 39.4738593305 ]
+					]
+				]
+			},
+			"properties" : {
+				"TIPO" : "ZONA AZUL",
+				"PLAZAS" : "2",
+				"CODIGOVIA" : "122",
+				"TIPOVIA" : "CALLE",
+				"NOMBREVIA" : "CERES",
+				"URL" : "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=122",
+				"DISTRITO" : "CENTRO",
+				"BARRIO" : "SAN JUAN",
+				"CODBARRIO" : 66
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Polygon",
+				"coordinates" : [
+					[
+						[ -6.3761975623, 39.473641681 ],
+						[ -6.3761892701, 39.4736460602 ],
+						[ -6.3760582059, 39.4737364526 ],
+						[ -6.3760758173, 39.4737493709 ],
+						[ -6.3762334445, 39.4736366975 ],
+						[ -6.3762502514, 39.4736194197 ],
+						[ -6.3761975623, 39.473641681 ]
+					]
+				]
+			},
+			"properties" : {
+				"TIPO" : "ZONA AZUL",
+				"PLAZAS" : "3",
+				"CODIGOVIA" : "122",
+				"TIPOVIA" : "CALLE",
+				"NOMBREVIA" : "CERES",
+				"URL" : "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=122",
+				"DISTRITO" : "CENTRO",
+				"BARRIO" : "SAN JUAN",
+				"CODBARRIO" : 66
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Polygon",
+				"coordinates" : [
+					[
+						[ -6.3761975623, 39.473641681 ],
+						[ -6.3761892701, 39.4736460602 ],
+						[ -6.3760582059, 39.4737364526 ],
+						[ -6.3760758173, 39.4737493709 ],
+						[ -6.3762334445, 39.4736366975 ],
+						[ -6.3762502514, 39.4736194197 ],
+						[ -6.3761975623, 39.473641681 ]
+					]
+				]
+			},
+			"properties" : {
+				"TIPO" : "ZONA AZUL",
+				"PLAZAS" : "3",
+				"CODIGOVIA" : "17",
+				"TIPOVIA" : "CALLE",
+				"NOMBREVIA" : "ALFONSO IX",
+				"URL" : "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=17",
+				"DISTRITO" : "CENTRO",
+				"BARRIO" : "SAN JUAN",
+				"CODBARRIO" : 66
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Polygon",
+				"coordinates" : [
+					[
+						[ -6.3732508589, 39.471015273 ],
+						[ -6.3732674435, 39.4710036465 ],
+						[ -6.37325797, 39.4709963316 ],
+						[ -6.3731781011, 39.4709346607 ],
+						[ -6.3730881856, 39.4708650638 ],
+						[ -6.3730389305, 39.4708266022 ],
+						[ -6.3730135607, 39.4708319562 ],
+						[ -6.3732508589, 39.471015273 ]
+					]
+				]
+			},
+			"properties" : {
+				"TIPO" : "EN LINEA",
+				"PLAZAS" : "5",
+				"CODIGOVIA" : "611",
+				"TIPOVIA" : "CALLE",
+				"NOMBREVIA" : "CAMINO LLANO",
+				"URL" : "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=611",
+				"DISTRITO" : "CENTRO",
+				"BARRIO" : "SANTA CLARA",
+				"CODBARRIO" : 69
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Polygon",
+				"coordinates" : [
+					[
+						[ -6.37309001, 39.4709428234 ],
+						[ -6.3730721472, 39.4709556319 ],
+						[ -6.373121172, 39.4709938612 ],
+						[ -6.3731959322, 39.4710514236 ],
+						[ -6.37321335, 39.4710394617 ],
+						[ -6.37309001, 39.4709428234 ]
+					]
+				]
+			},
+			"properties" : {
+				"TIPO" : "EN LINEA",
+				"PLAZAS" : "3",
+				"CODIGOVIA" : "611",
+				"TIPOVIA" : "CALLE",
+				"NOMBREVIA" : "CAMINO LLANO",
+				"URL" : "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=611",
+				"DISTRITO" : "CENTRO",
+				"BARRIO" : "SANTA CLARA",
+				"CODBARRIO" : 69
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Polygon",
+				"coordinates" : [
+					[
+						[ -6.3748975889, 39.4722649702 ],
+						[ -6.3748736504, 39.4722427259 ],
+						[ -6.3746664271, 39.4723556489 ],
+						[ -6.3746756054, 39.4723631655 ],
+						[ -6.3747003563, 39.4723726434 ],
+						[ -6.3748975889, 39.4722649702 ]
+					]
+				]
+			},
+			"properties" : {
+				"TIPO" : "ZONA AZUL",
+				"PLAZAS" : "7",
+				"CODIGOVIA" : "304",
+				"TIPOVIA" : "PLAZA",
+				"NOMBREVIA" : "MARRON",
+				"URL" : "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=304",
+				"DISTRITO" : "CENTRO",
+				"BARRIO" : "SANTA CLARA",
+				"CODBARRIO" : 69
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Polygon",
+				"coordinates" : [
+					[
+						[ -6.3751837591, 39.475755103 ],
+						[ -6.3752001833, 39.4757356546 ],
+						[ -6.3751837802, 39.4756927177 ],
+						[ -6.3751556379, 39.475619052 ],
+						[ -6.3751454715, 39.4755924403 ],
+						[ -6.3751180616, 39.4755825421 ],
+						[ -6.3751213571, 39.4755980001 ],
+						[ -6.3751507723, 39.4756803612 ],
+						[ -6.375180685, 39.4757561435 ],
+						[ -6.3751837591, 39.475755103 ]
+					]
+				]
+			},
+			"properties" : {
+				"TIPO" : "EN LINEA",
+				"PLAZAS" : "3",
+				"CODIGOVIA" : "351",
+				"TIPOVIA" : "CALLE",
+				"NOMBREVIA" : "NUEVA",
+				"URL" : "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=351",
+				"DISTRITO" : "CENTRO",
+				"BARRIO" : "CASAS BARATAS",
+				"CODBARRIO" : 9
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Polygon",
+				"coordinates" : [
+					[
+						[ -6.379613076, 39.4720983502 ],
+						[ -6.3796327637, 39.4721140481 ],
+						[ -6.379794266, 39.4719944478 ],
+						[ -6.3797744864, 39.4719767514 ],
+						[ -6.379613076, 39.4720983502 ]
+					]
+				]
+			},
+			"properties" : {
+				"TIPO" : "ZONA AZUL",
+				"PLAZAS" : "3",
+				"CODIGOVIA" : "537",
+				"TIPOVIA" : "AVDA",
+				"NOMBREVIA" : "VIRGEN DE GUADALUPE",
+				"URL" : "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=537",
+				"DISTRITO" : "CENTRO",
+				"BARRIO" : "VIRGEN DE GUADALUPE",
+				"CODBARRIO" : 76
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Polygon",
+				"coordinates" : [
+					[
+						[ -6.3810266237, 39.4698036489 ],
+						[ -6.3811418969, 39.4698974158 ],
+						[ -6.3811460227, 39.4699011865 ],
+						[ -6.381164987, 39.4698869704 ],
+						[ -6.3810443909, 39.4697903301 ],
+						[ -6.3810266237, 39.4698036489 ]
+					]
+				]
+			},
+			"properties" : {
+				"TIPO" : "EN LINEA",
+				"PLAZAS" : "3",
+				"CODIGOVIA" : "977",
+				"TIPOVIA" : "CALLE",
+				"NOMBREVIA" : "SANTA JOAQUINA DE VEDRUNA",
+				"URL" : "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=977",
+				"DISTRITO" : "CENTRO",
+				"BARRIO" : "VIRGEN DE GUADALUPE",
+				"CODBARRIO" : 76
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Polygon",
+				"coordinates" : [
+					[
+						[ -6.3810890939, 39.4699443311 ],
+						[ -6.3811075206, 39.4699292502 ],
+						[ -6.3810565832, 39.4698930047 ],
+						[ -6.3810185409, 39.4698673237 ],
+						[ -6.3810107717, 39.4698630932 ],
+						[ -6.3809949746, 39.4698850959 ],
+						[ -6.3810360655, 39.4699082737 ],
+						[ -6.3810635253, 39.4699260994 ],
+						[ -6.3810890939, 39.4699443311 ]
+					]
+				]
+			},
+			"properties" : {
+				"TIPO" : "EN LINEA",
+				"PLAZAS" : "2",
+				"CODIGOVIA" : "977",
+				"TIPOVIA" : "CALLE",
+				"NOMBREVIA" : "SANTA JOAQUINA DE VEDRUNA",
+				"URL" : "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=977",
+				"DISTRITO" : "CENTRO",
+				"BARRIO" : "VIRGEN DE GUADALUPE",
+				"CODBARRIO" : 76
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Polygon",
+				"coordinates" : [
+					[
+						[ -6.3812616569, 39.470083455 ],
+						[ -6.381280998, 39.4700677041 ],
+						[ -6.3812538129, 39.4700466011 ],
+						[ -6.3811620296, 39.469972012 ],
+						[ -6.3811422353, 39.4699867241 ],
+						[ -6.3811899123, 39.4700254212 ],
+						[ -6.3812477448, 39.4700722108 ],
+						[ -6.3812616569, 39.470083455 ]
+					]
+				]
+			},
+			"properties" : {
+				"TIPO" : "EN LINEA",
+				"PLAZAS" : "3",
+				"CODIGOVIA" : "977",
+				"TIPOVIA" : "CALLE",
+				"NOMBREVIA" : "SANTA JOAQUINA DE VEDRUNA",
+				"URL" : "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=977",
+				"DISTRITO" : "CENTRO",
+				"BARRIO" : "VIRGEN DE GUADALUPE",
+				"CODBARRIO" : 76
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Polygon",
+				"coordinates" : [
+					[
+						[ -6.3776211871, 39.4699275205 ],
+						[ -6.3776321898, 39.4699126447 ],
+						[ -6.3775448607, 39.4698731835 ],
+						[ -6.3774675849, 39.4698382516 ],
+						[ -6.3774548274, 39.4698536542 ],
+						[ -6.3776211871, 39.4699275205 ]
+					]
+				]
+			},
+			"properties" : {
+				"TIPO" : "ZONA AZUL",
+				"PLAZAS" : "4",
+				"CODIGOVIA" : "119",
+				"TIPOVIA" : "CALLE",
+				"NOMBREVIA" : "CATEDRATICO ANTONIO SILVA",
+				"URL" : "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=119",
+				"DISTRITO" : "CENTRO",
+				"BARRIO" : "CANOVAS",
+				"CODBARRIO" : 7
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Polygon",
+				"coordinates" : [
+					[
+						[ -6.3780444092, 39.471091109 ],
+						[ -6.3780163301, 39.471079878 ],
+						[ -6.3779234277, 39.4712053495 ],
+						[ -6.3779133905, 39.4712169075 ],
+						[ -6.3779402278, 39.4712275152 ],
+						[ -6.3780444092, 39.471091109 ]
+					]
+				]
+			},
+			"properties" : {
+				"TIPO" : "ZONA AZUL",
+				"PLAZAS" : "3",
+				"CODIGOVIA" : "3415",
+				"TIPOVIA" : "CALLE",
+				"NOMBREVIA" : "COMANDANTE SANCHEZ HERRERO",
+				"URL" : "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=3415",
+				"DISTRITO" : "CENTRO",
+				"BARRIO" : "CANOVAS",
+				"CODBARRIO" : 7
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Polygon",
+				"coordinates" : [
+					[
+						[ -6.3780444092, 39.471091109 ],
+						[ -6.3780163301, 39.471079878 ],
+						[ -6.3779234277, 39.4712053495 ],
+						[ -6.3779133905, 39.4712169075 ],
+						[ -6.3779402278, 39.4712275152 ],
+						[ -6.3780444092, 39.471091109 ]
+					]
+				]
+			},
+			"properties" : {
+				"TIPO" : "ZONA AZUL",
+				"PLAZAS" : "3",
+				"CODIGOVIA" : "3048",
+				"TIPOVIA" : "AVDA",
+				"NOMBREVIA" : "DE ESPAÑA",
+				"URL" : "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=3048",
+				"DISTRITO" : "CENTRO",
+				"BARRIO" : "CANOVAS",
+				"CODBARRIO" : 7
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Polygon",
+				"coordinates" : [
+					[
+						[ -6.3793600784, 39.4692715093 ],
+						[ -6.3793244271, 39.4692693223 ],
+						[ -6.3793214936, 39.4693000957 ],
+						[ -6.3793093068, 39.4693237366 ],
+						[ -6.3792726745, 39.4693805926 ],
+						[ -6.3792556836, 39.4694041897 ],
+						[ -6.3791216518, 39.4695809883 ],
+						[ -6.3790523662, 39.4696729972 ],
+						[ -6.3790784432, 39.4696835295 ],
+						[ -6.379212871, 39.4695044772 ],
+						[ -6.3793159109, 39.469366714 ],
+						[ -6.3793278006, 39.4693514483 ],
+						[ -6.3793371451, 39.4693389452 ],
+						[ -6.3793461133, 39.4693269456 ],
+						[ -6.3793567078, 39.4693079057 ],
+						[ -6.3793599047, 39.469290861 ],
+						[ -6.3793600784, 39.4692715093 ]
+					]
+				]
+			},
+			"properties" : {
+				"TIPO" : "ZONA AZUL",
+				"PLAZAS" : "9",
+				"CODIGOVIA" : "3415",
+				"TIPOVIA" : "CALLE",
+				"NOMBREVIA" : "COMANDANTE SANCHEZ HERRERO",
+				"URL" : "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=3415",
+				"DISTRITO" : "CENTRO",
+				"BARRIO" : "CANOVAS",
+				"CODBARRIO" : 7
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Polygon",
+				"coordinates" : [
+					[
+						[ -6.3793600784, 39.4692715093 ],
+						[ -6.3793244271, 39.4692693223 ],
+						[ -6.3793214936, 39.4693000957 ],
+						[ -6.3793093068, 39.4693237366 ],
+						[ -6.3792726745, 39.4693805926 ],
+						[ -6.3792556836, 39.4694041897 ],
+						[ -6.3791216518, 39.4695809883 ],
+						[ -6.3790523662, 39.4696729972 ],
+						[ -6.3790784432, 39.4696835295 ],
+						[ -6.379212871, 39.4695044772 ],
+						[ -6.3793159109, 39.469366714 ],
+						[ -6.3793278006, 39.4693514483 ],
+						[ -6.3793371451, 39.4693389452 ],
+						[ -6.3793461133, 39.4693269456 ],
+						[ -6.3793567078, 39.4693079057 ],
+						[ -6.3793599047, 39.469290861 ],
+						[ -6.3793600784, 39.4692715093 ]
+					]
+				]
+			},
+			"properties" : {
+				"TIPO" : "ZONA AZUL",
+				"PLAZAS" : "9",
+				"CODIGOVIA" : "3048",
+				"TIPOVIA" : "AVDA",
+				"NOMBREVIA" : "DE ESPAÑA",
+				"URL" : "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=3048",
+				"DISTRITO" : "CENTRO",
+				"BARRIO" : "CANOVAS",
+				"CODBARRIO" : 7
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Polygon",
+				"coordinates" : [
+					[
+						[ -6.3769670981, 39.469329909 ],
+						[ -6.3769526673, 39.4693388015 ],
+						[ -6.3769422107, 39.4693448716 ],
+						[ -6.3769306447, 39.4693526284 ],
+						[ -6.3769208173, 39.4693605145 ],
+						[ -6.376914678, 39.4693661416 ],
+						[ -6.37690731, 39.4693760652 ],
+						[ -6.3768944464, 39.4693933909 ],
+						[ -6.3768745175, 39.4694202323 ],
+						[ -6.3768474761, 39.4694566533 ],
+						[ -6.3768243757, 39.4694877664 ],
+						[ -6.3768440497, 39.4694980578 ],
+						[ -6.3768636716, 39.4694714634 ],
+						[ -6.3769095311, 39.4694093079 ],
+						[ -6.3769274068, 39.4693850802 ],
+						[ -6.3769332449, 39.4693793803 ],
+						[ -6.3769508589, 39.4693621836 ],
+						[ -6.3769648505, 39.4693522055 ],
+						[ -6.3769751038, 39.4693448934 ],
+						[ -6.3769805508, 39.4693415198 ],
+						[ -6.3769670981, 39.469329909 ]
+					]
+				]
+			},
+			"properties" : {
+				"TIPO" : "EN LINEA",
+				"PLAZAS" : "4",
+				"CODIGOVIA" : "1135",
+				"TIPOVIA" : "CALLE",
+				"NOMBREVIA" : "MALUQUER",
+				"URL" : "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=1135",
+				"DISTRITO" : "CENTRO",
+				"BARRIO" : "CANOVAS",
+				"CODBARRIO" : 7
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Polygon",
+				"coordinates" : [
+					[
+						[ -6.3804643612, 39.4693365755 ],
+						[ -6.3803337016, 39.4693743356 ],
+						[ -6.3803422129, 39.4693910939 ],
+						[ -6.3804728814, 39.4693533311 ],
+						[ -6.3804643612, 39.4693365755 ]
+					]
+				]
+			},
+			"properties" : {
+				"TIPO" : "EN LINEA",
+				"PLAZAS" : "2",
+				"CODIGOVIA" : "227",
+				"TIPOVIA" : "CALLE",
+				"NOMBREVIA" : "GOMEZ BECERRA",
+				"URL" : "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=227",
+				"DISTRITO" : "CENTRO",
+				"BARRIO" : "CANOVAS",
+				"CODBARRIO" : 7
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Polygon",
+				"coordinates" : [
+					[
+						[ -6.3793932472, 39.4697591013 ],
+						[ -6.3792696819, 39.469809159 ],
+						[ -6.3792806109, 39.4698250527 ],
+						[ -6.3794036306, 39.4697741867 ],
+						[ -6.3793932472, 39.4697591013 ]
+					]
+				]
+			},
+			"properties" : {
+				"TIPO" : "EN LINEA",
+				"PLAZAS" : "2",
+				"CODIGOVIA" : "227",
+				"TIPOVIA" : "CALLE",
+				"NOMBREVIA" : "GOMEZ BECERRA",
+				"URL" : "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=227",
+				"DISTRITO" : "CENTRO",
+				"BARRIO" : "CANOVAS",
+				"CODBARRIO" : 7
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Polygon",
+				"coordinates" : [
+					[
+						[ -6.3765325042, 39.467359209 ],
+						[ -6.3765150248, 39.4673699847 ],
+						[ -6.3764776121, 39.4673930473 ],
+						[ -6.3764124344, 39.467433216 ],
+						[ -6.3763745938, 39.4674565164 ],
+						[ -6.376331832, 39.4674829368 ],
+						[ -6.3763444921, 39.4674964372 ],
+						[ -6.3765479902, 39.4673740647 ],
+						[ -6.3765325042, 39.467359209 ]
+					]
+				]
+			},
+			"properties" : {
+				"TIPO" : "LINEA",
+				"PLAZAS" : "4",
+				"CODIGOVIA" : "3557",
+				"TIPOVIA" : "CALLE",
+				"NOMBREVIA" : "ANTONIO REYES HUERTAS",
+				"URL" : "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=3557",
+				"DISTRITO" : "CENTRO",
+				"BARRIO" : "REYES HUERTAS",
+				"CODBARRIO" : 56
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Polygon",
+				"coordinates" : [
+					[
+						[ -6.3773381563, 39.4674887502 ],
+						[ -6.3773584639, 39.4674785439 ],
+						[ -6.3772249114, 39.4673331259 ],
+						[ -6.3772057851, 39.4673434125 ],
+						[ -6.3773381563, 39.4674887502 ]
+					]
+				]
+			},
+			"properties" : {
+				"TIPO" : "LINEA",
+				"PLAZAS" : "4",
+				"CODIGOVIA" : "3558",
+				"TIPOVIA" : "CALLE",
+				"NOMBREVIA" : "ARTURO ARANGUREN",
+				"URL" : "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=3558",
+				"DISTRITO" : "CENTRO",
+				"BARRIO" : "REYES HUERTAS",
+				"CODBARRIO" : 56
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Polygon",
+				"coordinates" : [
+					[
+						[ -6.377834965, 39.467962374 ],
+						[ -6.3778544089, 39.4679514708 ],
+						[ -6.3777594795, 39.4678483288 ],
+						[ -6.3776831834, 39.4677650237 ],
+						[ -6.3776645783, 39.4677743586 ],
+						[ -6.377834965, 39.467962374 ],
+						[ -6.377834965, 39.467962374 ]
+					]
+				]
+			},
+			"properties" : {
+				"TIPO" : "LINEA",
+				"PLAZAS" : "5",
+				"CODIGOVIA" : "3558",
+				"TIPOVIA" : "CALLE",
+				"NOMBREVIA" : "ARTURO ARANGUREN",
+				"URL" : "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=3558",
+				"DISTRITO" : "CENTRO",
+				"BARRIO" : "REYES HUERTAS",
+				"CODBARRIO" : 56
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Polygon",
+				"coordinates" : [
+					[
+						[ -6.3781342505, 39.467534553 ],
+						[ -6.3781551545, 39.467523002 ],
+						[ -6.377874601, 39.4672105118 ],
+						[ -6.3778503949, 39.4672222425 ],
+						[ -6.3780423506, 39.467433754 ],
+						[ -6.3781342505, 39.467534553 ]
+					]
+				]
+			},
+			"properties" : {
+				"TIPO" : "ZONA AZUL",
+				"PLAZAS" : "8",
+				"CODIGOVIA" : "1390",
+				"TIPOVIA" : "AVDA",
+				"NOMBREVIA" : "ANTONIO HURTADO",
+				"URL" : "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=1390",
+				"DISTRITO" : "CENTRO",
+				"BARRIO" : "REYES HUERTAS",
+				"CODBARRIO" : 56
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Polygon",
+				"coordinates" : [
+					[
+						[ -6.378687748, 39.4684329282 ],
+						[ -6.3786240428, 39.4684069215 ],
+						[ -6.3785778523, 39.4683880178 ],
+						[ -6.3785174372, 39.4683626546 ],
+						[ -6.37844253, 39.4683312073 ],
+						[ -6.3783816368, 39.4683056432 ],
+						[ -6.3783324872, 39.4682850192 ],
+						[ -6.3783022712, 39.468272343 ],
+						[ -6.3782786762, 39.4682670351 ],
+						[ -6.3782475134, 39.4682613794 ],
+						[ -6.3782015918, 39.4682530736 ],
+						[ -6.3781268715, 39.468239559 ],
+						[ -6.3781170362, 39.4682352831 ],
+						[ -6.3781173397, 39.4682426772 ],
+						[ -6.3781308139, 39.4682676653 ],
+						[ -6.3781364696, 39.4682749099 ],
+						[ -6.3782141041, 39.468293688 ],
+						[ -6.3783001377, 39.4683209436 ],
+						[ -6.37833639, 39.4683351846 ],
+						[ -6.3783775482, 39.4683518785 ],
+						[ -6.3784648934, 39.4683875418 ],
+						[ -6.3785678131, 39.468429412 ],
+						[ -6.3786848935, 39.4684779979 ],
+						[ -6.3786927861, 39.4684540593 ],
+						[ -6.378687748, 39.4684329282 ]
+					]
+				]
+			},
+			"properties" : {
+				"TIPO" : "ZONA AZUL",
+				"PLAZAS" : "18",
+				"CODIGOVIA" : "3507",
+				"TIPOVIA" : "RONDA",
+				"NOMBREVIA" : "DEL CARMEN",
+				"URL" : "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=3507",
+				"DISTRITO" : "CENTRO",
+				"BARRIO" : "REYES HUERTAS",
+				"CODBARRIO" : 56
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Polygon",
+				"coordinates" : [
+					[
+						[ -6.3760654033, 39.4687651808 ],
+						[ -6.3760350845, 39.4687801715 ],
+						[ -6.3760133154, 39.4687956868 ],
+						[ -6.3759995427, 39.4688082378 ],
+						[ -6.3759846131, 39.468826326 ],
+						[ -6.3759760482, 39.4688400254 ],
+						[ -6.3759722468, 39.4688470394 ],
+						[ -6.3759659856, 39.4688636396 ],
+						[ -6.375961065, 39.468887867 ],
+						[ -6.3759587004, 39.4689136689 ],
+						[ -6.3759609935, 39.4689454316 ],
+						[ -6.3759622938, 39.4689505723 ],
+						[ -6.3759682395, 39.4689740768 ],
+						[ -6.3759741183, 39.4689973174 ],
+						[ -6.3759795123, 39.4690186409 ],
+						[ -6.3760455563, 39.4690087122 ],
+						[ -6.3760408133, 39.4689928834 ],
+						[ -6.3760268466, 39.4689478854 ],
+						[ -6.3760248722, 39.4689246721 ],
+						[ -6.3760260082, 39.4688849798 ],
+						[ -6.37603807, 39.4688386388 ],
+						[ -6.3760570117, 39.4687891432 ],
+						[ -6.3760654033, 39.4687651808 ]
+					]
+				]
+			},
+			"properties" : {
+				"TIPO" : "BATERIA",
+				"PLAZAS" : "10",
+				"CODIGOVIA" : "24",
+				"TIPOVIA" : "CALLE",
+				"NOMBREVIA" : "ALVARO LOPEZ NUÑEZ",
+				"URL" : "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=24",
+				"DISTRITO" : "CENTRO",
+				"BARRIO" : "REYES HUERTAS",
+				"CODBARRIO" : 56
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Polygon",
+				"coordinates" : [
+					[
+						[ -6.3756598355, 39.4690740478 ],
+						[ -6.3756433059, 39.4690052882 ],
+						[ -6.3756333525, 39.4689449699 ],
+						[ -6.37560053, 39.4689121573 ],
+						[ -6.3755812414, 39.4688972635 ],
+						[ -6.3755443222, 39.46893299 ],
+						[ -6.3755684655, 39.4689533942 ],
+						[ -6.375589205, 39.4689886158 ],
+						[ -6.3756221157, 39.4690787243 ],
+						[ -6.3756598355, 39.4690740478 ]
+					]
+				]
+			},
+			"properties" : {
+				"TIPO" : "BATERIA",
+				"PLAZAS" : "6",
+				"CODIGOVIA" : "24",
+				"TIPOVIA" : "CALLE",
+				"NOMBREVIA" : "ALVARO LOPEZ NUÑEZ",
+				"URL" : "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=24",
+				"DISTRITO" : "CENTRO",
+				"BARRIO" : "REYES HUERTAS",
+				"CODBARRIO" : 56
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Polygon",
+				"coordinates" : [
+					[
+						[ -6.3755107651, 39.4689074085 ],
+						[ -6.3755469287, 39.4688755423 ],
+						[ -6.3755319927, 39.4688678178 ],
+						[ -6.3755055775, 39.4688624466 ],
+						[ -6.3754790032, 39.4688705849 ],
+						[ -6.3754566925, 39.4688879833 ],
+						[ -6.3755107651, 39.4689074085 ]
+					]
+				]
+			},
+			"properties" : {
+				"TIPO" : "BATERIA",
+				"PLAZAS" : "1",
+				"CODIGOVIA" : "24",
+				"TIPOVIA" : "CALLE",
+				"NOMBREVIA" : "ALVARO LOPEZ NUÑEZ",
+				"URL" : "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=24",
+				"DISTRITO" : "CENTRO",
+				"BARRIO" : "REYES HUERTAS",
+				"CODBARRIO" : 56
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Polygon",
+				"coordinates" : [
+					[
+						[ -6.3675182374, 39.4653576354 ],
+						[ -6.3675030655, 39.4653562106 ],
+						[ -6.3674929977, 39.4653535052 ],
+						[ -6.3674874977, 39.4653560382 ],
+						[ -6.3676685813, 39.4658122011 ],
+						[ -6.3676712963, 39.4658110914 ],
+						[ -6.3676733927, 39.4658078958 ],
+						[ -6.3676759467, 39.4658048906 ],
+						[ -6.3676805087, 39.4658013379 ],
+						[ -6.3676875842, 39.465796341 ],
+						[ -6.3676887355, 39.4657955409 ],
+						[ -6.3675803468, 39.4655167474 ],
+						[ -6.3675182374, 39.4653576354 ]
+					]
+				]
+			},
+			"properties" : {
+				"TIPO" : "EN LINEA",
+				"PLAZAS" : "10",
+				"CODIGOVIA" : "1427",
+				"TIPOVIA" : "RONDA",
+				"NOMBREVIA" : "DE SAN FRANCISCO",
+				"URL" : "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=1427",
+				"DISTRITO" : "CENTRO",
+				"BARRIO" : "EL RODEO",
+				"CODBARRIO" : 17
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Polygon",
+				"coordinates" : [
+					[
+						[ -6.3810812761, 39.4656836386 ],
+						[ -6.3810395374, 39.4657391718 ],
+						[ -6.3810133982, 39.4657730551 ],
+						[ -6.3810391825, 39.4657848329 ],
+						[ -6.3811065998, 39.4656948795 ],
+						[ -6.3810812761, 39.4656836386 ]
+					]
+				]
+			},
+			"properties" : {
+				"TIPO" : "EN LINEA",
+				"PLAZAS" : "2",
+				"CODIGOVIA" : "1219",
+				"TIPOVIA" : "AVDA",
+				"NOMBREVIA" : "DE ALEMANIA",
+				"URL" : "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=1219",
+				"DISTRITO" : "CENTRO",
+				"BARRIO" : "LOS FRATRES",
+				"CODBARRIO" : 41
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Polygon",
+				"coordinates" : [
+					[
+						[ -6.3777512919, 39.4653408751 ],
+						[ -6.377717444, 39.4653055358 ],
+						[ -6.3776910052, 39.4653199343 ],
+						[ -6.3776130046, 39.4653624131 ],
+						[ -6.3775436949, 39.4654001588 ],
+						[ -6.3774920181, 39.4654251511 ],
+						[ -6.3775198898, 39.4654645751 ],
+						[ -6.3777512919, 39.4653408751 ]
+					]
+				]
+			},
+			"properties" : {
+				"TIPO" : "EN LINEA",
+				"PLAZAS" : "11",
+				"CODIGOVIA" : "3079",
+				"TIPOVIA" : "CALLE",
+				"NOMBREVIA" : "CUAUHTEMOC",
+				"URL" : "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=3079",
+				"DISTRITO" : "CENTRO",
+				"BARRIO" : "MOCTEZUMA",
+				"CODBARRIO" : 46
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Polygon",
+				"coordinates" : [
+					[
+						[ -6.377915362, 39.4661854522 ],
+						[ -6.3779352101, 39.4661733771 ],
+						[ -6.3777523011, 39.4659685568 ],
+						[ -6.3777300062, 39.4659805003 ],
+						[ -6.377915362, 39.4661854522 ]
+					]
+				]
+			},
+			"properties" : {
+				"TIPO" : "EN LINEA",
+				"PLAZAS" : "5",
+				"CODIGOVIA" : "453",
+				"TIPOVIA" : "CALLE",
+				"NOMBREVIA" : "SALAMANCA",
+				"URL" : "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=453",
+				"DISTRITO" : "CENTRO",
+				"BARRIO" : "MOCTEZUMA",
+				"CODBARRIO" : 46
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Polygon",
+				"coordinates" : [
+					[
+						[ -6.3772731139, 39.4663533101 ],
+						[ -6.3772958569, 39.4663383492 ],
+						[ -6.3772740749, 39.4663140504 ],
+						[ -6.3771992078, 39.4662318396 ],
+						[ -6.3771384993, 39.4661648805 ],
+						[ -6.377113612, 39.4661791838 ],
+						[ -6.3772731139, 39.4663533101 ]
+					]
+				]
+			},
+			"properties" : {
+				"TIPO" : "EN LINEA",
+				"PLAZAS" : "4",
+				"CODIGOVIA" : "1390",
+				"TIPOVIA" : "AVDA",
+				"NOMBREVIA" : "ANTONIO HURTADO",
+				"URL" : "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=1390",
+				"DISTRITO" : "CENTRO",
+				"BARRIO" : "MOCTEZUMA",
+				"CODBARRIO" : 46
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Polygon",
+				"coordinates" : [
+					[
+						[ -6.3784122347, 39.4675780532 ],
+						[ -6.3783437034, 39.4675025166 ],
+						[ -6.378285803, 39.4674386973 ],
+						[ -6.3782619742, 39.4674513695 ],
+						[ -6.3783877831, 39.4675911051 ],
+						[ -6.3784122347, 39.4675780532 ]
+					]
+				]
+			},
+			"properties" : {
+				"TIPO" : "ZONA AZUL",
+				"PLAZAS" : "3",
+				"CODIGOVIA" : "1390",
+				"TIPOVIA" : "AVDA",
+				"NOMBREVIA" : "ANTONIO HURTADO",
+				"URL" : "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=1390",
+				"DISTRITO" : "CENTRO",
+				"BARRIO" : "MOCTEZUMA",
+				"CODBARRIO" : 46
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Polygon",
+				"coordinates" : [
+					[
+						[ -6.3782078959, 39.4673524667 ],
+						[ -6.3780922302, 39.4672253358 ],
+						[ -6.3780035429, 39.4671275814 ],
+						[ -6.3779811377, 39.4671394429 ],
+						[ -6.3781833526, 39.4673640445 ],
+						[ -6.3782078959, 39.4673524667 ]
+					]
+				]
+			},
+			"properties" : {
+				"TIPO" : "ZONA AZUL",
+				"PLAZAS" : "6",
+				"CODIGOVIA" : "1390",
+				"TIPOVIA" : "AVDA",
+				"NOMBREVIA" : "ANTONIO HURTADO",
+				"URL" : "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=1390",
+				"DISTRITO" : "CENTRO",
+				"BARRIO" : "MOCTEZUMA",
+				"CODBARRIO" : 46
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Polygon",
+				"coordinates" : [
+					[
+						[ -6.3789791617, 39.4679029366 ],
+						[ -6.3790075182, 39.4679030356 ],
+						[ -6.3790190166, 39.4678037805 ],
+						[ -6.3790190166, 39.4678037805 ],
+						[ -6.3789633162, 39.4677998082 ],
+						[ -6.3789525503, 39.4678935078 ],
+						[ -6.3789791617, 39.4679029366 ]
+					]
+				]
+			},
+			"properties" : {
+				"TIPO" : "ZONA AZUL",
+				"PLAZAS" : "3",
+				"CODIGOVIA" : "1576",
+				"TIPOVIA" : "AVDA",
+				"NOMBREVIA" : "DE PORTUGAL",
+				"URL" : "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=1576",
+				"DISTRITO" : "CENTRO",
+				"BARRIO" : "MOCTEZUMA",
+				"CODBARRIO" : 46
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Polygon",
+				"coordinates" : [
+					[
+						[ -6.3782304069, 39.4628823762 ],
+						[ -6.3782477509, 39.4628754703 ],
+						[ -6.378275887, 39.4628637172 ],
+						[ -6.3781565704, 39.4626732133 ],
+						[ -6.3781022301, 39.4626946743 ],
+						[ -6.3781287245, 39.4627345307 ],
+						[ -6.3781825531, 39.4628155067 ],
+						[ -6.3782154092, 39.4628619774 ],
+						[ -6.3782304069, 39.4628823762 ]
+					]
+				]
+			},
+			"properties" : {
+				"TIPO" : "EN BATERIA",
+				"PLAZAS" : "9",
+				"CODIGOVIA" : "120",
+				"TIPOVIA" : "CALLE",
+				"NOMBREVIA" : "CAUPOLICAN",
+				"URL" : "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=120",
+				"DISTRITO" : "CENTRO",
+				"BARRIO" : "MOCTEZUMA",
+				"CODBARRIO" : 46
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Polygon",
+				"coordinates" : [
+					[
+						[ -6.3781205548, 39.462424863 ],
+						[ -6.3781567995, 39.4623855745 ],
+						[ -6.3780964923, 39.4622925697 ],
+						[ -6.3780231652, 39.4621802388 ],
+						[ -6.3779877218, 39.4622172761 ],
+						[ -6.3781205548, 39.462424863 ]
+					]
+				]
+			},
+			"properties" : {
+				"TIPO" : "EN BATERIA",
+				"PLAZAS" : "10",
+				"CODIGOVIA" : "120",
+				"TIPOVIA" : "CALLE",
+				"NOMBREVIA" : "CAUPOLICAN",
+				"URL" : "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=120",
+				"DISTRITO" : "CENTRO",
+				"BARRIO" : "MOCTEZUMA",
+				"CODBARRIO" : 46
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Polygon",
+				"coordinates" : [
+					[
+						[ -6.3752167799, 39.4618679768 ],
+						[ -6.3752240416, 39.4619375987 ],
+						[ -6.3752307443, 39.4620004514 ],
+						[ -6.3752314917, 39.462008396 ],
+						[ -6.375236309, 39.4620131894 ],
+						[ -6.3752859011, 39.4619986341 ],
+						[ -6.3752718102, 39.4618546747 ],
+						[ -6.3752549423, 39.4618575777 ],
+						[ -6.3752404079, 39.461860853 ],
+						[ -6.3752167799, 39.4618679768 ]
+					]
+				]
+			},
+			"properties" : {
+				"TIPO" : "EN BATERIA",
+				"PLAZAS" : "6",
+				"CODIGOVIA" : "578",
+				"TIPOVIA" : "AVDA",
+				"NOMBREVIA" : "DE LA BONDAD",
+				"URL" : "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=578",
+				"DISTRITO" : "CENTRO",
+				"BARRIO" : "MOCTEZUMA",
+				"CODBARRIO" : 46
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Polygon",
+				"coordinates" : [
+					[
+						[ -6.38283058, 39.4690979869 ],
+						[ -6.3827318469, 39.4690632814 ],
+						[ -6.3826602555, 39.4690381163 ],
+						[ -6.3825869424, 39.4690123461 ],
+						[ -6.382574689, 39.4690329074 ],
+						[ -6.3825837715, 39.4690359012 ],
+						[ -6.3827033745, 39.4690773123 ],
+						[ -6.3828195496, 39.4691175365 ],
+						[ -6.38283058, 39.4690979869 ]
+					]
+				]
+			},
+			"properties" : {
+				"TIPO" : "EN LINEA",
+				"PLAZAS" : "4",
+				"CODIGOVIA" : "222",
+				"TIPOVIA" : "CALLE",
+				"NOMBREVIA" : "GIL CORDERO",
+				"URL" : "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=222",
+				"DISTRITO" : "CENTRO",
+				"BARRIO" : "ARGENTINA",
+				"CODBARRIO" : 2
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Polygon",
+				"coordinates" : [
+					[
+						[ -6.3821581334, 39.4681698249 ],
+						[ -6.3821792226, 39.46817906 ],
+						[ -6.3822549506, 39.4680779252 ],
+						[ -6.3822336148, 39.4680687082 ],
+						[ -6.3821581334, 39.4681698249 ]
+					]
+				]
+			},
+			"properties" : {
+				"TIPO" : "EN LINEA",
+				"PLAZAS" : "2",
+				"CODIGOVIA" : "280",
+				"TIPOVIA" : "CALLE",
+				"NOMBREVIA" : "LINARES",
+				"URL" : "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=280",
+				"DISTRITO" : "CENTRO",
+				"BARRIO" : "ARGENTINA",
+				"CODBARRIO" : 2
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Polygon",
+				"coordinates" : [
+					[
+						[ -6.3817459183, 39.4676517074 ],
+						[ -6.3817747642, 39.467638754 ],
+						[ -6.3814630749, 39.4674971935 ],
+						[ -6.3814486907, 39.4675185721 ],
+						[ -6.3817459183, 39.4676517074 ]
+					]
+				]
+			},
+			"properties" : {
+				"TIPO" : "EN LINEA",
+				"PLAZAS" : "5",
+				"CODIGOVIA" : "57",
+				"TIPOVIA" : "CALLE",
+				"NOMBREVIA" : "ARGENTINA",
+				"URL" : "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=57",
+				"DISTRITO" : "CENTRO",
+				"BARRIO" : "ARGENTINA",
+				"CODBARRIO" : 2
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Polygon",
+				"coordinates" : [
+					[
+						[ -6.3813552382, 39.4683351094 ],
+						[ -6.3812563205, 39.4684659479 ],
+						[ -6.381277113, 39.4684771739 ],
+						[ -6.3813756808, 39.4683450582 ],
+						[ -6.3813552382, 39.4683351094 ]
+					]
+				]
+			},
+			"properties" : {
+				"TIPO" : "EN LINEA",
+				"PLAZAS" : "3",
+				"CODIGOVIA" : "465",
+				"TIPOVIA" : "CALLE",
+				"NOMBREVIA" : "SANGUINO MICHEL",
+				"URL" : "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=465",
+				"DISTRITO" : "CENTRO",
+				"BARRIO" : "ARGENTINA",
+				"CODBARRIO" : 2
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Polygon",
+				"coordinates" : [
+					[
+						[ -6.3825468897, 39.4668824715 ],
+						[ -6.3825488333, 39.4668798677 ],
+						[ -6.3826378502, 39.4667601407 ],
+						[ -6.3826668353, 39.4667211949 ],
+						[ -6.3826407651, 39.466711803 ],
+						[ -6.3825220508, 39.4668718033 ],
+						[ -6.3825468897, 39.4668824715 ]
+					]
+				]
+			},
+			"properties" : {
+				"TIPO" : "EN LINEA",
+				"PLAZAS" : "4",
+				"CODIGOVIA" : "465",
+				"TIPOVIA" : "CALLE",
+				"NOMBREVIA" : "SANGUINO MICHEL",
+				"URL" : "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=465",
+				"DISTRITO" : "CENTRO",
+				"BARRIO" : "ARGENTINA",
+				"CODBARRIO" : 2
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Polygon",
+				"coordinates" : [
+					[
+						[ -6.3814349876, 39.4668514429 ],
+						[ -6.3814717943, 39.4668042628 ],
+						[ -6.3815191949, 39.4667435032 ],
+						[ -6.3814791105, 39.466722359 ],
+						[ -6.381396748, 39.4668322405 ],
+						[ -6.3814349876, 39.4668514429 ]
+					]
+				]
+			},
+			"properties" : {
+				"TIPO" : "EN LINEA",
+				"PLAZAS" : "5",
+				"CODIGOVIA" : "208",
+				"TIPOVIA" : "CALLE",
+				"NOMBREVIA" : "GARCIA PLATA DE OSMA",
+				"URL" : "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=208",
+				"DISTRITO" : "CENTRO",
+				"BARRIO" : "ARGENTINA",
+				"CODBARRIO" : 2
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Polygon",
+				"coordinates" : [
+					[
+						[ -6.3807478306, 39.4664873501 ],
+						[ -6.3807209095, 39.4664759023 ],
+						[ -6.380627414, 39.4666044104 ],
+						[ -6.380651967, 39.4666156338 ],
+						[ -6.3806829776, 39.4665741358 ],
+						[ -6.3807208229, 39.4665234916 ],
+						[ -6.3807375186, 39.4665011496 ],
+						[ -6.3807478306, 39.4664873501 ]
+					]
+				]
+			},
+			"properties" : {
+				"TIPO" : "EN LINEA",
+				"PLAZAS" : "3",
+				"CODIGOVIA" : "1219",
+				"TIPOVIA" : "AVDA",
+				"NOMBREVIA" : "DE ALEMANIA",
+				"URL" : "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=1219",
+				"DISTRITO" : "CENTRO",
+				"BARRIO" : "ARGENTINA",
+				"CODBARRIO" : 2
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Polygon",
+				"coordinates" : [
+					[
+						[ -6.3812215633, 39.465852455 ],
+						[ -6.3812019403, 39.4658438059 ],
+						[ -6.3811968128, 39.4658415459 ],
+						[ -6.3811673985, 39.4658804229 ],
+						[ -6.381067832, 39.4660125907 ],
+						[ -6.3810934416, 39.466024071 ],
+						[ -6.3812215633, 39.465852455 ]
+					]
+				]
+			},
+			"properties" : {
+				"TIPO" : "EN LINEA",
+				"PLAZAS" : "5",
+				"CODIGOVIA" : "1219",
+				"TIPOVIA" : "AVDA",
+				"NOMBREVIA" : "DE ALEMANIA",
+				"URL" : "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=1219",
+				"DISTRITO" : "CENTRO",
+				"BARRIO" : "ARGENTINA",
+				"CODBARRIO" : 2
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Polygon",
+				"coordinates" : [
+					[
+						[ -6.3850127391, 39.4680786165 ],
+						[ -6.385159461, 39.4679712224 ],
+						[ -6.3851395241, 39.4679548665 ],
+						[ -6.3850798781, 39.4679988388 ],
+						[ -6.3849922141, 39.4680635171 ],
+						[ -6.3850127391, 39.4680786165 ]
+					]
+				]
+			},
+			"properties" : {
+				"TIPO" : "EN LINEA",
+				"PLAZAS" : "3",
+				"CODIGOVIA" : "537",
+				"TIPOVIA" : "AVDA",
+				"NOMBREVIA" : "VIRGEN DE GUADALUPE",
+				"URL" : "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=537",
+				"DISTRITO" : "CENTRO",
+				"BARRIO" : "EL PERU",
+				"CODBARRIO" : 16
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "MultiPolygon",
+				"coordinates" : [
+					[
+						[
+							[ -6.3850271992, 39.4651821103 ],
+							[ -6.3850271901, 39.4651820386 ],
+							[ -6.3850271992, 39.4651821103 ],
+							[ -6.3850271992, 39.4651821103 ]
+						]
+					],
+					[
+						[
+							[ -6.3850271992, 39.4651821103 ],
+							[ -6.3850380402, 39.4652677514 ],
+							[ -6.3850921593, 39.4652573519 ],
+							[ -6.3850789614, 39.4651527537 ],
+							[ -6.3850271992, 39.4651821103 ]
+						]
+					]
+				]
+			},
+			"properties" : {
+				"TIPO" : "EN LINEA",
+				"PLAZAS" : "5",
+				"CODIGOVIA" : "2363",
+				"TIPOVIA" : "CALLE",
+				"NOMBREVIA" : "ANTONIO FLORIANO CUMBREÑO",
+				"URL" : "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=2363",
+				"DISTRITO" : "CENTRO",
+				"BARRIO" : "EL PERU",
+				"CODBARRIO" : 16
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Polygon",
+				"coordinates" : [
+					[
+						[ -6.3832253743, 39.4650663483 ],
+						[ -6.3832261588, 39.4650640237 ],
+						[ -6.3831028608, 39.465007735 ],
+						[ -6.3830985114, 39.4650054728 ],
+						[ -6.3830969451, 39.4650074216 ],
+						[ -6.3831042388, 39.4650329907 ],
+						[ -6.3831904815, 39.4650732201 ],
+						[ -6.3832253743, 39.4650663483 ]
+					]
+				]
+			},
+			"properties" : {
+				"TIPO" : "EN LINEA",
+				"PLAZAS" : "2",
+				"CODIGOVIA" : "278",
+				"TIPOVIA" : "CALLE",
+				"NOMBREVIA" : "LIMA",
+				"URL" : "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=278",
+				"DISTRITO" : "CENTRO",
+				"BARRIO" : "EL PERU",
+				"CODBARRIO" : 16
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "MultiPolygon",
+				"coordinates" : [
+					[
+						[
+							[ -6.3845543363, 39.4673520713 ],
+							[ -6.3845377386, 39.4673142211 ],
+							[ -6.3845351013, 39.4673132609 ],
+							[ -6.384481636, 39.4674032268 ],
+							[ -6.3843799728, 39.4675768889 ],
+							[ -6.3844134235, 39.4675913721 ],
+							[ -6.3845543363, 39.4673520713 ]
+						]
+					],
+					[
+						[
+							[ -6.3843799728, 39.4675768889 ],
+							[ -6.3843786294, 39.4675763072 ],
+							[ -6.3843793012, 39.4675780361 ],
+							[ -6.3843799728, 39.4675768889 ]
+						]
+					]
+				]
+			},
+			"properties" : {
+				"TIPO" : "EN BATERIA",
+				"PLAZAS" : "13",
+				"CODIGOVIA" : "3626",
+				"TIPOVIA" : "CALLE",
+				"NOMBREVIA" : "PADRE ELADIO MOZAS",
+				"URL" : "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=3626",
+				"DISTRITO" : "CENTRO",
+				"BARRIO" : "EL PERU",
+				"CODBARRIO" : 16
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Polygon",
+				"coordinates" : [
+					[
+						[ -6.3721601229, 39.4698322711 ],
+						[ -6.3721373758, 39.4697865776 ],
+						[ -6.372061872, 39.4698100047 ],
+						[ -6.3720737548, 39.4698309036 ],
+						[ -6.3721033476, 39.4698506714 ],
+						[ -6.3721601229, 39.4698322711 ]
+					]
+				]
+			},
+			"properties" : {
+				"TIPO" : "EN BATERIA",
+				"PLAZAS" : "3",
+				"CODIGOVIA" : "393",
+				"TIPOVIA" : "CALLE",
+				"NOMBREVIA" : "PROFESOR HERNANDEZ PACHECO",
+				"URL" : "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=393",
+				"DISTRITO" : "CENTRO",
+				"BARRIO" : "HERNANDEZ PACHECO",
+				"CODBARRIO" : 24
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Polygon",
+				"coordinates" : [
+					[
+						[ -6.372061872, 39.4698100047 ],
+						[ -6.3719811548, 39.4698298906 ],
+						[ -6.3719877149, 39.4698496579 ],
+						[ -6.3720274907, 39.469841794 ],
+						[ -6.3720737548, 39.4698309036 ],
+						[ -6.372061872, 39.4698100047 ]
+					]
+				]
+			},
+			"properties" : {
+				"TIPO" : "EN LINEA",
+				"PLAZAS" : "1",
+				"CODIGOVIA" : "393",
+				"TIPOVIA" : "CALLE",
+				"NOMBREVIA" : "PROFESOR HERNANDEZ PACHECO",
+				"URL" : "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=393",
+				"DISTRITO" : "CENTRO",
+				"BARRIO" : "HERNANDEZ PACHECO",
+				"CODBARRIO" : 24
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Polygon",
+				"coordinates" : [
+					[
+						[ -6.3719132492, 39.4704226305 ],
+						[ -6.3720894858, 39.4704817839 ],
+						[ -6.3721004365, 39.4704595515 ],
+						[ -6.3720087508, 39.4704295128 ],
+						[ -6.3719257742, 39.4704020896 ],
+						[ -6.3719132492, 39.4704226305 ]
+					]
+				]
+			},
+			"properties" : {
+				"TIPO" : "EN LINEA",
+				"PLAZAS" : "3",
+				"CODIGOVIA" : "611",
+				"TIPOVIA" : "CALLE",
+				"NOMBREVIA" : "CAMINO LLANO",
+				"URL" : "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=611",
+				"DISTRITO" : "CENTRO",
+				"BARRIO" : "HERNANDEZ PACHECO",
+				"CODBARRIO" : 24
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Polygon",
+				"coordinates" : [
+					[
+						[ -6.3692665415, 39.4687806564 ],
+						[ -6.3692628637, 39.4687579611 ],
+						[ -6.3692575001, 39.4687543748 ],
+						[ -6.3690930716, 39.4688753887 ],
+						[ -6.3691102135, 39.468890903 ],
+						[ -6.3691710374, 39.4688480085 ],
+						[ -6.3692175032, 39.4688152396 ],
+						[ -6.3692665415, 39.4687806564 ]
+					]
+				]
+			},
+			"properties" : {
+				"TIPO" : "EN LINEA",
+				"PLAZAS" : "4",
+				"CODIGOVIA" : "1541",
+				"TIPOVIA" : "CALLE",
+				"NOMBREVIA" : "HERMANOS ROMERO RUIZ",
+				"URL" : "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=1541",
+				"DISTRITO" : "CENTRO",
+				"BARRIO" : "HERNANDEZ PACHECO",
+				"CODBARRIO" : 24
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Polygon",
+				"coordinates" : [
+					[
+						[ -6.3695159549, 39.4692782063 ],
+						[ -6.3694342476, 39.4692066388 ],
+						[ -6.3694086466, 39.4692520582 ],
+						[ -6.369492171, 39.4693250184 ],
+						[ -6.3695159549, 39.4692782063 ]
+					]
+				]
+			},
+			"properties" : {
+				"TIPO" : "EN BATERIA",
+				"PLAZAS" : "4",
+				"CODIGOVIA" : "1427",
+				"TIPOVIA" : "RONDA",
+				"NOMBREVIA" : "DE SAN FRANCISCO",
+				"URL" : "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=1427",
+				"DISTRITO" : "CENTRO",
+				"BARRIO" : "HERNANDEZ PACHECO",
+				"CODBARRIO" : 24
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Polygon",
+				"coordinates" : [
+					[
+						[ -6.370319617, 39.4691925243 ],
+						[ -6.3702593037, 39.4692947905 ],
+						[ -6.3702679648, 39.4692967332 ],
+						[ -6.3703068124, 39.4692946261 ],
+						[ -6.3703244341, 39.4692653514 ],
+						[ -6.3703439725, 39.4692328924 ],
+						[ -6.3703603718, 39.4692056485 ],
+						[ -6.370319617, 39.4691925243 ]
+					]
+				]
+			},
+			"properties" : {
+				"TIPO" : "EN BATERIA",
+				"PLAZAS" : "5",
+				"CODIGOVIA" : "1394",
+				"TIPOVIA" : "CALLE",
+				"NOMBREVIA" : "SAN IGNACIO",
+				"URL" : "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=1394",
+				"DISTRITO" : "CENTRO",
+				"BARRIO" : "HERNANDEZ PACHECO",
+				"CODBARRIO" : 24
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Polygon",
+				"coordinates" : [
+					[
+						[ -6.3759238378, 39.4710409397 ],
+						[ -6.3758691704, 39.4709986252 ],
+						[ -6.3758446614, 39.4710365046 ],
+						[ -6.3758901826, 39.4710704493 ],
+						[ -6.375910555, 39.4710727111 ],
+						[ -6.3759196386, 39.4710660695 ],
+						[ -6.3759238378, 39.4710409397 ]
+					]
+				]
+			},
+			"properties" : {
+				"TIPO" : "ZONA AZUL",
+				"PLAZAS" : "2",
+				"CODIGOVIA" : "541",
+				"TIPOVIA" : "AVDA",
+				"NOMBREVIA" : "VIRGEN DE LA MONTAÑA",
+				"URL" : "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=541",
+				"DISTRITO" : "CENTRO",
+				"BARRIO" : "VIRGEN DE LA MONTAÑA",
+				"CODBARRIO" : 77
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Polygon",
+				"coordinates" : [
+					[
+						[ -6.3758101783, 39.4710109659 ],
+						[ -6.3758289028, 39.4709721309 ],
+						[ -6.3757044774, 39.4708777017 ],
+						[ -6.3756539408, 39.4708431415 ],
+						[ -6.3756397236, 39.4708838437 ],
+						[ -6.3756598723, 39.4708988485 ],
+						[ -6.375697824, 39.4709271277 ],
+						[ -6.375707877, 39.4709346216 ],
+						[ -6.3757520707, 39.4709675653 ],
+						[ -6.3757613187, 39.4709744529 ],
+						[ -6.3758001578, 39.4710033832 ],
+						[ -6.3758101783, 39.4710109659 ]
+					]
+				]
+			},
+			"properties" : {
+				"TIPO" : "ZONA AZUL",
+				"PLAZAS" : "6",
+				"CODIGOVIA" : "541",
+				"TIPOVIA" : "AVDA",
+				"NOMBREVIA" : "VIRGEN DE LA MONTAÑA",
+				"URL" : "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=541",
+				"DISTRITO" : "CENTRO",
+				"BARRIO" : "VIRGEN DE LA MONTAÑA",
+				"CODBARRIO" : 77
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Polygon",
+				"coordinates" : [
+					[
+						[ -6.3749438672, 39.4711834128 ],
+						[ -6.3748709636, 39.4711297347 ],
+						[ -6.374804768, 39.4710808933 ],
+						[ -6.3747913819, 39.471091842 ],
+						[ -6.3749299957, 39.4711959554 ],
+						[ -6.3749438672, 39.4711834128 ]
+					]
+				]
+			},
+			"properties" : {
+				"TIPO" : "EN LINEA",
+				"PLAZAS" : "3",
+				"CODIGOVIA" : "159",
+				"TIPOVIA" : "CALLE",
+				"NOMBREVIA" : "DIEGO MARIA CREHUET",
+				"URL" : "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=159",
+				"DISTRITO" : "CENTRO",
+				"BARRIO" : "VIRGEN DE LA MONTAÑA",
+				"CODBARRIO" : 77
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Polygon",
+				"coordinates" : [
+					[
+						[ -6.3731500895, 39.4704226664 ],
+						[ -6.3731799729, 39.4703557347 ],
+						[ -6.3732611024, 39.4701740229 ],
+						[ -6.3732837696, 39.4701232533 ],
+						[ -6.3732701614, 39.4701147028 ],
+						[ -6.3732608506, 39.4701108159 ],
+						[ -6.3731275154, 39.4704163694 ],
+						[ -6.3731500895, 39.4704226664 ]
+					]
+				]
+			},
+			"properties" : {
+				"TIPO" : "EN LINEA",
+				"PLAZAS" : "7",
+				"CODIGOVIA" : "134",
+				"TIPOVIA" : "CALLE",
+				"NOMBREVIA" : "COLON",
+				"URL" : "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=134",
+				"DISTRITO" : "CENTRO",
+				"BARRIO" : "VIRGEN DE LA MONTAÑA",
+				"CODBARRIO" : 77
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Polygon",
+				"coordinates" : [
+					[
+						[ -6.3763157317, 39.4722183293 ],
+						[ -6.3763434208, 39.4722305766 ],
+						[ -6.3764055412, 39.4721467966 ],
+						[ -6.376378321, 39.4721348996 ],
+						[ -6.3763157317, 39.4722183293 ]
+					]
+				]
+			},
+			"properties" : {
+				"TIPO" : "ZONA AZUL",
+				"PLAZAS" : "2",
+				"CODIGOVIA" : "3415",
+				"TIPOVIA" : "CALLE",
+				"NOMBREVIA" : "COMANDANTE SANCHEZ HERRERO",
+				"URL" : "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=3415",
+				"DISTRITO" : "CENTRO",
+				"BARRIO" : "VIRGEN DE LA MONTAÑA",
+				"CODBARRIO" : 77
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Polygon",
+				"coordinates" : [
+					[
+						[ -6.3736289715, 39.4756674641 ],
+						[ -6.3736807962, 39.4756424321 ],
+						[ -6.3736449999, 39.475583476 ],
+						[ -6.3735806641, 39.4756057025 ],
+						[ -6.3736289715, 39.4756674641 ]
+					]
+				]
+			},
+			"properties" : {
+				"TIPO" : "EN BATERIA",
+				"PLAZAS" : "3",
+				"CODIGOVIA" : "353",
+				"TIPOVIA" : "PLAZA",
+				"NOMBREVIA" : "OBISPO GALARZA",
+				"URL" : "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=353",
+				"DISTRITO" : "CENTRO",
+				"BARRIO" : "MARGALLO",
+				"CODBARRIO" : 44
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Polygon",
+				"coordinates" : [
+					[
+						[ -6.3826987758, 39.4598634504 ],
+						[ -6.3828844879, 39.4595589269 ],
+						[ -6.3828315406, 39.4595395243 ],
+						[ -6.3826714134, 39.4598020945 ],
+						[ -6.3826987758, 39.4598634504 ]
+					]
+				]
+			},
+			"properties" : {
+				"TIPO" : "EN BATERIA",
+				"PLAZAS" : "15",
+				"CODIGOVIA" : "3461",
+				"TIPOVIA" : "CALLE",
+				"NOMBREVIA" : "TUNEZ",
+				"URL" : "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=3641",
+				"DISTRITO" : "SUR",
+				"BARRIO" : "SAN ANTONIO (NUEVO CACERES)",
+				"CODBARRIO" : 62
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Polygon",
+				"coordinates" : [
+					[
+						[ -6.3732601473, 39.4594349949 ],
+						[ -6.3732641198, 39.4594124509 ],
+						[ -6.3728886136, 39.45937678 ],
+						[ -6.3728862866, 39.4593985124 ],
+						[ -6.3729163092, 39.4594014273 ],
+						[ -6.3730495473, 39.4594144596 ],
+						[ -6.3731579989, 39.4594250222 ],
+						[ -6.3732601473, 39.4594349949 ]
+					]
+				]
+			},
+			"properties" : {
+				"TIPO" : "EN LINEA",
+				"PLAZAS" : "6",
+				"CODIGOVIA" : "133",
+				"TIPOVIA" : "CALLE",
+				"NOMBREVIA" : "COLOMBIA",
+				"URL" : "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=133",
+				"DISTRITO" : "SUR",
+				"BARRIO" : "LLOPIS IVORRA",
+				"CODBARRIO" : 39
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Polygon",
+				"coordinates" : [
+					[
+						[ -6.376104701, 39.473774508 ],
+						[ -6.3759125674, 39.4739009773 ],
+						[ -6.3759163402, 39.473905747 ],
+						[ -6.3759950252, 39.4739523876 ],
+						[ -6.3761095998, 39.4737934568 ],
+						[ -6.376107697, 39.4737752063 ],
+						[ -6.376104701, 39.473774508 ]
+					]
+				]
+			},
+			"properties" : {
+				"TIPO" : "EN BATERIA",
+				"PLAZAS" : "3",
+				"CODIGOVIA" : "122",
+				"TIPOVIA" : "CALLE",
+				"NOMBREVIA" : "CERES",
+				"URL" : "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=122",
+				"CODBARRIO" : 0
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Polygon",
+				"coordinates" : [
+					[
+						[ -6.376104701, 39.473774508 ],
+						[ -6.3759125674, 39.4739009773 ],
+						[ -6.3759163402, 39.473905747 ],
+						[ -6.3759950252, 39.4739523876 ],
+						[ -6.3761095998, 39.4737934568 ],
+						[ -6.376107697, 39.4737752063 ],
+						[ -6.376104701, 39.473774508 ]
+					]
+				]
+			},
+			"properties" : {
+				"TIPO" : "EN BATERIA",
+				"PLAZAS" : "3",
+				"CODIGOVIA" : "17",
+				"TIPOVIA" : "CALLE",
+				"NOMBREVIA" : "ALFONSO IX",
+				"URL" : "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=17",
+				"CODBARRIO" : 0
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Polygon",
+				"coordinates" : [
+					[
+						[ -6.3798098113, 39.4702114354 ],
+						[ -6.3798078567, 39.4702098763 ],
+						[ -6.3797921882, 39.4702164433 ],
+						[ -6.3797513294, 39.4702335397 ],
+						[ -6.3797104672, 39.470250726 ],
+						[ -6.3796979385, 39.4702593622 ],
+						[ -6.3797645499, 39.4702869897 ],
+						[ -6.3798739378, 39.470243331 ],
+						[ -6.3798098113, 39.4702114354 ]
+					]
+				]
+			},
+			"properties" : {
+				"TIPO" : "EN BATERIA",
+				"PLAZAS" : "3",
+				"CODIGOVIA" : "977",
+				"TIPOVIA" : "CALLE",
+				"NOMBREVIA" : "SANTA JOAQUINA DE VEDRUNA",
+				"URL" : "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=977",
+				"CODBARRIO" : 0
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Polygon",
+				"coordinates" : [
+					[
+						[ -6.3749369982, 39.4653500464 ],
+						[ -6.3749693933, 39.4653478053 ],
+						[ -6.3749724701, 39.4653463433 ],
+						[ -6.3747233806, 39.4650747768 ],
+						[ -6.3747128244, 39.465068052 ],
+						[ -6.3747011627, 39.465093824 ],
+						[ -6.3749369982, 39.4653500464 ]
+					]
+				]
+			},
+			"properties" : {
+				"TIPO" : "EN LINEA",
+				"PLAZAS" : "7",
+				"CODIGOVIA" : "3619",
+				"TIPOVIA" : "AVDA",
+				"NOMBREVIA" : "DE LOS PILARES",
+				"URL" : "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=3619",
+				"DISTRITO" : "CENTRO",
+				"BARRIO" : "EL RODEO",
+				"CODBARRIO" : 17
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Polygon",
+				"coordinates" : [
+					[
+						[ -6.3774831086, 39.4601469482 ],
+						[ -6.3774645775, 39.4599790601 ],
+						[ -6.3774386565, 39.4599976809 ],
+						[ -6.3774527681, 39.4601344454 ],
+						[ -6.3774831086, 39.4601469482 ]
+					]
+				]
+			},
+			"properties" : {
+				"TIPO" : "EN LINEA",
+				"PLAZAS" : "3",
+				"CODIGOVIA" : "3010",
+				"TIPOVIA" : "RONDA",
+				"NOMBREVIA" : "DE LA PIZARRA",
+				"URL" : "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=3010",
+				"DISTRITO" : "SUR",
+				"BARRIO" : "VERA CRUZ",
+				"CODBARRIO" : 75
+			}
+		}
+	]
+}
