@@ -1,0 +1,126 @@
+{
+	"type" : "FeatureCollection",
+	"name" : "parkings",
+	"features" : [
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Point",
+				"coordinates" : [ -6.3743148782, 39.4757325603 ]
+			},
+			"properties" : {
+				"CLASE" : "PARKING",
+				"DENOMINACI" : "Obispo Galarza",
+				"NUCLEO" : "CÁCERES",
+				"URL" : "http://sig.caceres.es/serweb/fichasig/fichatoponimia.php?mslink=1882",
+				"WGS84_X" : "-6.374084",
+				"WGS84_Y" : "39.475736"
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Point",
+				"coordinates" : [ -6.3772081026, 39.4708300303 ]
+			},
+			"properties" : {
+				"CLASE" : "PARKING",
+				"DENOMINACI" : "Canovas",
+				"NUCLEO" : "CÁCERES",
+				"URL" : "http://sig.caceres.es/serweb/fichasig/fichatoponimia.php?mslink=1899",
+				"WGS84_X" : "-6.37705",
+				"WGS84_Y" : "39.470835"
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Point",
+				"coordinates" : [ -6.3908159247, 39.4687782827 ]
+			},
+			"properties" : {
+				"CLASE" : "PARKING",
+				"DENOMINACI" : "Centro Comercial Ruta de la Plata",
+				"NUCLEO" : "CÁCERES",
+				"URL" : "http://sig.caceres.es/serweb/fichasig/fichatoponimia.php?mslink=1908",
+				"WGS84_X" : "-6.390816",
+				"WGS84_Y" : "39.468778"
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Point",
+				"coordinates" : [ -6.3853535914, 39.4675194101 ]
+			},
+			"properties" : {
+				"CLASE" : "PARKING",
+				"DENOMINACI" : "EL PERU",
+				"NUCLEO" : "CÁCERES",
+				"URL" : "http://sig.caceres.es/serweb/fichasig/fichatoponimia.php?mslink=10751",
+				"WGS84_X" : "-6.385354",
+				"WGS84_Y" : "39.467519"
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Point",
+				"coordinates" : [ -6.3716891287, 39.4775514741 ]
+			},
+			"properties" : {
+				"CLASE" : "PARKING",
+				"DENOMINACI" : "Don Manuel",
+				"NUCLEO" : "CÁCERES",
+				"URL" : "http://sig.caceres.es/serweb/fichasig/fichatoponimia.php?mslink=10752",
+				"WGS84_X" : "-6.371689",
+				"WGS84_Y" : "39.477551"
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Point",
+				"coordinates" : [ -6.3777927306, 39.4719819065 ]
+			},
+			"properties" : {
+				"CLASE" : "PARKING",
+				"DENOMINACI" : "Clara Campoamor",
+				"NUCLEO" : "CÁCERES",
+				"URL" : "http://sig.caceres.es/serweb/fichasig/fichatoponimia.php?mslink=10763",
+				"WGS84_X" : "-6.379014",
+				"WGS84_Y" : "39.472495"
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Point",
+				"coordinates" : [ -6.3789750411, 39.4725935255 ]
+			},
+			"properties" : {
+				"CLASE" : "PARKING",
+				"DENOMINACI" : "Clara Campoamor",
+				"NUCLEO" : "CÁCERES",
+				"URL" : "http://sig.caceres.es/serweb/fichasig/fichatoponimia.php?mslink=10763",
+				"WGS84_X" : "-6.379014",
+				"WGS84_Y" : "39.472495"
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Point",
+				"coordinates" : [ -6.3792366038, 39.4724907967 ]
+			},
+			"properties" : {
+				"CLASE" : "PARKING",
+				"DENOMINACI" : "Clara Campoamor",
+				"NUCLEO" : "CÁCERES",
+				"URL" : "http://sig.caceres.es/serweb/fichasig/fichatoponimia.php?mslink=10763",
+				"WGS84_X" : "-6.379014",
+				"WGS84_Y" : "39.472495"
+			}
+		}
+	]
+}

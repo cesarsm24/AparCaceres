@@ -10,8 +10,13 @@ BACKEND_DIR = Path(__file__).resolve().parent.parent
 # Carga variables desde backend/.env si existe.
 load_dotenv(BACKEND_DIR / ".env")
 
-# Dataset GeoJSON con los aparcamientos públicos de Cáceres (Open Data).
-DATA_FILE = BACKEND_DIR / "data" / "aparcamientos.geojson"
+# Directorio con los datasets GeoJSON de Open Data Cáceres. El importador
+# procesa todos los `*.geojson` del directorio y normaliza cada fichero contra
+# el contrato móvil, infiriendo categoría/vehículo/régimen del filename
+# cuando el feature no los aporta. Mantenemos `DATA_FILE` para compatibilidad
+# con cualquier herramienta que aún apunte al fichero original.
+DATA_DIR = BACKEND_DIR / "data"
+DATA_FILE = DATA_DIR / "aparcamientos.geojson"
 
 # Claves de Redis que usa la app:
 #   geo:parkings                       -> sorted set geoespacial (GEOADD / GEOSEARCH)

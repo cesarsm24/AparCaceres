@@ -1,0 +1,926 @@
+{
+	"type" : "FeatureCollection",
+	"name" : "parking_motos_puntos",
+	"features" : [
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Point",
+				"coordinates" : [ -6.3817880425, 39.4707181079 ]
+			},
+			"properties" : {
+				"NUCLEO" : "CACERES",
+				"DISTRITO" : "OESTE",
+				"BARRIO" : "PARQUE DEL PRINCIPE",
+				"CODBARRIO" : 49,
+				"CODIGO_VIA" : 537,
+				"TIPO_VIA" : "AVDA",
+				"NOMBRE_VIA" : "VIRGEN DE GUADALUPE",
+				"TIPO" : "Parking Motos",
+				"PLAZAS" : 3,
+				"URL_FICHA" : "https://sig.caceres.es/serweb/fichasig/fichaparkingmotos.php?mslink=32",
+				"URL_VIA" : "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=537"
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Point",
+				"coordinates" : [ -6.3890438203, 39.4683999395 ]
+			},
+			"properties" : {
+				"NUCLEO" : "CACERES",
+				"DISTRITO" : "OESTE",
+				"BARRIO" : "CABEZARRUBIA",
+				"CODBARRIO" : 4,
+				"CODIGO_VIA" : 3446,
+				"TIPO_VIA" : "CALLE",
+				"NOMBRE_VIA" : "LONDRES",
+				"TIPO" : "Parking Motos",
+				"PLAZAS" : 15,
+				"URL_FICHA" : "https://sig.caceres.es/serweb/fichasig/fichaparkingmotos.php?mslink=31",
+				"URL_VIA" : "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=3446"
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Point",
+				"coordinates" : [ -6.3870870499, 39.4688239464 ]
+			},
+			"properties" : {
+				"NUCLEO" : "CACERES",
+				"DISTRITO" : "OESTE",
+				"BARRIO" : "CABEZARRUBIA",
+				"CODBARRIO" : 4,
+				"CODIGO_VIA" : 3497,
+				"TIPO_VIA" : "AVDA",
+				"NOMBRE_VIA" : "PARIS",
+				"TIPO" : "Parking Motos",
+				"PLAZAS" : 3,
+				"URL_FICHA" : "https://sig.caceres.es/serweb/fichasig/fichaparkingmotos.php?mslink=3",
+				"URL_VIA" : "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=3497"
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Point",
+				"coordinates" : [ -6.3873031108, 39.4684594599 ]
+			},
+			"properties" : {
+				"NUCLEO" : "CACERES",
+				"DISTRITO" : "OESTE",
+				"BARRIO" : "CABEZARRUBIA",
+				"CODBARRIO" : 4,
+				"CODIGO_VIA" : 3497,
+				"TIPO_VIA" : "AVDA",
+				"NOMBRE_VIA" : "PARIS",
+				"TIPO" : "Parking Motos",
+				"PLAZAS" : 3,
+				"URL_FICHA" : "https://sig.caceres.es/serweb/fichasig/fichaparkingmotos.php?mslink=4",
+				"URL_VIA" : "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=3497"
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Point",
+				"coordinates" : [ -6.387024409, 39.4683637702 ]
+			},
+			"properties" : {
+				"NUCLEO" : "CACERES",
+				"DISTRITO" : "OESTE",
+				"BARRIO" : "CABEZARRUBIA",
+				"CODBARRIO" : 4,
+				"CODIGO_VIA" : 3497,
+				"TIPO_VIA" : "AVDA",
+				"NOMBRE_VIA" : "PARIS",
+				"TIPO" : "Parking Motos",
+				"PLAZAS" : 3,
+				"URL_FICHA" : "https://sig.caceres.es/serweb/fichasig/fichaparkingmotos.php?mslink=5",
+				"URL_VIA" : "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=3497"
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Point",
+				"coordinates" : [ -6.3664816331, 39.4728971469 ]
+			},
+			"properties" : {
+				"NUCLEO" : "CACERES",
+				"DISTRITO" : "CENTRO",
+				"BARRIO" : "SAN MARQUINO",
+				"CODBARRIO" : 68,
+				"CODIGO_VIA" : 193,
+				"TIPO_VIA" : "CALLE",
+				"NOMBRE_VIA" : "FUENTE CONCEJO",
+				"TIPO" : "Parking Motos",
+				"PLAZAS" : 8,
+				"URL_FICHA" : "https://sig.caceres.es/serweb/fichasig/fichaparkingmotos.php?mslink=6",
+				"URL_VIA" : "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=193"
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Point",
+				"coordinates" : [ -6.3675648934, 39.4657478278 ]
+			},
+			"properties" : {
+				"NUCLEO" : "CACERES",
+				"DISTRITO" : "CENTRO",
+				"BARRIO" : "SAN FRANCISCO",
+				"CODBARRIO" : 64,
+				"CODIGO_VIA" : 1427,
+				"TIPO_VIA" : "RONDA",
+				"NOMBRE_VIA" : "DE SAN FRANCISCO",
+				"TIPO" : "Parking Motos",
+				"PLAZAS" : 2,
+				"URL_FICHA" : "https://sig.caceres.es/serweb/fichasig/fichaparkingmotos.php?mslink=7",
+				"URL_VIA" : "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=1427"
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Point",
+				"coordinates" : [ -6.3680378583, 39.4671708899 ]
+			},
+			"properties" : {
+				"NUCLEO" : "CACERES",
+				"DISTRITO" : "CENTRO",
+				"BARRIO" : "SAN FRANCISCO",
+				"CODBARRIO" : 64,
+				"CODIGO_VIA" : 1427,
+				"TIPO_VIA" : "RONDA",
+				"NOMBRE_VIA" : "DE SAN FRANCISCO",
+				"TIPO" : "Parking Motos",
+				"PLAZAS" : 8,
+				"URL_FICHA" : "https://sig.caceres.es/serweb/fichasig/fichaparkingmotos.php?mslink=8",
+				"URL_VIA" : "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=1427"
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Point",
+				"coordinates" : [ -6.3746736853, 39.4722672065 ]
+			},
+			"properties" : {
+				"NUCLEO" : "CACERES",
+				"DISTRITO" : "CENTRO",
+				"BARRIO" : "SANTA CLARA",
+				"CODBARRIO" : 69,
+				"CODIGO_VIA" : 304,
+				"TIPO_VIA" : "PLAZA",
+				"NOMBRE_VIA" : "MARRON",
+				"TIPO" : "Parking Motos",
+				"PLAZAS" : 5,
+				"URL_FICHA" : "https://sig.caceres.es/serweb/fichasig/fichaparkingmotos.php?mslink=9",
+				"URL_VIA" : "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=304"
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Point",
+				"coordinates" : [ -6.3746480621, 39.4723907099 ]
+			},
+			"properties" : {
+				"NUCLEO" : "CACERES",
+				"DISTRITO" : "CENTRO",
+				"BARRIO" : "SANTA CLARA",
+				"CODBARRIO" : 69,
+				"CODIGO_VIA" : 304,
+				"TIPO_VIA" : "PLAZA",
+				"NOMBRE_VIA" : "MARRON",
+				"TIPO" : "Parking Motos",
+				"PLAZAS" : 5,
+				"URL_FICHA" : "https://sig.caceres.es/serweb/fichasig/fichaparkingmotos.php?mslink=10",
+				"URL_VIA" : "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=186"
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Point",
+				"coordinates" : [ -6.3746609274, 39.4722328139 ]
+			},
+			"properties" : {
+				"NUCLEO" : "CACERES",
+				"DISTRITO" : "CENTRO",
+				"BARRIO" : "SANTA CLARA",
+				"CODBARRIO" : 69,
+				"CODIGO_VIA" : 304,
+				"TIPO_VIA" : "PLAZA",
+				"NOMBRE_VIA" : "MARRON",
+				"TIPO" : "Parking Motos",
+				"PLAZAS" : 5,
+				"URL_FICHA" : "https://sig.caceres.es/serweb/fichasig/fichaparkingmotos.php?mslink=11",
+				"URL_VIA" : "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=304"
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Point",
+				"coordinates" : [ -6.3765449908, 39.4733514679 ]
+			},
+			"properties" : {
+				"NUCLEO" : "CACERES",
+				"DISTRITO" : "CENTRO",
+				"BARRIO" : "CASAS BARATAS",
+				"CODBARRIO" : 9,
+				"CODIGO_VIA" : 17,
+				"TIPO_VIA" : "CALLE",
+				"NOMBRE_VIA" : "ALFONSO IX",
+				"TIPO" : "Parking Motos",
+				"PLAZAS" : 4,
+				"URL_FICHA" : "https://sig.caceres.es/serweb/fichasig/fichaparkingmotos.php?mslink=12",
+				"URL_VIA" : "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=17"
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Point",
+				"coordinates" : [ -6.3816512065, 39.4692308734 ]
+			},
+			"properties" : {
+				"NUCLEO" : "CACERES",
+				"DISTRITO" : "CENTRO",
+				"BARRIO" : "VIRGEN DE GUADALUPE",
+				"CODBARRIO" : 76,
+				"CODIGO_VIA" : 227,
+				"TIPO_VIA" : "CALLE",
+				"NOMBRE_VIA" : "GOMEZ BECERRA",
+				"TIPO" : "Parking Motos",
+				"PLAZAS" : 1,
+				"URL_FICHA" : "https://sig.caceres.es/serweb/fichasig/fichaparkingmotos.php?mslink=13",
+				"URL_VIA" : "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=227"
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Point",
+				"coordinates" : [ -6.3789961969, 39.4697781708 ]
+			},
+			"properties" : {
+				"NUCLEO" : "CACERES",
+				"DISTRITO" : "CENTRO",
+				"BARRIO" : "CANOVAS",
+				"CODBARRIO" : 7,
+				"CODIGO_VIA" : 3048,
+				"TIPO_VIA" : "AVDA",
+				"NOMBRE_VIA" : "DE ESPAÑA",
+				"TIPO" : "Parking Motos",
+				"PLAZAS" : 6,
+				"URL_FICHA" : "https://sig.caceres.es/serweb/fichasig/fichaparkingmotos.php?mslink=14",
+				"URL_VIA" : "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=3048"
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Point",
+				"coordinates" : [ -6.3778369977, 39.4688678231 ]
+			},
+			"properties" : {
+				"NUCLEO" : "CACERES",
+				"DISTRITO" : "CENTRO",
+				"BARRIO" : "CANOVAS",
+				"CODBARRIO" : 7,
+				"CODIGO_VIA" : 1135,
+				"TIPO_VIA" : "CALLE",
+				"NOMBRE_VIA" : "MALUQUER",
+				"TIPO" : "Parking Motos",
+				"PLAZAS" : 12,
+				"URL_FICHA" : "https://sig.caceres.es/serweb/fichasig/fichaparkingmotos.php?mslink=15",
+				"URL_VIA" : "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=1135"
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Point",
+				"coordinates" : [ -6.3773557251, 39.471006818 ]
+			},
+			"properties" : {
+				"NUCLEO" : "CACERES",
+				"DISTRITO" : "CENTRO",
+				"BARRIO" : "CANOVAS",
+				"CODBARRIO" : 7,
+				"CODIGO_VIA" : 3048,
+				"TIPO_VIA" : "AVDA",
+				"NOMBRE_VIA" : "DE ESPAÑA",
+				"TIPO" : "Parking Motos",
+				"PLAZAS" : 6,
+				"URL_FICHA" : "https://sig.caceres.es/serweb/fichasig/fichaparkingmotos.php?mslink=16",
+				"URL_VIA" : "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=3048"
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Point",
+				"coordinates" : [ -6.3777300251, 39.4731323158 ]
+			},
+			"properties" : {
+				"NUCLEO" : "CACERES",
+				"DISTRITO" : "CENTRO",
+				"BARRIO" : "CANOVAS",
+				"CODBARRIO" : 7,
+				"CODIGO_VIA" : 17,
+				"TIPO_VIA" : "CALLE",
+				"NOMBRE_VIA" : "ALFONSO IX",
+				"TIPO" : "Parking Motos",
+				"PLAZAS" : 4,
+				"URL_FICHA" : "https://sig.caceres.es/serweb/fichasig/fichaparkingmotos.php?mslink=17",
+				"URL_VIA" : "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=17"
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Point",
+				"coordinates" : [ -6.3763032924, 39.4723931196 ]
+			},
+			"properties" : {
+				"NUCLEO" : "CACERES",
+				"DISTRITO" : "CENTRO",
+				"BARRIO" : "CANOVAS",
+				"CODBARRIO" : 7,
+				"CODIGO_VIA" : 3048,
+				"TIPO_VIA" : "AVDA",
+				"NOMBRE_VIA" : "DE ESPAÑA",
+				"TIPO" : "Parking Motos",
+				"PLAZAS" : 20,
+				"URL_FICHA" : "https://sig.caceres.es/serweb/fichasig/fichaparkingmotos.php?mslink=18",
+				"URL_VIA" : "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=3048"
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Point",
+				"coordinates" : [ -6.3740935525, 39.4690896118 ]
+			},
+			"properties" : {
+				"NUCLEO" : "CACERES",
+				"DISTRITO" : "CENTRO",
+				"BARRIO" : "REYES HUERTAS",
+				"CODBARRIO" : 56,
+				"CODIGO_VIA" : 3507,
+				"TIPO_VIA" : "RONDA",
+				"NOMBRE_VIA" : "DEL CARMEN",
+				"TIPO" : "Parking Motos",
+				"PLAZAS" : 6,
+				"URL_FICHA" : "https://sig.caceres.es/serweb/fichasig/fichaparkingmotos.php?mslink=1",
+				"URL_VIA" : "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=3507"
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Point",
+				"coordinates" : [ -6.3737989085, 39.4680100641 ]
+			},
+			"properties" : {
+				"NUCLEO" : "CACERES",
+				"DISTRITO" : "CENTRO",
+				"BARRIO" : "REYES HUERTAS",
+				"CODBARRIO" : 56,
+				"CODIGO_VIA" : 3528,
+				"TIPO_VIA" : "CALLE",
+				"NOMBRE_VIA" : "MEDICO SORAPAN",
+				"TIPO" : "Parking Motos",
+				"PLAZAS" : 6,
+				"URL_FICHA" : "https://sig.caceres.es/serweb/fichasig/fichaparkingmotos.php?mslink=20",
+				"URL_VIA" : "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=3528"
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Point",
+				"coordinates" : [ -6.3742989946, 39.4683679183 ]
+			},
+			"properties" : {
+				"NUCLEO" : "CACERES",
+				"DISTRITO" : "CENTRO",
+				"BARRIO" : "REYES HUERTAS",
+				"CODBARRIO" : 56,
+				"CODIGO_VIA" : 4013,
+				"TIPO_VIA" : "CUSTA",
+				"NOMBRE_VIA" : "DEL PALANCAR",
+				"TIPO" : "Parking Motos",
+				"PLAZAS" : 4,
+				"URL_FICHA" : "https://sig.caceres.es/serweb/fichasig/fichaparkingmotos.php?mslink=21",
+				"URL_VIA" : "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=4013"
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Point",
+				"coordinates" : [ -6.3765806029, 39.4674309023 ]
+			},
+			"properties" : {
+				"NUCLEO" : "CACERES",
+				"DISTRITO" : "CENTRO",
+				"BARRIO" : "REYES HUERTAS",
+				"CODBARRIO" : 56,
+				"CODIGO_VIA" : 3557,
+				"TIPO_VIA" : "CALLE",
+				"NOMBRE_VIA" : "ANTONIO REYES HUERTAS",
+				"TIPO" : "Parking Motos",
+				"PLAZAS" : 3,
+				"URL_FICHA" : "https://sig.caceres.es/serweb/fichasig/fichaparkingmotos.php?mslink=22",
+				"URL_VIA" : "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=3557"
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Point",
+				"coordinates" : [ -6.3719859325, 39.4689933011 ]
+			},
+			"properties" : {
+				"NUCLEO" : "CACERES",
+				"DISTRITO" : "CENTRO",
+				"BARRIO" : "EL RODEO",
+				"CODBARRIO" : 17,
+				"CODIGO_VIA" : 1142,
+				"TIPO_VIA" : "AVDA",
+				"NOMBRE_VIA" : "EL BROCENSE",
+				"TIPO" : "Parking Motos",
+				"PLAZAS" : 5,
+				"URL_FICHA" : "https://sig.caceres.es/serweb/fichasig/fichaparkingmotos.php?mslink=23",
+				"URL_VIA" : "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=1142"
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Point",
+				"coordinates" : [ -6.3712448576, 39.4652689072 ]
+			},
+			"properties" : {
+				"NUCLEO" : "CACERES",
+				"DISTRITO" : "CENTRO",
+				"BARRIO" : "EL RODEO",
+				"CODBARRIO" : 17,
+				"CODIGO_VIA" : 1142,
+				"TIPO_VIA" : "AVDA",
+				"NOMBRE_VIA" : "EL BROCENSE",
+				"TIPO" : "Parking Motos",
+				"PLAZAS" : 15,
+				"URL_FICHA" : "https://sig.caceres.es/serweb/fichasig/fichaparkingmotos.php?mslink=24",
+				"URL_VIA" : "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=1142"
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Point",
+				"coordinates" : [ -6.3693377448, 39.4623145071 ]
+			},
+			"properties" : {
+				"NUCLEO" : "CACERES",
+				"DISTRITO" : "CENTRO",
+				"BARRIO" : "EL RODEO",
+				"CODBARRIO" : 17,
+				"CODIGO_VIA" : 1288,
+				"TIPO_VIA" : "AVDA",
+				"NOMBRE_VIA" : "DE LA HISPANIDAD",
+				"TIPO" : "Parking Motos",
+				"PLAZAS" : 6,
+				"URL_FICHA" : "https://sig.caceres.es/serweb/fichasig/fichaparkingmotos.php?mslink=25",
+				"URL_VIA" : "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=1288"
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Point",
+				"coordinates" : [ -6.381705773, 39.4631838777 ]
+			},
+			"properties" : {
+				"NUCLEO" : "CACERES",
+				"DISTRITO" : "CENTRO",
+				"BARRIO" : "LOS FRATRES",
+				"CODBARRIO" : 41,
+				"CODIGO_VIA" : 3433,
+				"TIPO_VIA" : "CALLE",
+				"NOMBRE_VIA" : "FRANCIA",
+				"TIPO" : "Parking Motos",
+				"PLAZAS" : 6,
+				"URL_FICHA" : "https://sig.caceres.es/serweb/fichasig/fichaparkingmotos.php?mslink=26",
+				"URL_VIA" : "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=3433"
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Point",
+				"coordinates" : [ -6.3792288484, 39.4671673055 ]
+			},
+			"properties" : {
+				"NUCLEO" : "CACERES",
+				"DISTRITO" : "CENTRO",
+				"BARRIO" : "LOS FRATRES",
+				"CODBARRIO" : 41,
+				"CODIGO_VIA" : 1576,
+				"TIPO_VIA" : "AVDA",
+				"NOMBRE_VIA" : "DE PORTUGAL",
+				"TIPO" : "Parking Motos",
+				"PLAZAS" : 9,
+				"URL_FICHA" : "https://sig.caceres.es/serweb/fichasig/fichaparkingmotos.php?mslink=27",
+				"URL_VIA" : "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=1576"
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Point",
+				"coordinates" : [ -6.3789574187, 39.4670574827 ]
+			},
+			"properties" : {
+				"NUCLEO" : "CACERES",
+				"DISTRITO" : "CENTRO",
+				"BARRIO" : "MOCTEZUMA",
+				"CODBARRIO" : 46,
+				"CODIGO_VIA" : 829,
+				"TIPO_VIA" : "CALLE",
+				"NOMBRE_VIA" : "SAN VICENTE DE PAUL",
+				"TIPO" : "Parking Motos",
+				"PLAZAS" : 4,
+				"URL_FICHA" : "https://sig.caceres.es/serweb/fichasig/fichaparkingmotos.php?mslink=28",
+				"URL_VIA" : "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=829"
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Point",
+				"coordinates" : [ -6.379012304, 39.4681233332 ]
+			},
+			"properties" : {
+				"NUCLEO" : "CACERES",
+				"DISTRITO" : "CENTRO",
+				"BARRIO" : "MOCTEZUMA",
+				"CODBARRIO" : 46,
+				"CODIGO_VIA" : 1576,
+				"TIPO_VIA" : "AVDA",
+				"NOMBRE_VIA" : "DE PORTUGAL",
+				"TIPO" : "Parking Motos",
+				"PLAZAS" : 4,
+				"URL_FICHA" : "https://sig.caceres.es/serweb/fichasig/fichaparkingmotos.php?mslink=29",
+				"URL_VIA" : "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=1576"
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Point",
+				"coordinates" : [ -6.3779529564, 39.4670901396 ]
+			},
+			"properties" : {
+				"NUCLEO" : "CACERES",
+				"DISTRITO" : "CENTRO",
+				"BARRIO" : "MOCTEZUMA",
+				"CODBARRIO" : 46,
+				"CODIGO_VIA" : 1390,
+				"TIPO_VIA" : "AVDA",
+				"NOMBRE_VIA" : "ANTONIO HURTADO",
+				"TIPO" : "Parking Motos",
+				"PLAZAS" : 14,
+				"URL_FICHA" : "https://sig.caceres.es/serweb/fichasig/fichaparkingmotos.php?mslink=30",
+				"URL_VIA" : "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=1390"
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Point",
+				"coordinates" : [ -6.3814169688, 39.467490644 ]
+			},
+			"properties" : {
+				"NUCLEO" : "CACERES",
+				"DISTRITO" : "CENTRO",
+				"BARRIO" : "ARGENTINA",
+				"CODBARRIO" : 2,
+				"CODIGO_VIA" : 57,
+				"TIPO_VIA" : "CALLE",
+				"NOMBRE_VIA" : "ARGENTINA",
+				"TIPO" : "Parking Motos",
+				"PLAZAS" : 9,
+				"URL_FICHA" : "https://sig.caceres.es/serweb/fichasig/fichaparkingmotos.php?mslink=2",
+				"URL_VIA" : "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=57"
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Point",
+				"coordinates" : [ -6.3843604154, 39.4676448261 ]
+			},
+			"properties" : {
+				"NUCLEO" : "CACERES",
+				"DISTRITO" : "CENTRO",
+				"BARRIO" : "EL PERU",
+				"CODBARRIO" : 16,
+				"CODIGO_VIA" : 3626,
+				"TIPO_VIA" : "CALLE",
+				"NOMBRE_VIA" : "PADRE ELADIO MOZAS",
+				"TIPO" : "Parking Motos",
+				"PLAZAS" : 3,
+				"URL_FICHA" : "https://sig.caceres.es/serweb/fichasig/fichaparkingmotos.php?mslink=34",
+				"URL_VIA" : "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=3626"
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Point",
+				"coordinates" : [ -6.3731419774, 39.4694684736 ]
+			},
+			"properties" : {
+				"NUCLEO" : "CACERES",
+				"DISTRITO" : "CENTRO",
+				"BARRIO" : "HERNANDEZ PACHECO",
+				"CODBARRIO" : 24,
+				"CODIGO_VIA" : 393,
+				"TIPO_VIA" : "CALLE",
+				"NOMBRE_VIA" : "PROFESOR HERNANDEZ PACHECO",
+				"TIPO" : "Parking Motos",
+				"PLAZAS" : 4,
+				"URL_FICHA" : "https://sig.caceres.es/serweb/fichasig/fichaparkingmotos.php?mslink=33",
+				"URL_VIA" : "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=393"
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Point",
+				"coordinates" : [ -6.3678424627, 39.4625256976 ]
+			},
+			"properties" : {
+				"NUCLEO" : "CACERES",
+				"DISTRITO" : "SUR",
+				"BARRIO" : "ESPIRITU SANTO",
+				"CODBARRIO" : 19,
+				"CODIGO_VIA" : 1288,
+				"TIPO_VIA" : "AVDA",
+				"NOMBRE_VIA" : "DE LA HISPANIDAD",
+				"TIPO" : "Parking Motos",
+				"PLAZAS" : 6,
+				"URL_FICHA" : "https://sig.caceres.es/serweb/fichasig/fichaparkingmotos.php?mslink=19",
+				"URL_VIA" : "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=1288"
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Point",
+				"coordinates" : [ -6.3627808898, 39.4890168262 ]
+			},
+			"properties" : {
+				"NUCLEO" : "CACERES",
+				"DISTRITO" : "NORTE",
+				"BARRIO" : "MEJOSTILLA",
+				"CODBARRIO" : 45,
+				"CODIGO_VIA" : 4268,
+				"TIPO_VIA" : "CALLE",
+				"NOMBRE_VIA" : "ELPIDIO BERNALDEZ SOLANO",
+				"TIPO" : "Parking Motos",
+				"PLAZAS" : 6,
+				"URL_FICHA" : "https://sig.caceres.es/serweb/fichasig/fichaparkingmotos.php?mslink=35",
+				"URL_VIA" : "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=4268"
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Point",
+				"coordinates" : [ -6.36892619, 39.4823290804 ]
+			},
+			"properties" : {
+				"NUCLEO" : "CACERES",
+				"DISTRITO" : "NORTE",
+				"BARRIO" : "CEMENTERIO",
+				"CODBARRIO" : 10,
+				"CODIGO_VIA" : 3610,
+				"TIPO_VIA" : "AVDA",
+				"NOMBRE_VIA" : "DE EXTREMADURA",
+				"TIPO" : "Parking Motos",
+				"PLAZAS" : 2,
+				"URL_FICHA" : "https://sig.caceres.es/serweb/fichasig/fichaparkingmotos.php?mslink=36",
+				"URL_VIA" : "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=3610"
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Point",
+				"coordinates" : [ -6.3687252018, 39.4822099168 ]
+			},
+			"properties" : {
+				"NUCLEO" : "CACERES",
+				"DISTRITO" : "NORTE",
+				"BARRIO" : "CEMENTERIO",
+				"CODBARRIO" : 10,
+				"CODIGO_VIA" : 3610,
+				"TIPO_VIA" : "AVDA",
+				"NOMBRE_VIA" : "DE EXTREMADURA",
+				"TIPO" : "Parking Motos",
+				"PLAZAS" : 2,
+				"URL_FICHA" : "https://sig.caceres.es/serweb/fichasig/fichaparkingmotos.php?mslink=37",
+				"URL_VIA" : "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=3610"
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Point",
+				"coordinates" : [ -6.3690164834, 39.4820315428 ]
+			},
+			"properties" : {
+				"NUCLEO" : "CACERES",
+				"DISTRITO" : "NORTE",
+				"BARRIO" : "CEMENTERIO",
+				"CODBARRIO" : 10,
+				"CODIGO_VIA" : 3610,
+				"TIPO_VIA" : "AVDA",
+				"NOMBRE_VIA" : "DE EXTREMADURA",
+				"TIPO" : "Parking Motos",
+				"PLAZAS" : 2,
+				"URL_FICHA" : "https://sig.caceres.es/serweb/fichasig/fichaparkingmotos.php?mslink=38",
+				"URL_VIA" : "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=3610"
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Point",
+				"coordinates" : [ -6.3995622056, 39.4685181385 ]
+			},
+			"properties" : {
+				"NUCLEO" : "CACERES",
+				"DISTRITO" : "OESTE",
+				"BARRIO" : "LOS CASTELLANOS",
+				"CODBARRIO" : 40,
+				"CODIGO_VIA" : 3696,
+				"TIPO_VIA" : "CALLE",
+				"NOMBRE_VIA" : "MIGUEL SERRANO",
+				"TIPO" : "Parking Motos",
+				"PLAZAS" : 3,
+				"URL_FICHA" : "https://sig.caceres.es/serweb/fichasig/fichaparkingmotos.php?mslink=39",
+				"URL_VIA" : "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=3696"
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Point",
+				"coordinates" : [ -6.3993863368, 39.4685706124 ]
+			},
+			"properties" : {
+				"NUCLEO" : "CACERES",
+				"DISTRITO" : "OESTE",
+				"BARRIO" : "LOS CASTELLANOS",
+				"CODBARRIO" : 40,
+				"CODIGO_VIA" : 3696,
+				"TIPO_VIA" : "CALLE",
+				"NOMBRE_VIA" : "MIGUEL SERRANO",
+				"TIPO" : "Parking Motos",
+				"PLAZAS" : 3,
+				"URL_FICHA" : "https://sig.caceres.es/serweb/fichasig/fichaparkingmotos.php?mslink=40",
+				"URL_VIA" : "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=3696"
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Point",
+				"coordinates" : [ -6.3751601635, 39.4765800456 ]
+			},
+			"properties" : {
+				"NUCLEO" : "CACERES",
+				"DISTRITO" : "CENTRO",
+				"BARRIO" : "MARGALLO",
+				"CODBARRIO" : 44,
+				"CODIGO_VIA" : 351,
+				"TIPO_VIA" : "CALLE",
+				"NOMBRE_VIA" : "NUEVA",
+				"TIPO" : "Parking Motos",
+				"PLAZAS" : 3,
+				"URL_FICHA" : "https://sig.caceres.es/serweb/fichasig/fichaparkingmotos.php?mslink=41",
+				"URL_VIA" : "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=351"
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Point",
+				"coordinates" : [ -6.3782963375, 39.4573872661 ]
+			},
+			"properties" : {
+				"NUCLEO" : "CACERES",
+				"DISTRITO" : "SUR",
+				"BARRIO" : "SAN ANTONIO (NUEVO CACERES)",
+				"CODBARRIO" : 62,
+				"CODIGO_VIA" : 3625,
+				"TIPO_VIA" : "AVDA",
+				"NOMBRE_VIA" : "PIERRE DE COUBERTIN",
+				"TIPO" : "Parking Motos",
+				"PLAZAS" : 2,
+				"URL_FICHA" : "https://sig.caceres.es/serweb/fichasig/fichaparkingmotos.php?mslink=42",
+				"URL_VIA" : "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=3625"
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Point",
+				"coordinates" : [ -6.3774464499, 39.4573695764 ]
+			},
+			"properties" : {
+				"NUCLEO" : "CACERES",
+				"DISTRITO" : "SUR",
+				"BARRIO" : "SAN ANTONIO (NUEVO CACERES)",
+				"CODBARRIO" : 62,
+				"CODIGO_VIA" : 3010,
+				"TIPO_VIA" : "RONDA",
+				"NOMBRE_VIA" : "DE LA PIZARRA",
+				"TIPO" : "Parking Motos",
+				"PLAZAS" : 2,
+				"URL_FICHA" : "https://sig.caceres.es/serweb/fichasig/fichaparkingmotos.php?mslink=43",
+				"URL_VIA" : "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=3010"
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Point",
+				"coordinates" : [ -6.3804259477, 39.4771247994 ]
+			},
+			"properties" : {
+				"NUCLEO" : "CACERES",
+				"DISTRITO" : "OESTE",
+				"BARRIO" : "PARQUE DEL PRINCIPE",
+				"CODBARRIO" : 49,
+				"CODIGO_VIA" : 3534,
+				"TIPO_VIA" : "CALLE",
+				"NOMBRE_VIA" : "JOSE LUIS COTALLO",
+				"TIPO" : "Parking Motos",
+				"PLAZAS" : 3,
+				"URL_FICHA" : "https://sig.caceres.es/serweb/fichasig/fichaparkingmotos.php?mslink=44",
+				"URL_VIA" : "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=3534"
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Point",
+				"coordinates" : [ -6.3804651121, 39.4770748968 ]
+			},
+			"properties" : {
+				"NUCLEO" : "CACERES",
+				"DISTRITO" : "OESTE",
+				"BARRIO" : "PARQUE DEL PRINCIPE",
+				"CODBARRIO" : 49,
+				"CODIGO_VIA" : 3534,
+				"TIPO_VIA" : "CALLE",
+				"NOMBRE_VIA" : "JOSE LUIS COTALLO",
+				"TIPO" : "Parking Motos",
+				"PLAZAS" : 1,
+				"URL_FICHA" : "https://sig.caceres.es/serweb/fichasig/fichaparkingmotos.php?mslink=45",
+				"URL_VIA" : "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=3534"
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Point",
+				"coordinates" : [ -6.3803994927, 39.4767042647 ]
+			},
+			"properties" : {
+				"NUCLEO" : "CACERES",
+				"DISTRITO" : "OESTE",
+				"BARRIO" : "PARQUE DEL PRINCIPE",
+				"CODBARRIO" : 49,
+				"CODIGO_VIA" : 3534,
+				"TIPO_VIA" : "CALLE",
+				"NOMBRE_VIA" : "JOSE LUIS COTALLO",
+				"TIPO" : "Parking Motos",
+				"PLAZAS" : 2,
+				"URL_FICHA" : "https://sig.caceres.es/serweb/fichasig/fichaparkingmotos.php?mslink=46",
+				"URL_VIA" : "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=3534"
+			}
+		}
+	]
+}
