@@ -31,7 +31,7 @@ class MapResultsSheet extends StatelessWidget {
       onTap: onTap,
       child: Row(
         children: [
-          const _BadgeP(),
+          const _ResultsBadge(),
           const SizedBox(width: AppSpacing.md),
           Expanded(
             child: Column(
@@ -217,8 +217,8 @@ class _SheetShell extends StatelessWidget {
   }
 }
 
-class _BadgeP extends StatelessWidget {
-  const _BadgeP();
+class _ResultsBadge extends StatelessWidget {
+  const _ResultsBadge();
 
   @override
   Widget build(BuildContext context) {
@@ -230,13 +230,10 @@ class _BadgeP extends StatelessWidget {
         borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
       ),
       child: const Center(
-        child: Text(
-          'P',
-          style: TextStyle(
-            color: AppColors.textOnPrimary,
-            fontSize: 18,
-            fontWeight: FontWeight.w800,
-          ),
+        child: Icon(
+          Icons.list_alt,
+          color: AppColors.textOnPrimary,
+          size: 22,
         ),
       ),
     );

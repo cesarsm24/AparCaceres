@@ -20,6 +20,7 @@ class _AppShellState extends State<AppShell> {
   int _index = 0;
   int _mapRequestVersion = 0;
   MapFilters _mapFilters = MapFilters();
+  bool _mapInitialFocused = false;
 
   final GlobalKey<NavigatorState> _homeNav = GlobalKey<NavigatorState>();
   GlobalKey<NavigatorState> _mapNav = GlobalKey<NavigatorState>();
@@ -44,6 +45,7 @@ class _AppShellState extends State<AppShell> {
   void _openMapFromHome(MapFilters filters) {
     setState(() {
       _mapFilters = filters;
+      _mapInitialFocused = true;
       _mapRequestVersion++;
       _mapNav = GlobalKey<NavigatorState>();
       _index = 1;
@@ -77,7 +79,10 @@ class _AppShellState extends State<AppShell> {
           _TabNavigator(
             key: ValueKey(_mapRequestVersion),
             navigatorKey: _mapNav,
-            root: MapScreen(initialFilters: _mapFilters),
+            root: MapScreen(
+              initialFilters: _mapFilters,
+              initialFocused: _mapInitialFocused,
+            ),
           ),
           _TabNavigator(
             navigatorKey: _favoritesNav,

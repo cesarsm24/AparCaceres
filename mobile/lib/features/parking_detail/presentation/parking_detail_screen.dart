@@ -134,7 +134,9 @@ class ParkingDetailScreen extends StatelessWidget {
                               icon: Icons.send_outlined,
                               onPressed: () {
                                 routeRequest.requestRoute(place);
-                                Navigator.of(context).maybePop();
+                                Navigator.of(
+                                  context,
+                                ).popUntil((route) => route.isFirst);
                               },
                             ),
                           ),
