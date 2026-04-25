@@ -39,7 +39,10 @@ class LocationService {
   }
 
   /// Re-fetches the device position. Requires permission to have already
-  /// been granted; otherwise no-op and returns false.
+  /// been granted; otherwise no-op and returns false. Fixes outside the
+  /// Cáceres bounding box are discarded and the fallback is kept — that
+  /// way an emulator pretending to be in Mountain View doesn't leak into
+  /// the UI, but a real device in Cáceres still gets a real location.
   Future<bool> refresh() async {
     if (!_granted) return false;
     try {
@@ -49,11 +52,20 @@ class LocationService {
           timeLimit: Duration(seconds: 8),
         ),
       );
-      position.value = LatLng(pos.latitude, pos.longitude);
+      final fix = LatLng(pos.latitude, pos.longitude);
+      if (!_isWithinCaceres(fix)) return false;
+      position.value = fix;
       return true;
     } catch (_) {
       return false;
     }
+  }
+
+  static bool _isWithinCaceres(LatLng p) {
+    return p.latitude >= 39.42 &&
+        p.latitude <= 39.52 &&
+        p.longitude >= -6.45 &&
+        p.longitude <= -6.30;
   }
 }
 
