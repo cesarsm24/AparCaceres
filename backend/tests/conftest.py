@@ -2,7 +2,8 @@
 
 `fake_redis` es una implementación minimalista en memoria del subset de la
 API de `redis-py` que usan el importador y los routers (`scan_iter`, `delete`,
-`geoadd`, `geosearch`, `hset`, `pipeline`, `hgetall`, `setex`, `get`, `zscore`).
+`exists`, `geoadd`, `geosearch`, `hset`, `pipeline`, `hgetall`, `setex`, `get`,
+`zadd`, `zrem`, `zrevrange`, `zscore`).
 
 Mantenerla aquí (en lugar de añadir `fakeredis` como dependencia) tiene dos
 ventajas:
@@ -44,18 +45,21 @@ def _haversine_m(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
 class FakeRedis:
     """Subset de `redis.Redis(decode_responses=True)` en memoria.
 
-    Modela tres tipos de claves:
+    Modela cuatro tipos de claves:
     - `strings`: para `SET`/`SETEX`/`GET` (caché `cache:nearby:*`).
     - `hashes`: para `HSET`/`HGETALL` (`parking:{id}`).
-    - `geo`: para `GEOADD`/`ZSCORE` (índice `geo:parkings`). Se guarda
+    - `geo`: para `GEOADD`/`GEOSEARCH` (índice `geo:parkings`). Se guarda
       `{member: (lon, lat)}`; suficiente para verificar que el feature se
       indexó en la posición correcta.
+    - `zsets`: sorted sets genéricos para `ZADD`/`ZREM`/`ZREVRANGE`/`ZSCORE`
+      (favoritos por usuario `user:{id}:favorites`). `{member: score}`.
     """
 
     def __init__(self) -> None:
         self.strings: dict[str, str] = {}
         self.hashes: dict[str, dict[str, str]] = {}
         self.geo: dict[str, dict[str, tuple[float, float]]] = {}
+        self.zsets: dict[str, dict[str, float]] = {}
 
     # ---------- API directa (no pipeline) ----------
 
@@ -99,10 +103,21 @@ class FakeRedis:
     def delete(self, *keys: str) -> int:
         n = 0
         for k in keys:
-            for store in (self.hashes, self.strings, self.geo):
+            for store in (self.hashes, self.strings, self.geo, self.zsets):
                 if k in store:
                     del store[k]
                     n += 1
+        return n
+
+    def exists(self, *keys: str) -> int:
+        # Como el real: cuenta cuántas de las claves pasadas existen (en
+        # cualquier tipo). Suficiente para los chequeos de "parking:{id}".
+        n = 0
+        for k in keys:
+            for store in (self.hashes, self.strings, self.geo, self.zsets):
+                if k in store:
+                    n += 1
+                    break
         return n
 
     def scan_iter(self, match: str | None = None) -> Iterator[str]:
@@ -110,6 +125,7 @@ class FakeRedis:
             list(self.hashes.keys())
             + list(self.strings.keys())
             + list(self.geo.keys())
+            + list(self.zsets.keys())
         )
         if match is None:
             yield from all_keys
@@ -134,12 +150,61 @@ class FakeRedis:
         return self.strings.get(key)
 
     def zscore(self, key: str, member: str) -> float | None:
-        bucket = self.geo.get(key, {})
-        if member not in bucket:
-            return None
-        # No emulamos el geohash real; devolver algo no-None es suficiente
-        # para los asserts del test.
-        return 1.0
+        # Prioriza sorted sets genéricos (ZSCORE real para favoritos).
+        zset = self.zsets.get(key)
+        if zset is not None:
+            return zset.get(member)
+        # Fallback histórico: devolver algo no-None si el miembro está en el
+        # índice geoespacial (los tests del importador comprueban presencia).
+        if member in self.geo.get(key, {}):
+            return 1.0
+        return None
+
+    # ---------- Sorted sets genéricos (favoritos) ----------
+
+    def zadd(self, key: str, mapping: dict[str, float]) -> int:
+        bucket = self.zsets.setdefault(key, {})
+        added = 0
+        for member, score in mapping.items():
+            if member not in bucket:
+                added += 1
+            bucket[str(member)] = float(score)
+        return added
+
+    def zrem(self, key: str, *members: str) -> int:
+        bucket = self.zsets.get(key)
+        if not bucket:
+            return 0
+        n = 0
+        for m in members:
+            if m in bucket:
+                del bucket[m]
+                n += 1
+        # Limpiamos la clave si queda vacía, igual que hace Redis con sorted sets.
+        if not bucket:
+            del self.zsets[key]
+        return n
+
+    def zrevrange(self, key: str, start: int, end: int) -> list[str]:
+        """Subset de `ZREVRANGE`: miembros ordenados por score descendente.
+
+        Soporta `end == -1` (hasta el final). En empates de score Redis ordena
+        lexicográfico DESC; lo emulamos con dos `sorted` estables consecutivos
+        (primero por miembro DESC, luego por score DESC).
+        """
+        bucket = self.zsets.get(key, {})
+        if not bucket:
+            return []
+        # Estable: primero criterio secundario (miembro DESC), luego primario (score DESC).
+        items = sorted(bucket.items(), key=lambda kv: kv[0], reverse=True)
+        items = sorted(items, key=lambda kv: kv[1], reverse=True)
+        members = [m for m, _ in items]
+        if end == -1:
+            return members[start:]
+        return members[start : end + 1]
+
+    def zcard(self, key: str) -> int:
+        return len(self.zsets.get(key, {}))
 
     def geosearch(
         self,
@@ -241,13 +306,14 @@ def _build_test_app(fake_redis: FakeRedis) -> FastAPI:
     Importamos los routers DENTRO de la función para que cada test arranque
     desde un estado limpio y no haya efectos colaterales del orden de imports.
     """
-    from app.routers import health, imports, parkings
+    from app.routers import favorites, health, imports, parkings
 
     app = FastAPI()
     app.state.redis = fake_redis
     app.include_router(health.router)
     app.include_router(imports.router)
     app.include_router(parkings.router)
+    app.include_router(favorites.router)
     return app
 
 

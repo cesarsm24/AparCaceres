@@ -157,6 +157,46 @@ class ParkingPlaceNearbyOut(ParkingPlaceOut):
 
 
 # ============================================================
+# Favoritos por usuario — respuestas de PUT / DELETE.
+# El GET de favoritos reutiliza `ParkingPlaceOut` para devolver directamente
+# la lista lista para alimentar la pantalla de favoritos en Flutter.
+# ============================================================
+
+class FavoriteAdded(BaseModel):
+    """Respuesta de `PUT /users/me/favorites/{parkingId}`.
+
+    `created` distingue entre "lo acabo de añadir" y "ya estaba" para que el
+    cliente pueda dar feedback distinto si quiere; en ambos casos `addedAt`
+    refleja la marca temporal real persistida (no se reescribe al re-PUT,
+    para que el orden newest-first sea estable).
+    """
+
+    id: str = Field(..., description="Id del aparcamiento favoritado.")
+    addedAt: str = Field(
+        ...,
+        description="Marca temporal ISO 8601 UTC del momento en que entró en favoritos.",
+    )
+    created: bool = Field(
+        ...,
+        description="True si la entrada se acaba de crear; False si ya existía (idempotente).",
+    )
+
+
+class FavoriteRemoved(BaseModel):
+    """Respuesta de `DELETE /users/me/favorites/{parkingId}`.
+
+    Idempotente: si el aparcamiento existe en el catálogo pero no estaba
+    en favoritos, devolvemos 200 con `removed=False` en vez de 404.
+    """
+
+    id: str = Field(..., description="Id del aparcamiento sobre el que se actuó.")
+    removed: bool = Field(
+        ...,
+        description="True si estaba en favoritos y se quitó; False si no estaba.",
+    )
+
+
+# ============================================================
 # Filtros de consulta — espejo de `ParkingQuery` en Flutter.
 # Se usarán cuando se refactoricen los endpoints en PRs posteriores.
 # ============================================================

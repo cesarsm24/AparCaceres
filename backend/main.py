@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import CORS_ORIGINS
 from app.redis_client import lifespan
-from app.routers import health, imports, parkings
+from app.routers import favorites, health, imports, parkings
 
 app = FastAPI(
     title="AparCaceres API",
@@ -29,3 +29,4 @@ app.add_middleware(
 app.include_router(health.router)
 app.include_router(imports.router)
 app.include_router(parkings.router)
+app.include_router(favorites.router)

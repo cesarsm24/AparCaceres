@@ -17,9 +17,12 @@ DATA_FILE = BACKEND_DIR / "data" / "aparcamientos.geojson"
 #   geo:parkings                       -> sorted set geoespacial (GEOADD / GEOSEARCH)
 #   parking:{id}                       -> hash con metadatos del aparcamiento (HSET / HGETALL)
 #   cache:nearby:{lat}:{lng}:{radius}  -> JSON cacheado del resultado de /parkings/nearby (SETEX)
+#   user:{user_id}:favorites           -> sorted set con ids favoritados, score = epoch ms (ZREVRANGE para newest-first)
 GEO_KEY = "geo:parkings"
 PARKING_KEY_PREFIX = "parking:"
 CACHE_NEARBY_PREFIX = "cache:nearby:"
+USER_FAVORITES_KEY_PREFIX = "user:"
+USER_FAVORITES_KEY_SUFFIX = ":favorites"
 
 # ---------- Config leída del entorno / .env (defaults para dev) ----------
 REDIS_HOST = os.getenv("REDIS_HOST", "localhost")
