@@ -6,6 +6,8 @@ import '../../../shared/widgets/app_top_bar.dart';
 import '../../../shared/widgets/section_title.dart';
 import '../../../theme/app_colors.dart';
 import '../../../theme/app_spacing.dart';
+import '../../location_picker/domain/place_suggestion.dart';
+import '../../location_picker/presentation/location_picker_screen.dart';
 import '../../map/presentation/widgets/filters_drawer.dart';
 import '../../parking/data/parking_constants.dart';
 import '../../parking/data/parking_repository_provider.dart';
@@ -14,7 +16,7 @@ import '../../parking/domain/parking_query.dart';
 import '../../parking_detail/presentation/parking_detail_screen.dart';
 import '../../search/presentation/search_screen.dart';
 import 'widgets/home_search_bar.dart';
-import 'widgets/nearby_summary_card.dart';
+import 'widgets/location_actions.dart';
 import 'widgets/quick_access_row.dart';
 import 'widgets/suggestion_tile.dart';
 
@@ -24,6 +26,16 @@ class HomeScreen extends StatelessWidget {
   final ValueChanged<MapFilters> onOpenMap;
 
   static const int _radiusMeters = 1000;
+
+  Future<void> _pickLocation(BuildContext context) async {
+    final suggestion = await Navigator.of(context).push<PlaceSuggestion>(
+      MaterialPageRoute(builder: (_) => const LocationPickerScreen()),
+    );
+    if (suggestion == null) return;
+    onOpenMap(
+      MapFilters.atLocation(suggestion.position, label: suggestion.shortName),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -76,10 +88,9 @@ class HomeScreen extends StatelessWidget {
                           onOpenMap(MapFilters.forAccessible()),
                     ),
                     const SizedBox(height: AppSpacing.lg),
-                    NearbySummaryCard(
-                      places: places,
-                      radiusMeters: _radiusMeters,
-                      onTap: () => onOpenMap(MapFilters()),
+                    LocationActions(
+                      onUseCurrent: () => onOpenMap(MapFilters()),
+                      onPickLocation: () => _pickLocation(context),
                     ),
                     const SizedBox(height: AppSpacing.lg),
                     const SectionTitle(AppStrings.sectionSuggestions),

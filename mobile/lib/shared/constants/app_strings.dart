@@ -8,7 +8,6 @@ class AppStrings {
 
   static const String searchHint = '¿Dónde quieres aparcar?';
   static const String sectionQuickAccess = 'Accesos rápidos';
-  static const String sectionNearby = 'Cerca de ti';
   static const String sectionSuggestions = 'Sugerencias para ti';
 
   static const String quickCar = 'Coche';
@@ -72,4 +71,18 @@ class AppStrings {
   static const String searchFieldHint = 'Buscar por nombre o calle';
   static const String searchEmpty = 'Escribe para buscar aparcamientos en Cáceres.';
   static const String searchNoResults = 'Sin resultados para tu búsqueda.';
+
+  static const String homeUseMyLocation = 'Usar mi ubicación actual';
+  static const String homeSetLocation = 'Indicar ubicación';
+  static const String homeUseMyLocationCaption = 'Centrar el mapa en ti';
+  static const String homeSetLocationCaption = 'Buscar otra dirección de Cáceres';
+
+  static const String locationPickerTitle = 'Indicar ubicación';
+  static const String locationPickerHint = 'Calle, plaza o barrio en Cáceres';
+  static const String locationPickerEmpty =
+      'Escribe una dirección de Cáceres.';
+  static const String locationPickerNoResults =
+      'Sin resultados en Cáceres para esa búsqueda.';
+  static const String locationPickerError =
+      'No se pudo consultar el servicio de direcciones.';
 }

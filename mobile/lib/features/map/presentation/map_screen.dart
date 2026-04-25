@@ -122,12 +122,12 @@ class _MapScreenState extends State<MapScreen> {
                   children: [
                     FlutterMap(
                       mapController: _mapController,
-                      options: const MapOptions(
-                        initialCenter: kCaceresCenter,
+                      options: MapOptions(
+                        initialCenter: _filters.center ?? kCaceresCenter,
                         initialZoom: _initialZoom,
                         minZoom: _minZoom,
                         maxZoom: _maxZoom,
-                        interactionOptions: InteractionOptions(
+                        interactionOptions: const InteractionOptions(
                           flags: InteractiveFlag.all & ~InteractiveFlag.rotate,
                         ),
                       ),
