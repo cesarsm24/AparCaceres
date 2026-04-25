@@ -5,8 +5,8 @@ import '../../../shared/constants/app_strings.dart';
 import '../../../shared/widgets/app_top_bar.dart';
 import '../../../theme/app_colors.dart';
 import '../../../theme/app_spacing.dart';
+import '../../location/data/location_service.dart';
 import '../../parking/data/favorites_store.dart';
-import '../../parking/data/parking_constants.dart';
 import '../../parking/data/parking_repository_provider.dart';
 import '../../parking/domain/parking_place.dart';
 import '../../parking_detail/presentation/parking_detail_screen.dart';
@@ -58,7 +58,7 @@ class FavoritesScreen extends StatelessWidget {
                         return FavoriteTile(
                           place: place,
                           distanceMeters: const Distance()(
-                            kMockUserLocation,
+                            locationService.position.value,
                             place.position,
                           ),
                           onTap: () => Navigator.of(context).push(

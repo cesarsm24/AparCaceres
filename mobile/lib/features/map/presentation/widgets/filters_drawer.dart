@@ -6,7 +6,7 @@ import '../../../../shared/widgets/primary_button.dart';
 import '../../../../shared/widgets/secondary_button.dart';
 import '../../../../theme/app_colors.dart';
 import '../../../../theme/app_spacing.dart';
-import '../../../parking/data/parking_constants.dart';
+import '../../../location/data/location_service.dart';
 import '../../../parking/domain/parking_place.dart';
 import '../../../parking/domain/parking_query.dart';
 import '../../../parking/presentation/parking_ui.dart';
@@ -34,7 +34,7 @@ class MapFilters {
 
   ParkingQuery toQuery() {
     return ParkingQuery(
-      center: center ?? kMockUserLocation,
+      center: center ?? locationService.position.value,
       radiusMeters: radiusMeters,
       vehicleTypes: vehicleTypes,
       categories: categories,

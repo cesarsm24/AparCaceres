@@ -6,10 +6,10 @@ import '../../../shared/widgets/app_top_bar.dart';
 import '../../../shared/widgets/section_title.dart';
 import '../../../theme/app_colors.dart';
 import '../../../theme/app_spacing.dart';
+import '../../location/data/location_service.dart';
 import '../../location_picker/domain/place_suggestion.dart';
 import '../../location_picker/presentation/location_picker_screen.dart';
 import '../../map/presentation/widgets/filters_drawer.dart';
-import '../../parking/data/parking_constants.dart';
 import '../../parking/data/parking_repository_provider.dart';
 import '../../parking/domain/parking_place.dart';
 import '../../parking/domain/parking_query.dart';
@@ -55,8 +55,8 @@ class HomeScreen extends StatelessWidget {
           Expanded(
             child: FutureBuilder<List<ParkingPlace>>(
               future: parkingRepository.getNearby(
-                const ParkingQuery(
-                  center: kMockUserLocation,
+                ParkingQuery(
+                  center: locationService.position.value,
                   radiusMeters: _radiusMeters,
                 ),
               ),
@@ -106,7 +106,7 @@ class HomeScreen extends StatelessWidget {
                           child: SuggestionTile(
                             place: place,
                             distanceMeters: const Distance()(
-                              kMockUserLocation,
+                              locationService.position.value,
                               place.position,
                             ),
                             onTap: () => Navigator.of(context).push(

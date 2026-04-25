@@ -6,6 +6,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../../shared/widgets/app_top_bar.dart';
 import '../../../theme/app_colors.dart';
 import '../../../theme/app_spacing.dart';
+import '../../location/data/location_service.dart';
 import '../../location_picker/domain/place_suggestion.dart';
 import '../../location_picker/presentation/location_picker_screen.dart';
 import '../../parking/data/parking_constants.dart';
@@ -54,7 +55,8 @@ class _MapScreenState extends State<MapScreen> {
   LatLng? _routeOrigin;
   bool _loadingRoute = false;
 
-  LatLng get _activeCenter => _filters.center ?? kMockUserLocation;
+  LatLng get _activeCenter =>
+      _filters.center ?? locationService.position.value;
 
   @override
   void initState() {
@@ -168,7 +170,9 @@ class _MapScreenState extends State<MapScreen> {
     _mapController.move(suggestion.position, _focusedZoom);
   }
 
-  void _centerOnUser() {
+  Future<void> _centerOnUser() async {
+    await locationService.refresh();
+    if (!mounted) return;
     setState(() {
       _filters = _filters.withoutCenter();
       _selectedPlace = null;
@@ -176,7 +180,7 @@ class _MapScreenState extends State<MapScreen> {
       _routeOrigin = null;
       _placesFuture = parkingRepository.getNearby(_filters.toQuery());
     });
-    _mapController.move(kMockUserLocation, _focusedZoom);
+    _mapController.move(locationService.position.value, _focusedZoom);
   }
 
   void _zoomIn() {
@@ -418,11 +422,11 @@ class _MapScreenState extends State<MapScreen> {
 
     if (pickedCenter == null) {
       markers.add(
-        const Marker(
-          point: kMockUserLocation,
+        Marker(
+          point: locationService.position.value,
           width: 22,
           height: 22,
-          child: UserLocationMarker(),
+          child: const UserLocationMarker(),
         ),
       );
     } else {
