@@ -54,8 +54,11 @@ class _AppShellState extends State<AppShell> {
 
   void _onRouteRequested() {
     if (routeRequest.request == null) return;
-    if (_index == 1) return;
-    setState(() => _index = 1);
+    _navKeys[_index].currentState?.popUntil((route) => route.isFirst);
+    _mapNav.currentState?.popUntil((route) => route.isFirst);
+    if (_index != 1) {
+      setState(() => _index = 1);
+    }
   }
 
   void _onDestinationSelected(int i) {
