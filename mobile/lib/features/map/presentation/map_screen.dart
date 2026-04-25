@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../../shared/widgets/app_top_bar.dart';
 import '../../../theme/app_colors.dart';
@@ -14,6 +15,7 @@ import '../../parking/presentation/parking_ui.dart';
 import '../../parking_detail/presentation/parking_detail_screen.dart';
 import '../../parking_results/presentation/parking_results_screen.dart';
 import '../../routing/data/osrm_client.dart';
+import '../../routing/data/route_helpers.dart';
 import '../../routing/data/route_request.dart';
 import '../../routing/domain/route_path.dart';
 import 'widgets/filters_drawer.dart';
@@ -38,11 +40,13 @@ class _MapScreenState extends State<MapScreen> {
   static const double _minZoom = 10;
   static const double _maxZoom = 18;
   static const double _initialZoom = 15;
+  static const double _focusedZoom = 16;
 
   late MapFilters _filters;
   late Future<List<ParkingPlace>> _placesFuture;
   ParkingPlace? _selectedPlace;
   RoutePath? _route;
+  LatLng? _routeOrigin;
   bool _loadingRoute = false;
 
   LatLng get _activeCenter => _filters.center ?? kMockUserLocation;
@@ -74,28 +78,59 @@ class _MapScreenState extends State<MapScreen> {
     setState(() {
       _selectedPlace = place;
       _route = null;
+      _routeOrigin = origin;
       _loadingRoute = true;
     });
-    _mapController.move(place.position, _initialZoom);
-    _fetchRoute(origin, place.position);
+    _mapController.move(place.position, _focusedZoom);
+    _fetchRoute(osrmProfileFor(place.category), origin, place.position);
   }
 
-  Future<void> _fetchRoute(LatLng origin, LatLng destination) async {
+  Future<void> _fetchRoute(
+    String profile,
+    LatLng origin,
+    LatLng destination,
+  ) async {
     try {
-      final route = await _osrm.walkingRoute(origin, destination);
+      final route = await _osrm.route(profile, origin, destination);
       if (!mounted) return;
       setState(() {
         _route = route;
         _loadingRoute = false;
       });
+      final fullPath = <LatLng>[origin, ...route.coordinates, destination];
+      _mapController.fitCamera(
+        CameraFit.bounds(
+          bounds: LatLngBounds.fromPoints(fullPath),
+          padding: const EdgeInsets.fromLTRB(48, 110, 48, 220),
+        ),
+      );
     } catch (_) {
       if (!mounted) return;
       setState(() {
         _route = null;
+        _routeOrigin = null;
         _loadingRoute = false;
       });
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('No se pudo calcular la ruta.')),
+      );
+    }
+  }
+
+  Future<void> _launchGoogleMaps() async {
+    final origin = _routeOrigin;
+    final destination = _selectedPlace;
+    if (origin == null || destination == null) return;
+    final uri = Uri.parse(
+      'https://www.google.com/maps/dir/?api=1'
+      '&origin=${origin.latitude},${origin.longitude}'
+      '&destination=${destination.latitude},${destination.longitude}'
+      '&travelmode=${googleTravelModeFor(destination.category)}',
+    );
+    final ok = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    if (!ok && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No se pudo abrir Google Maps.')),
       );
     }
   }
@@ -105,6 +140,7 @@ class _MapScreenState extends State<MapScreen> {
       _filters = filters;
       _selectedPlace = null;
       _route = null;
+      _routeOrigin = null;
       _placesFuture = parkingRepository.getNearby(_filters.toQuery());
     });
   }
@@ -121,9 +157,10 @@ class _MapScreenState extends State<MapScreen> {
       );
       _selectedPlace = null;
       _route = null;
+      _routeOrigin = null;
       _placesFuture = parkingRepository.getNearby(_filters.toQuery());
     });
-    _mapController.move(suggestion.position, _initialZoom);
+    _mapController.move(suggestion.position, _focusedZoom);
   }
 
   void _centerOnUser() {
@@ -131,9 +168,10 @@ class _MapScreenState extends State<MapScreen> {
       _filters = _filters.withoutCenter();
       _selectedPlace = null;
       _route = null;
+      _routeOrigin = null;
       _placesFuture = parkingRepository.getNearby(_filters.toQuery());
     });
-    _mapController.move(kMockUserLocation, _initialZoom);
+    _mapController.move(kMockUserLocation, _focusedZoom);
   }
 
   void _zoomIn() {
@@ -150,6 +188,7 @@ class _MapScreenState extends State<MapScreen> {
     setState(() {
       _selectedPlace = place;
       _route = null;
+      _routeOrigin = null;
     });
   }
 
@@ -157,6 +196,7 @@ class _MapScreenState extends State<MapScreen> {
     setState(() {
       _selectedPlace = null;
       _route = null;
+      _routeOrigin = null;
     });
   }
 
@@ -224,11 +264,17 @@ class _MapScreenState extends State<MapScreen> {
                         ),
                         PolygonLayer(polygons: _buildPolygons(places)),
                         PolylineLayer(polylines: _buildLines(places)),
-                        if (_route != null)
+                        if (_route != null &&
+                            _routeOrigin != null &&
+                            selected != null)
                           PolylineLayer(
                             polylines: [
                               Polyline(
-                                points: _route!.coordinates,
+                                points: <LatLng>[
+                                  _routeOrigin!,
+                                  ..._route!.coordinates,
+                                  selected.position,
+                                ],
                                 color: AppColors.primary,
                                 strokeWidth: 5,
                                 borderColor: Colors.white,
@@ -257,12 +303,18 @@ class _MapScreenState extends State<MapScreen> {
                         onZoomOut: _zoomOut,
                       ),
                     ),
-                    if (_loadingRoute)
-                      const Positioned(
+                    if (_loadingRoute && selected != null)
+                      Positioned(
                         top: AppSpacing.md,
                         left: 0,
                         right: 0,
-                        child: Center(child: _RouteLoadingPill()),
+                        child: Center(
+                          child: _RouteLoadingPill(
+                            label:
+                                'Calculando ruta '
+                                '${routingLabelFor(selected.category)}…',
+                          ),
+                        ),
                       ),
                     if (snapshot.connectionState == ConnectionState.waiting)
                       const Center(child: CircularProgressIndicator()),
@@ -290,6 +342,9 @@ class _MapScreenState extends State<MapScreen> {
                               ),
                               onOpenDetail: () => _openDetail(selected),
                               onClose: _clearSelection,
+                              onOpenInMaps: _route == null
+                                  ? null
+                                  : _launchGoogleMaps,
                             ),
                     ),
                     const Positioned(
@@ -411,30 +466,32 @@ class _MapScreenState extends State<MapScreen> {
 }
 
 class _RouteLoadingPill extends StatelessWidget {
-  const _RouteLoadingPill();
+  const _RouteLoadingPill({required this.label});
+
+  final String label;
 
   @override
   Widget build(BuildContext context) {
     return Material(
       color: AppColors.surface.withValues(alpha: 0.95),
       borderRadius: BorderRadius.circular(AppSpacing.radiusPill),
-      child: const Padding(
-        padding: EdgeInsets.symmetric(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(
           horizontal: AppSpacing.md,
           vertical: 6,
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            SizedBox(
+            const SizedBox(
               width: 14,
               height: 14,
               child: CircularProgressIndicator(strokeWidth: 2),
             ),
-            SizedBox(width: AppSpacing.sm),
+            const SizedBox(width: AppSpacing.sm),
             Text(
-              'Calculando ruta…',
-              style: TextStyle(
+              label,
+              style: const TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
                 color: AppColors.textPrimary,

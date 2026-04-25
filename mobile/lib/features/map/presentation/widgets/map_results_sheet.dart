@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../shared/constants/app_strings.dart';
 import '../../../../shared/widgets/primary_button.dart';
+import '../../../../shared/widgets/secondary_button.dart';
 import '../../../../theme/app_colors.dart';
 import '../../../../theme/app_spacing.dart';
 import '../../../parking/domain/parking_place.dart';
@@ -69,12 +70,14 @@ class ParkingPreviewSheet extends StatelessWidget {
     required this.distanceMeters,
     required this.onOpenDetail,
     required this.onClose,
+    this.onOpenInMaps,
   });
 
   final ParkingPlace place;
   final double distanceMeters;
   final VoidCallback onOpenDetail;
   final VoidCallback onClose;
+  final VoidCallback? onOpenInMaps;
 
   @override
   Widget build(BuildContext context) {
@@ -145,6 +148,14 @@ class ParkingPreviewSheet extends StatelessWidget {
             ],
           ),
           const SizedBox(height: AppSpacing.md),
+          if (onOpenInMaps != null) ...[
+            SecondaryButton(
+              label: 'Abrir en Google Maps',
+              icon: Icons.open_in_new,
+              onPressed: onOpenInMaps,
+            ),
+            const SizedBox(height: AppSpacing.sm),
+          ],
           PrimaryButton(
             label: 'Ver detalle',
             icon: Icons.chevron_right,
