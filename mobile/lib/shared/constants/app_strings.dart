@@ -22,8 +22,6 @@ class AppStrings {
 
   static const String comingSoon = 'Próximamente';
 
-  static const String favoritesEdit = 'Editar';
-
   static const String detailType = 'Tipo';
   static const String detailRegulation = 'Regulación';
   static const String detailSpaces = 'Plazas';
