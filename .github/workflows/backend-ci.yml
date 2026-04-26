@@ -18,6 +18,7 @@ on:
     paths:
       - "backend/**"
       - ".github/workflows/backend-ci.yml"
+  workflow_dispatch:
 
 concurrency:
   group: backend-ci-${{ github.ref }}
@@ -68,6 +69,9 @@ jobs:
 
       - name: Lint (ruff)
         run: ruff check app tests main.py
+
+      - name: Instalar herramientas de Redis
+        run: sudo apt-get update && sudo apt-get install -y redis-tools
 
       - name: Esperar a Redis Stack
         run: |
