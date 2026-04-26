@@ -130,7 +130,11 @@ def search_parkings(
     offset: int = 0,
     limit: int = 100,
 ) -> ParkingSearchResult:
-    """Busca aparcamientos con filtros indexados."""
+    """Busca aparcamientos con filtros indexados.
+
+    Los resultados se devuelven con sus hashes completos (`FT.SEARCH` sin
+    `NOCONTENT`) para evitar el round-trip extra `HGETALL` por id.
+    """
     if not _has_redisearch(rdb):
         return _search_parkings_fake(
             rdb,
@@ -154,8 +158,8 @@ def search_parkings(
         datasets=datasets,
         min_spaces=min_spaces,
     )
-    total, parking_ids = _ft_search_ids(rdb, query, offset=offset, limit=limit)
-    return ParkingSearchResult(items=_load_places(rdb, parking_ids), total=total)
+    total, places = _ft_search_with_payload(rdb, query, offset=offset, limit=limit)
+    return ParkingSearchResult(items=places, total=total)
 
 
 def search_nearby(
@@ -202,7 +206,7 @@ def search_nearby(
         min_spaces=min_spaces,
         geo=(lng, lat, radius_meters),
     )
-    total, rows = _ft_nearby_rows(
+    total, nearby = _ft_nearby_rows(
         rdb,
         query=query,
         lng=lng,
@@ -210,18 +214,6 @@ def search_nearby(
         offset=offset,
         limit=limit,
     )
-    places_by_id = {place.id: place for place in _load_places(rdb, [row[0] for row in rows])}
-    nearby: list[ParkingPlaceNearbyOut] = []
-    for parking_id, distance in rows:
-        place = places_by_id.get(parking_id)
-        if place is None:
-            continue
-        nearby.append(
-            ParkingPlaceNearbyOut(
-                **place.model_dump(),
-                distanceMeters=distance,
-            )
-        )
     return ParkingNearbySearchResult(items=nearby, total=total)
 
 
@@ -262,8 +254,8 @@ def search_in_bounds(
         min_spaces=min_spaces,
         bounds=(min_lat, min_lng, max_lat, max_lng),
     )
-    total, parking_ids = _ft_search_ids(rdb, query, offset=offset, limit=limit)
-    return ParkingSearchResult(items=_load_places(rdb, parking_ids), total=total)
+    total, places = _ft_search_with_payload(rdb, query, offset=offset, limit=limit)
+    return ParkingSearchResult(items=places, total=total)
 
 
 def get_facets(rdb: redis.Redis) -> ParkingFacetsOut:
@@ -348,6 +340,7 @@ def _ft_search_ids(
     offset: int,
     limit: int,
 ) -> tuple[int, list[str]]:
+    """`FT.SEARCH NOCONTENT`: para conteos y para flujos que no necesitan el hash."""
     ensure_search_index(rdb)
     try:
         resp = rdb.execute_command(
@@ -370,6 +363,59 @@ def _ft_search_ids(
     return total, [_key_to_id(k) for k in resp[1:]]
 
 
+def _ft_search_with_payload(
+    rdb: redis.Redis,
+    query: str,
+    *,
+    offset: int,
+    limit: int,
+) -> tuple[int, list[ParkingPlaceOut]]:
+    """`FT.SEARCH` con hashes completos: una sola llamada en lugar de SEARCH+HGETALL.
+
+    Formato de respuesta de `FT.SEARCH` sin `NOCONTENT`:
+        [total, key1, [field1, value1, field2, value2, ...], key2, [...]]
+    El parser asume orden estable de la respuesta de RediSearch (lo es desde
+    la versión 1.x).
+    """
+    ensure_search_index(rdb)
+    if limit == 0:
+        # Caso especial: solo queremos `total` (p. ej. facets). El payload
+        # nunca se usaría, así que evitamos pedirlo.
+        total, _ = _ft_search_ids(rdb, query, offset=0, limit=0)
+        return total, []
+
+    try:
+        resp = rdb.execute_command(
+            "FT.SEARCH",
+            SEARCH_INDEX_NAME,
+            query,
+            "LIMIT",
+            offset,
+            limit,
+            "DIALECT",
+            "2",
+        )
+    except ResponseError as exc:
+        _raise_stack_error(exc)
+
+    if not resp:
+        return 0, []
+    total = int(resp[0])
+    # Importación local para evitar el ciclo importer <-> search.
+    from .importer import place_from_redis_hash
+
+    places: list[ParkingPlaceOut] = []
+    body = resp[1:]
+    # Pares (key, fields_array). Si por algún motivo viene impar, ignoramos
+    # el sobrante para no levantar.
+    for i in range(0, len(body) - 1, 2):
+        fields = body[i + 1]
+        data = _row_to_dict(fields)
+        if data:
+            places.append(place_from_redis_hash(data))
+    return total, places
+
+
 def _ft_nearby_rows(
     rdb: redis.Redis,
     *,
@@ -378,13 +424,15 @@ def _ft_nearby_rows(
     lat: float,
     offset: int,
     limit: int,
-) -> tuple[int, list[tuple[str, float]]]:
-    """Nearby ordenado en Redis con `geodistance(...)`.
+) -> tuple[int, list[ParkingPlaceNearbyOut]]:
+    """Nearby ordenado en Redis con `geodistance(...)` y hashes en una sola llamada.
 
-    RediSearch permite cargar el campo GEO, aplicar `geodistance` y ordenar por
-    esa propiedad calculada en el pipeline de `FT.AGGREGATE`. Así no traemos
-    una ventana arbitraria a Python ni corremos el riesgo de perder los puntos
-    realmente más cercanos cuando el índice crezca.
+    `FT.AGGREGATE … LOAD *` carga todos los campos del hash en la propia
+    pipeline, junto al `distance` calculado por `APPLY geodistance(...)`. Así:
+    - una sola llamada a Redis (antes: AGGREGATE + pipeline HGETALL),
+    - el orden por distancia ASC se calcula en Redis sobre toda la ventana
+      (`MAX sort_window`), evitando perder los puntos realmente más cercanos
+      cuando el índice crezca.
     """
     ensure_search_index(rdb)
     sort_window = max(offset + limit, limit)
@@ -394,9 +442,7 @@ def _ft_nearby_rows(
             SEARCH_INDEX_NAME,
             query,
             "LOAD",
-            "2",
-            "@id",
-            "@location",
+            "*",
             "APPLY",
             f"geodistance(@location,{float(lng)},{float(lat)})",
             "AS",
@@ -418,18 +464,33 @@ def _ft_nearby_rows(
 
     if not resp:
         return 0, []
-    rows: list[tuple[str, float]] = []
+
+    # Importación local para evitar el ciclo importer <-> search.
+    from .importer import place_from_redis_hash
+
+    nearby: list[ParkingPlaceNearbyOut] = []
     for row in resp[1:]:
         values = _row_to_dict(row)
-        parking_id = values.get("id")
-        if not parking_id:
+        if not values:
             continue
         try:
             distance = float(values.get("distance", 0))
         except (TypeError, ValueError):
             distance = 0.0
-        rows.append((parking_id, distance))
-    return int(resp[0]), rows
+        # `distance` es un campo computado de la pipeline y no forma parte del
+        # hash original; lo retiramos antes de hidratar el modelo.
+        values.pop("distance", None)
+        try:
+            place = place_from_redis_hash(values)
+        except Exception:  # noqa: BLE001 — hash corrupto, lo saltamos sin tirar.
+            continue
+        nearby.append(
+            ParkingPlaceNearbyOut(
+                **place.model_dump(),
+                distanceMeters=distance,
+            )
+        )
+    return int(resp[0]), nearby
 
 
 def _aggregate_tag_counts(rdb: redis.Redis, field: str) -> dict[str, int]:
@@ -534,18 +595,6 @@ def _text_query(q: Optional[str]) -> str:
 def _key_to_id(key: str) -> str:
     key = str(key)
     return key[len(PARKING_KEY_PREFIX):] if key.startswith(PARKING_KEY_PREFIX) else key
-
-
-def _load_places(rdb: redis.Redis, parking_ids: list[str]) -> list[ParkingPlaceOut]:
-    if not parking_ids:
-        return []
-    from .importer import place_from_redis_hash
-
-    pipe = rdb.pipeline()
-    for pid in parking_ids:
-        pipe.hgetall(f"{PARKING_KEY_PREFIX}{pid}")
-    hashes = pipe.execute()
-    return [place_from_redis_hash(data) for data in hashes if data]
 
 
 def _all_places_fake(rdb) -> list[ParkingPlaceOut]:

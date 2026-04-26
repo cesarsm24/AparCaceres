@@ -225,6 +225,34 @@ def test_representative_point_returns_none_for_degenerate_polygon():
     ) is None
 
 
+def test_polygon_centroid_weights_by_area_for_asymmetric_l():
+    """Centroide Shoelace pondera por área: domina el brazo grande.
+
+    L-shape muy asimétrico (brazo horizontal 10×1 = 10 unidades de área,
+    brazo vertical 1×2 = 2 unidades). El centroide ponderado debe caer en
+    el brazo horizontal, mientras que el promedio aritmético de vértices
+    cae cerca del codo, que es ambiguo.
+    """
+    coords = [[[0, 0], [10, 0], [10, 1], [1, 1], [1, 3], [0, 3], [0, 0]]]
+    centroid = representative_point(ParkingGeometryType.POLYGON, coords)
+    assert centroid is not None
+    cx, cy = centroid
+    # Centroide ponderado: el área dominante (brazo horizontal de 0..10 × 0..1)
+    # arrastra el centro hacia ese rectángulo. Esperado: ~(4.25, 0.75).
+    assert 0 <= cx <= 10 and 0 <= cy <= 1
+    # Sanity: muy distinto del promedio aritmético de vértices (~2.67, 1.33).
+    promedio_x = (0 + 10 + 10 + 1 + 1 + 0) / 6
+    promedio_y = (0 + 0 + 1 + 1 + 3 + 3) / 6
+    assert abs(cx - promedio_x) > 0.5 or abs(cy - promedio_y) > 0.5
+
+
+def test_polygon_centroid_falls_back_when_collinear():
+    """Anillo de 3+ puntos colineales (área 0): cae al promedio aritmético."""
+    coords = [[[0, 0], [1, 0], [2, 0]]]
+    # Sin cierre duplicado y con área 0, esperamos el promedio simple.
+    assert representative_point(ParkingGeometryType.POLYGON, coords) == (1.0, 0.0)
+
+
 # ============================================================
 # feature_to_place
 # ============================================================

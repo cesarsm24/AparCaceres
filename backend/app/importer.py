@@ -73,31 +73,74 @@ _GEOJSON_TYPE_TO_GEOMETRY: dict[str, ParkingGeometryType] = {
 }
 
 
-def _coerce_multi_geometry_coords(geom_type: str, raw_coords: object) -> object:
+def _coerce_multi_geometry_coords(
+    geom_type: str,
+    raw_coords: object,
+    *,
+    feature_id_hint: Optional[str] = None,
+) -> object:
     """Colapsa Multi* a la variante simple, para no perder el feature.
 
     - `MultiPolygon` -> `Polygon` (el primer polígono no degenerado de la lista).
     - `MultiLineString` -> `LineString` (la primera línea válida).
     Si la entrada está vacía o no es coherente, devuelve `raw_coords` tal cual
     para que las validaciones aguas abajo decidan si descartar el feature.
+
+    Si la lista contiene varias componentes válidas, se conserva la primera y
+    se loggea cuántas se descartan: es información útil para detectar datasets
+    con digitalización heterogénea sin reventar el import.
     """
     if geom_type == "MultiPolygon":
         if not isinstance(raw_coords, (list, tuple)) or not raw_coords:
             return raw_coords
-        for polygon in raw_coords:
+        for index, polygon in enumerate(raw_coords):
             polygon_clean = coerce_polygon(polygon)
             if polygon_clean:
+                _log_multi_dropped(
+                    geom_type, total=len(raw_coords), kept_index=index,
+                    feature_id_hint=feature_id_hint,
+                )
                 return [[list(pt) for pt in ring] for ring in polygon_clean]
         return raw_coords[0]
     if geom_type == "MultiLineString":
         if not isinstance(raw_coords, (list, tuple)) or not raw_coords:
             return raw_coords
-        for line in raw_coords:
+        for index, line in enumerate(raw_coords):
             line_clean = coerce_line_string(line)
             if line_clean:
+                _log_multi_dropped(
+                    geom_type, total=len(raw_coords), kept_index=index,
+                    feature_id_hint=feature_id_hint,
+                )
                 return [list(pt) for pt in line_clean]
         return raw_coords[0]
     return raw_coords
+
+
+def _log_multi_dropped(
+    geom_type: str,
+    *,
+    total: int,
+    kept_index: int,
+    feature_id_hint: Optional[str],
+) -> None:
+    """Loggea cuántas componentes de un Multi* se descartan al colapsar.
+
+    Solo levanta una entrada cuando hay más de una componente; si solo había
+    una, el "colapso" es trivial y no aporta información.
+    """
+    if total <= 1:
+        return
+    dropped = total - 1
+    logger.info(
+        "Multi* colapsado a primera componente: type=%s total=%d kept_index=%d "
+        "dropped=%d feature=%s",
+        geom_type,
+        total,
+        kept_index,
+        dropped,
+        feature_id_hint or "<unknown>",
+    )
 
 # El dataset municipal expone un identificador estable como query param de la
 # URL de la ficha: http://sig.caceres.es/.../fichatoponimia.php?mslink=1903
@@ -482,6 +525,52 @@ def derive_stable_id(
     return f"{namespace}:{fp}"
 
 
+def _polygon_centroid(ring: list[tuple[float, float]]) -> Optional[tuple[float, float]]:
+    """Centroide ponderado por área (fórmula de Shoelace) del anillo.
+
+    Para polígonos no convexos o irregulares, el centroide ponderado por área
+    cae siempre dentro de la envolvente convexa del polígono (a diferencia del
+    promedio aritmético, que puede salirse). Para polígonos pequeños y casi
+    convexos como los del catálogo municipal, el resultado es prácticamente
+    indistinguible del promedio simple.
+
+    Cuando el área es degenerada (anillo colineal o muy pequeño en escala de
+    coordenadas), caemos al promedio aritmético del anillo, que sigue siendo
+    una mejor aproximación que descartar el feature.
+    """
+    # Cierre duplicado del primer y último punto: no se incluye en el sumatorio.
+    pts = ring[:-1] if len(ring) > 1 and ring[0] == ring[-1] else ring
+    if not pts:
+        return None
+    if len(pts) < 3:
+        # Sin tres vértices distintos no hay área computable: caemos al promedio.
+        lon = sum(p[0] for p in pts) / len(pts)
+        lat = sum(p[1] for p in pts) / len(pts)
+        return (lon, lat)
+
+    area_x2 = 0.0
+    cx = 0.0
+    cy = 0.0
+    n = len(pts)
+    for i in range(n):
+        x0, y0 = pts[i]
+        x1, y1 = pts[(i + 1) % n]
+        cross = x0 * y1 - x1 * y0
+        area_x2 += cross
+        cx += (x0 + x1) * cross
+        cy += (y0 + y1) * cross
+
+    if area_x2 == 0:
+        # Polígono degenerado (todos los vértices colineales). Fallback al
+        # promedio aritmético para no perder el feature.
+        lon = sum(p[0] for p in pts) / n
+        lat = sum(p[1] for p in pts) / n
+        return (lon, lat)
+
+    factor = 1.0 / (3.0 * area_x2)
+    return (cx * factor, cy * factor)
+
+
 def representative_point(
     geometry_type: ParkingGeometryType,
     raw_coords: object,
@@ -489,7 +578,8 @@ def representative_point(
     """Devuelve un `(lon, lat)` representativo para indexar como `location`.
 
     - POINT: la propia coordenada.
-    - POLYGON: centroide simple del primer anillo (excluyendo el cierre duplicado).
+    - POLYGON: centroide ponderado por área del primer anillo (Shoelace).
+      Cae al promedio aritmético si el anillo es degenerado.
     - LINE_STRING: punto medio por índice del trazo.
 
     `None` si la geometría no aporta un punto válido (se descarta el feature).
@@ -506,15 +596,7 @@ def representative_point(
         polygon = coerce_polygon(raw_coords)
         if not polygon:
             return None
-        ring = polygon[0]
-        # Anillo cerrado: el primer y último punto coinciden; lo descartamos
-        # para no sesgar el promedio.
-        pts = ring[:-1] if len(ring) > 1 and ring[0] == ring[-1] else ring
-        if not pts:
-            return None
-        lon = sum(p[0] for p in pts) / len(pts)
-        lat = sum(p[1] for p in pts) / len(pts)
-        return (lon, lat)
+        return _polygon_centroid(polygon[0])
 
     if geometry_type is ParkingGeometryType.LINE_STRING:
         line = coerce_line_string(raw_coords)
@@ -557,7 +639,21 @@ def feature_to_place(
     # representativo y antes de fingerprintear; así no perdemos features
     # válidos (p. ej. los 2 MultiPolygon de `carga_descarga.geojson`).
     if raw_geom_type in ("MultiPolygon", "MultiLineString"):
-        raw_coords = _coerce_multi_geometry_coords(raw_geom_type, raw_coords)
+        # `feature_id_hint` no es el id final (aún no se ha derivado), pero
+        # ayuda a correlacionar el log con el GeoJSON de origen.
+        hint_dataset = source.source_dataset if source else "<no-source>"
+        hint_token = (
+            properties.get("MSLINK")
+            or properties.get("mslink")
+            or properties.get("ID")
+            or properties.get("id")
+            or properties.get("OBJECTID")
+            or "<no-id>"
+        )
+        feature_hint = f"{hint_dataset}:{hint_token}"
+        raw_coords = _coerce_multi_geometry_coords(
+            raw_geom_type, raw_coords, feature_id_hint=feature_hint,
+        )
 
     point = representative_point(geom_type, raw_coords)
     if point is None:
