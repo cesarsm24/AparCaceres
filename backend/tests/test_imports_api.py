@@ -42,3 +42,42 @@ def test_import_parkings_accepts_valid_token(api_client, monkeypatch):
 
     assert response.status_code == 200
     assert response.json()["status"] == "ok"
+
+
+def test_import_increments_cache_version_for_nearby_namespacing(
+    seeded_client, fake_redis, monkeypatch
+):
+    """Tras un re-import, `cache:version` debe subir y la clave de caché de
+    `/parkings/nearby` la incluye como prefijo `v{n}`. Esto desacopla la
+    invalidación del SCAN+DEL antiguo: las entradas previas quedan inalcanzables
+    al cambiar el namespace y caducan por TTL.
+    """
+    from app.config import CACHE_VERSION_KEY
+    from app.routers import imports as imports_router
+
+    monkeypatch.setattr(
+        imports_router,
+        "run_import_dir",
+        lambda data_dir, rdb: {
+            "status": "ok",
+            "imported": 0,
+            "cache_version": int(rdb.incr(CACHE_VERSION_KEY)),
+        },
+    )
+
+    initial_version = int(fake_redis.get(CACHE_VERSION_KEY) or "0")
+
+    response = seeded_client.post("/import-parkings")
+    assert response.status_code == 200
+
+    new_version = int(fake_redis.get(CACHE_VERSION_KEY))
+    assert new_version == initial_version + 1
+    assert response.json()["cache_version"] == new_version
+
+    nearby = seeded_client.get(
+        "/parkings/nearby", params={"lat": 39.47, "lng": -6.37}
+    )
+    assert nearby.status_code == 200
+    # Una nueva entrada de caché aparece con el prefijo `v{n}` actual.
+    cached_keys = [k for k in fake_redis.strings if k.startswith("cache:nearby:")]
+    assert any(f"v{new_version}:" in k for k in cached_keys)

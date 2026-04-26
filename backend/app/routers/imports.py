@@ -13,10 +13,11 @@ import logging
 from typing import Optional
 
 import redis
-from fastapi import APIRouter, Depends, Header, HTTPException
+from fastapi import APIRouter, Depends, Header, HTTPException, Request
 
 from ..config import DATA_DIR, IMPORT_TOKEN
 from ..importer import run_import_dir
+from ..rate_limit import RATE_LIMIT_IMPORT, limiter
 from ..redis_client import get_redis, raise_redis_503
 from ..search import SearchIndexError
 
@@ -88,9 +89,11 @@ def _check_import_token(provided: Optional[str]) -> None:
         "namespaced por dataset (`{sourceDataset}:{key}`) y recrea el índice "
         "Redis Stack / RediSearch `idx:parkings_search` sobre los hashes "
         "`parking:{id}`.\n\n"
-        "Idempotente: limpia `parking:*` y restos legacy (`geo:parkings`, "
-        "`idx:*`) antes de reescribir, e invalida la caché `cache:nearby:*`. "
-        "La respuesta incluye totales y desglose por `sourceDataset`.\n\n"
+        "Idempotente: limpia `parking:*` (`UNLINK`) y restos legacy "
+        "(`geo:parkings`, `idx:*`) antes de reescribir e invalida la caché de "
+        "`/parkings/nearby` incrementando `cache:version` (O(1), sin SCAN). "
+        "La respuesta incluye totales, desglose por `sourceDataset` y el nuevo "
+        "`cache_version`.\n\n"
         "Si `IMPORT_TOKEN` está configurado en el entorno, la petición debe "
         "incluir la cabecera `X-Import-Token` con ese valor (401 si no)."
     ),
@@ -101,7 +104,9 @@ def _check_import_token(provided: Optional[str]) -> None:
         401: {"description": "Falta o no coincide `X-Import-Token`."},
     },
 )
+@limiter.limit(RATE_LIMIT_IMPORT)
 def import_parkings(
+    request: Request,
     x_import_token: Optional[str] = Header(
         None,
         alias="X-Import-Token",

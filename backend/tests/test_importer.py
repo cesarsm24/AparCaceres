@@ -454,6 +454,47 @@ def test_run_import_is_idempotent_and_clears_stale_entries(fake_redis):
     assert surviving == [f"{PARKING_KEY_PREFIX}aparcamientos_en_linea:7700"]
 
 
+def test_run_import_uses_double_buffer_and_leaves_staging_clean(fake_redis):
+    """Tras el import no debe quedar ningún `parking_v2:*` en disco.
+
+    El staging es el escalón intermedio del doble buffer: build → swap →
+    wipe. Si quedaran claves de staging las lecturas verían "doble" durante
+    un re-import o se consumiría memoria innecesaria entre imports.
+    """
+    from app.config import STAGING_KEY_PREFIX
+
+    summary = run_import_sources(_all_geometries_sources(), fake_redis)
+    assert summary["status"] == "ok"
+
+    staging_leftovers = [
+        k for k in fake_redis.hashes if k.startswith(STAGING_KEY_PREFIX)
+    ]
+    assert staging_leftovers == [], (
+        f"Quedó staging tras el swap: {staging_leftovers}"
+    )
+
+    # Y el activo está poblado.
+    active_keys = [k for k in fake_redis.hashes if k.startswith(PARKING_KEY_PREFIX)]
+    assert active_keys, "El catálogo activo quedó vacío tras el swap"
+
+
+def test_run_import_recovers_from_orphan_staging(fake_redis):
+    """Si un import previo abortó dejando claves en staging, el siguiente
+    import debe limpiarlas antes de empezar — no escribir encima."""
+    from app.config import STAGING_KEY_PREFIX
+
+    fake_redis.hashes[f"{STAGING_KEY_PREFIX}leftover:1"] = {"id": "leftover:1"}
+    fake_redis.hashes[f"{STAGING_KEY_PREFIX}leftover:2"] = {"id": "leftover:2"}
+
+    summary = run_import_sources(_all_geometries_sources(), fake_redis)
+    assert summary["status"] == "ok"
+
+    staging_leftovers = [
+        k for k in fake_redis.hashes if k.startswith(STAGING_KEY_PREFIX)
+    ]
+    assert staging_leftovers == []
+
+
 def test_run_import_bumps_cache_version(fake_redis):
     """El reimport invalida la caché incrementando `cache:version` (O(1))."""
     # Versión inicial: no existe la clave -> tratada como 0.

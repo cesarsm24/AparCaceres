@@ -13,15 +13,28 @@ ventajas:
 `api_client` arma un `FastAPI` minimal (sin lifespan) con el `FakeRedis`
 inyectado en `app.state.redis`, y devuelve un `TestClient` listo para hacer
 requests contra los endpoints reales.
+
+Rate limiting: forzamos `RATE_LIMIT_ENABLED=false` antes de cualquier import
+de la app para que el limiter de slowapi sea inerte en la suite. Los tests
+dedicados al rate limit lo reactivan localmente.
 """
 
 from __future__ import annotations
 
-from typing import Iterator
+import os
 
-import pytest
-from fastapi import FastAPI
-from fastapi.testclient import TestClient
+# Debe ejecutarse ANTES de importar la app (incluye `app.rate_limit`).
+os.environ.setdefault("RATE_LIMIT_ENABLED", "false")
+os.environ.setdefault("METRICS_ENABLED", "false")
+# Clave de firma fija para los tokens de favoritos. Cualquier valor sirve;
+# solo importa que sea estable durante la suite.
+os.environ.setdefault("FAVORITES_SECRET", "test-secret-do-not-leak")
+
+from typing import Iterator  # noqa: E402
+
+import pytest  # noqa: E402
+from fastapi import FastAPI  # noqa: E402
+from fastapi.testclient import TestClient  # noqa: E402
 
 
 class FakeRedis:
@@ -163,6 +176,14 @@ class FakeRedis:
     def zcard(self, key: str) -> int:
         return len(self.zsets.get(key, {}))
 
+    def rename(self, src: str, dst: str) -> bool:
+        """Subset de RENAME: mueve la clave entre stores. Lanza KeyError si no existe."""
+        for store in (self.hashes, self.strings, self.zsets):
+            if src in store:
+                store[dst] = store.pop(src)
+                return True
+        raise KeyError(f"no such key: {src}")
+
     # ---------- Pipeline ----------
 
     def pipeline(self) -> "FakePipeline":
@@ -193,6 +214,10 @@ class FakePipeline:
         self._cmds.append(("hgetall", key))
         return self
 
+    def rename(self, src: str, dst: str) -> "FakePipeline":
+        self._cmds.append(("rename", src, dst))
+        return self
+
     def execute(self) -> list:
         results = []
         for cmd in self._cmds:
@@ -202,6 +227,8 @@ class FakePipeline:
                 results.append(self.parent.hset(cmd[1], mapping=cmd[2]))
             elif cmd[0] == "hgetall":
                 results.append(self.parent.hgetall(cmd[1]))
+            elif cmd[0] == "rename":
+                results.append(self.parent.rename(cmd[1], cmd[2]))
         self._cmds.clear()
         return results
 
@@ -209,6 +236,18 @@ class FakePipeline:
 @pytest.fixture
 def fake_redis() -> FakeRedis:
     return FakeRedis()
+
+
+@pytest.fixture
+def auth_headers():
+    """Devuelve un helper `make(sub)` que produce las cabeceras Bearer."""
+    from app.auth import issue_token
+
+    def make(sub: str) -> dict[str, str]:
+        token, _ = issue_token(sub)
+        return {"Authorization": f"Bearer {token}"}
+
+    return make
 
 
 # ============================================================
@@ -221,11 +260,16 @@ def _build_test_app(fake_redis: FakeRedis) -> FastAPI:
     Importamos los routers DENTRO de la función para que cada test arranque
     desde un estado limpio y no haya efectos colaterales del orden de imports.
     """
-    from app.routers import favorites, health, imports, parkings
+    from app.rate_limit import limiter
+    from app.routers import auth, favorites, health, imports, parkings
 
     app = FastAPI()
     app.state.redis = fake_redis
+    # slowapi exige `app.state.limiter`; con `enabled=False` (forzado en este
+    # fichero) los decoradores `@limiter.limit(...)` no aplican cupo alguno.
+    app.state.limiter = limiter
     app.include_router(health.router)
+    app.include_router(auth.router)
     app.include_router(imports.router)
     app.include_router(parkings.router)
     app.include_router(favorites.router)

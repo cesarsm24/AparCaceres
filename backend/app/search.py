@@ -69,24 +69,43 @@ def build_location(place: ParkingPlaceOut) -> str:
     return f"{place.longitude},{place.latitude}"
 
 
-def recreate_search_index(rdb: redis.Redis) -> None:
-    """Recrea `idx:parkings_search` de forma idempotente.
+def recreate_search_index(
+    rdb: redis.Redis,
+    *,
+    name: str = SEARCH_INDEX_NAME,
+    key_prefix: str = PARKING_KEY_PREFIX,
+) -> None:
+    """Recrea un índice RediSearch de forma idempotente.
 
-    No usa `DD`: el importador borra los hashes explícitamente y luego vuelve a
-    crearlos, así evitamos que `FT.DROPINDEX` borre datos por accidente.
+    Los parámetros `name` y `key_prefix` permiten construir un índice de
+    staging para el doble buffer del importador sin tocar el activo.
+
+    No usa `DD`: el importador gestiona los hashes explícitamente, así
+    evitamos que `FT.DROPINDEX` borre datos por accidente.
     """
     if not hasattr(rdb, "execute_command"):
         return
     try:
-        rdb.execute_command("FT.DROPINDEX", SEARCH_INDEX_NAME)
+        rdb.execute_command("FT.DROPINDEX", name)
     except ResponseError as exc:
         if not _is_unknown_index(exc):
             _raise_stack_error(exc)
-    _create_search_index(rdb)
+    _create_search_index(rdb, name=name, key_prefix=key_prefix)
+
+
+def drop_search_index(rdb: redis.Redis, *, name: str) -> None:
+    """`FT.DROPINDEX` idempotente: ignora "unknown index" y deja los hashes."""
+    if not hasattr(rdb, "execute_command"):
+        return
+    try:
+        rdb.execute_command("FT.DROPINDEX", name)
+    except ResponseError as exc:
+        if not _is_unknown_index(exc):
+            _raise_stack_error(exc)
 
 
 def ensure_search_index(rdb: redis.Redis) -> None:
-    """Crea el índice RediSearch si no existe."""
+    """Crea el índice RediSearch principal si no existe."""
     if not hasattr(rdb, "execute_command"):
         return
     try:
@@ -262,16 +281,21 @@ def get_facets(rdb: redis.Redis) -> ParkingFacetsOut:
     )
 
 
-def _create_search_index(rdb: redis.Redis) -> None:
+def _create_search_index(
+    rdb: redis.Redis,
+    *,
+    name: str = SEARCH_INDEX_NAME,
+    key_prefix: str = PARKING_KEY_PREFIX,
+) -> None:
     try:
         rdb.execute_command(
             "FT.CREATE",
-            SEARCH_INDEX_NAME,
+            name,
             "ON",
             "HASH",
             "PREFIX",
             "1",
-            PARKING_KEY_PREFIX,
+            key_prefix,
             "SCHEMA",
             "id",
             "TAG",

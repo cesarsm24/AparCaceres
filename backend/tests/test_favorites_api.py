@@ -4,11 +4,15 @@ Comparten `seeded_client` con los tests de parkings (mismo dataset sintético
 ya importado) y monkeypatchean `_now_ms` en `app.routers.favorites` para fijar
 el orden temporal sin depender del reloj real.
 
+Autenticación: cada llamada se hace con un Bearer JWT firmado por el helper
+`auth_headers(sub)` (definido en `conftest.py`). Reemplaza al `X-User-Id`
+opaco anterior y endurece el aislamiento entre usuarios.
+
 Cubren:
 - Alta (PUT) con payload, idempotencia y conservación de `addedAt`.
 - Baja (DELETE) con flag `removed` y casuística "no estaba".
 - Listado (GET) con shape completo de `ParkingPlace` y orden newest-first.
-- Validación de cabecera `X-User-Id` (400) y de aparcamiento inexistente (404).
+- Validación del Bearer (401) y de aparcamiento inexistente (404).
 - Aislamiento entre usuarios.
 - Favoritos huérfanos (parking borrado del catálogo): se filtran del GET.
 - OpenAPI: ejemplos registrados para los 3 endpoints.
@@ -61,10 +65,10 @@ def freeze_time(monkeypatch):
 # PUT /users/me/favorites/{parkingId}
 # ============================================================
 
-def test_put_favorite_creates_entry_and_returns_payload(seeded_client):
+def test_put_favorite_creates_entry_and_returns_payload(seeded_client, auth_headers):
     response = seeded_client.put(
         "/users/me/favorites/aparcamientos_en_linea:5500",
-        headers={"X-User-Id": "alice"},
+        headers=auth_headers("alice"),
     )
     assert response.status_code == 200
     body = response.json()
@@ -74,8 +78,10 @@ def test_put_favorite_creates_entry_and_returns_payload(seeded_client):
     assert body["addedAt"].endswith("+00:00")
 
 
-def test_put_favorite_is_idempotent_keeps_added_at(seeded_client, freeze_time):
-    headers = {"X-User-Id": "alice"}
+def test_put_favorite_is_idempotent_keeps_added_at(
+    seeded_client, freeze_time, auth_headers
+):
+    headers = auth_headers("alice")
 
     first = seeded_client.put("/users/me/favorites/aparcamientos_en_linea:5500", headers=headers)
     assert first.json()["created"] is True
@@ -90,44 +96,43 @@ def test_put_favorite_is_idempotent_keeps_added_at(seeded_client, freeze_time):
     assert second.json()["addedAt"] == original_added_at
 
 
-def test_put_favorite_404_when_parking_does_not_exist(seeded_client):
+def test_put_favorite_404_when_parking_does_not_exist(seeded_client, auth_headers):
     response = seeded_client.put(
         "/users/me/favorites/no-existe",
-        headers={"X-User-Id": "alice"},
+        headers=auth_headers("alice"),
     )
     assert response.status_code == 404
     assert "no-existe" in response.json()["detail"]
 
 
-def test_put_favorite_400_when_x_user_id_missing(seeded_client):
+def test_put_favorite_401_when_no_bearer_token(seeded_client):
     response = seeded_client.put("/users/me/favorites/aparcamientos_en_linea:5500")
-    assert response.status_code == 400
-    assert "X-User-Id" in response.json()["detail"]
+    assert response.status_code == 401
+    assert "token" in response.json()["detail"].lower()
 
 
-def test_put_favorite_400_when_x_user_id_blank(seeded_client):
+def test_put_favorite_401_when_bearer_malformed(seeded_client):
     response = seeded_client.put(
         "/users/me/favorites/aparcamientos_en_linea:5500",
-        headers={"X-User-Id": "   "},
+        headers={"Authorization": "NotBearer xyz"},
     )
-    assert response.status_code == 400
+    assert response.status_code == 401
 
 
-def test_put_favorite_400_when_x_user_id_has_forbidden_chars(seeded_client):
-    # ":" rompería la convención de claves Redis user:{id}:favorites.
+def test_put_favorite_401_when_token_invalid(seeded_client):
     response = seeded_client.put(
         "/users/me/favorites/aparcamientos_en_linea:5500",
-        headers={"X-User-Id": "ali:ce"},
+        headers={"Authorization": "Bearer not-a-jwt"},
     )
-    assert response.status_code == 400
+    assert response.status_code == 401
 
 
 # ============================================================
 # DELETE /users/me/favorites/{parkingId}
 # ============================================================
 
-def test_delete_favorite_removes_existing_entry(seeded_client):
-    headers = {"X-User-Id": "alice"}
+def test_delete_favorite_removes_existing_entry(seeded_client, auth_headers):
+    headers = auth_headers("alice")
     seeded_client.put("/users/me/favorites/aparcamientos_en_linea:5500", headers=headers)
 
     response = seeded_client.delete(
@@ -143,44 +148,46 @@ def test_delete_favorite_removes_existing_entry(seeded_client):
     assert listing == []
 
 
-def test_delete_favorite_returns_removed_false_when_not_in_list(seeded_client):
+def test_delete_favorite_returns_removed_false_when_not_in_list(
+    seeded_client, auth_headers
+):
     response = seeded_client.delete(
         "/users/me/favorites/aparcamientos_en_linea:5500",
-        headers={"X-User-Id": "alice"},
+        headers=auth_headers("alice"),
     )
     # El parking existe pero no estaba en favoritos: 200, removed=False.
     assert response.status_code == 200
     assert response.json() == {"id": "aparcamientos_en_linea:5500", "removed": False}
 
 
-def test_delete_favorite_404_when_parking_does_not_exist(seeded_client):
+def test_delete_favorite_404_when_parking_does_not_exist(seeded_client, auth_headers):
     response = seeded_client.delete(
         "/users/me/favorites/no-existe",
-        headers={"X-User-Id": "alice"},
+        headers=auth_headers("alice"),
     )
     assert response.status_code == 404
 
 
-def test_delete_favorite_400_when_x_user_id_missing(seeded_client):
+def test_delete_favorite_401_when_no_bearer_token(seeded_client):
     response = seeded_client.delete("/users/me/favorites/aparcamientos_en_linea:5500")
-    assert response.status_code == 400
+    assert response.status_code == 401
 
 
 # ============================================================
 # GET /users/me/favorites
 # ============================================================
 
-def test_get_favorites_empty_when_user_has_none(seeded_client):
+def test_get_favorites_empty_when_user_has_none(seeded_client, auth_headers):
     response = seeded_client.get(
         "/users/me/favorites",
-        headers={"X-User-Id": "alice"},
+        headers=auth_headers("alice"),
     )
     assert response.status_code == 200
     assert response.json() == []
 
 
-def test_get_favorites_returns_full_parking_place_shape(seeded_client):
-    headers = {"X-User-Id": "alice"}
+def test_get_favorites_returns_full_parking_place_shape(seeded_client, auth_headers):
+    headers = auth_headers("alice")
     seeded_client.put("/users/me/favorites/aparcamientos_en_linea:5500", headers=headers)
 
     response = seeded_client.get("/users/me/favorites", headers=headers)
@@ -196,8 +203,10 @@ def test_get_favorites_returns_full_parking_place_shape(seeded_client):
     assert body[0]["coordinates"][0][0] == [-6.3994515, 39.4670139]
 
 
-def test_get_favorites_orders_by_most_recent_first(seeded_client, freeze_time):
-    headers = {"X-User-Id": "alice"}
+def test_get_favorites_orders_by_most_recent_first(
+    seeded_client, freeze_time, auth_headers
+):
+    headers = auth_headers("alice")
 
     # Tres favoritos añadidos con 1s entre cada uno.
     seeded_client.put("/users/me/favorites/aparcamientos:1903", headers=headers)
@@ -211,37 +220,48 @@ def test_get_favorites_orders_by_most_recent_first(seeded_client, freeze_time):
     assert ids == ["parking_motos_puntos:9100", "aparcamientos_en_linea:5500", "aparcamientos:1903"]
 
 
-def test_get_favorites_isolated_per_user(seeded_client):
+def test_get_favorites_isolated_per_user(seeded_client, auth_headers):
     seeded_client.put(
         "/users/me/favorites/aparcamientos_en_linea:5500",
-        headers={"X-User-Id": "alice"},
+        headers=auth_headers("alice"),
     )
     seeded_client.put(
         "/users/me/favorites/aparcamientos:1903",
-        headers={"X-User-Id": "bob"},
+        headers=auth_headers("bob"),
     )
 
     alice = seeded_client.get(
-        "/users/me/favorites", headers={"X-User-Id": "alice"}
+        "/users/me/favorites", headers=auth_headers("alice")
     ).json()
     bob = seeded_client.get(
-        "/users/me/favorites", headers={"X-User-Id": "bob"}
+        "/users/me/favorites", headers=auth_headers("bob")
     ).json()
 
     assert [p["id"] for p in alice] == ["aparcamientos_en_linea:5500"]
     assert [p["id"] for p in bob] == ["aparcamientos:1903"]
 
 
-def test_get_favorites_400_when_x_user_id_missing(seeded_client):
+def test_get_favorites_401_when_no_bearer_token(seeded_client):
     response = seeded_client.get("/users/me/favorites")
-    assert response.status_code == 400
+    assert response.status_code == 401
+
+
+def test_get_favorites_accepts_x_session_token_alias(seeded_client, auth_headers):
+    """`X-Session-Token` debe funcionar como alternativa a `Authorization`."""
+    bearer = auth_headers("alice")["Authorization"].split(" ", 1)[1]
+    response = seeded_client.get(
+        "/users/me/favorites",
+        headers={"X-Session-Token": bearer},
+    )
+    assert response.status_code == 200
+    assert response.json() == []
 
 
 def test_get_favorites_skips_orphan_entries_silently(
-    seeded_client, fake_redis
+    seeded_client, fake_redis, auth_headers
 ):
     """Si un favorito apunta a un parking borrado del catálogo, GET lo omite."""
-    headers = {"X-User-Id": "alice"}
+    headers = auth_headers("alice")
 
     seeded_client.put("/users/me/favorites/aparcamientos_en_linea:5500", headers=headers)
     seeded_client.put("/users/me/favorites/aparcamientos:1903", headers=headers)
@@ -260,8 +280,8 @@ def test_get_favorites_skips_orphan_entries_silently(
 # Flujo combinado: put -> get -> delete -> get
 # ============================================================
 
-def test_full_favorite_lifecycle(seeded_client, freeze_time):
-    headers = {"X-User-Id": "alice"}
+def test_full_favorite_lifecycle(seeded_client, freeze_time, auth_headers):
+    headers = auth_headers("alice")
 
     seeded_client.put("/users/me/favorites/aparcamientos:1903", headers=headers)
     freeze_time(500)
