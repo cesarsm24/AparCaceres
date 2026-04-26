@@ -362,7 +362,7 @@ def test_favorites_cap_drops_oldest_when_max_reached(
 def test_favorites_cap_disabled_when_zero(
     seeded_client, fake_redis, auth_headers, monkeypatch, freeze_time
 ):
-    """`FAVORITES_MAX_PER_USER=0` desactiva el recorte (modo legacy)."""
+    """`FAVORITES_MAX_PER_USER=0` desactiva el recorte (modo sin tope)."""
     monkeypatch.setattr("app.routers.favorites.FAVORITES_MAX_PER_USER", 0)
 
     headers = auth_headers("uncapped-user")

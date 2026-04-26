@@ -5,8 +5,8 @@ Cubre:
 - Punto representativo por tipo geométrico (point / polygon / line_string).
 - Mapeo Feature -> ParkingPlaceOut con propiedades del dataset municipal.
 - Round-trip ParkingPlaceOut <-> hash de Redis.
-- Orquestación `run_import`: idempotencia, persistencia íntegra del contrato,
-  invalidación de caché y tolerancia a features degenerados.
+- Orquestación `run_import_sources`: doble buffer, persistencia íntegra del
+  contrato, invalidación de caché y tolerancia a features degenerados.
 
 Para los tipos de geometría que el dataset real no incluye (polygon /
 line_string) usamos GeoJSON sintético construido inline.
@@ -397,7 +397,7 @@ def test_place_round_trip_through_redis_hash_preserves_contract():
 
 
 # ============================================================
-# run_import (orquestador completo contra fake_redis)
+# run_import_sources (orquestador completo contra fake_redis)
 # ============================================================
 
 def _all_geometries_sources() -> list[tuple[list[dict], object]]:

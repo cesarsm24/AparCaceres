@@ -13,16 +13,16 @@ BACKEND_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(BACKEND_DIR / ".env")
 
 # Directorio con los datasets GeoJSON de Open Data Cáceres. El importador
-# procesa todos los `*.geojson` del directorio y normaliza cada fichero contra
-# el contrato móvil, infiriendo categoría/vehículo/régimen del filename
-# cuando el feature no los aporta. Mantenemos `DATA_FILE` para compatibilidad
-# con cualquier herramienta que aún apunte al fichero original.
+# procesa todos los `*.geojson` del directorio y normaliza cada fichero
+# contra el contrato móvil, infiriendo categoría/vehículo/régimen del
+# filename cuando el feature no los aporta.
 DATA_DIR = BACKEND_DIR / "data"
-DATA_FILE = DATA_DIR / "aparcamientos.geojson"
 
 # Claves de Redis que usa la app:
 #   parking:{id}                              -> hash con metadatos del aparcamiento (HSET / HGETALL)
+#   parking_v2:{id}                           -> staging del importador con doble buffer
 #   idx:parkings_search                       -> índice RediSearch sobre hashes parking:*
+#   idx:parkings_search_v2                    -> índice de staging del importador
 #   cache:nearby:v{n}:{lat}:{lng}:{radius}    -> JSON cacheado del resultado de /parkings/nearby (SETEX)
 #   cache:version                             -> entero monotónico que namespacia las claves de caché
 #   user:{user_id}:favorites                  -> sorted set con ids favoritados, score = epoch ms (ZREVRANGE para newest-first)
@@ -30,17 +30,14 @@ PARKING_KEY_PREFIX = "parking:"
 SEARCH_INDEX_NAME = "idx:parkings_search"
 # Doble buffer para imports sin downtime: el importador construye la nueva
 # generación bajo el prefijo de staging y, una vez completa, hace el swap
-# atómico-en-lo-posible (drop índice viejo + UNLINK viejo + RENAME staging
-# → activo + recrear índice).
+# (drop índice activo + UNLINK activo + RENAME staging → activo +
+# recrear índice).
 STAGING_KEY_PREFIX = "parking_v2:"
 STAGING_INDEX_NAME = "idx:parkings_search_v2"
 CACHE_NEARBY_PREFIX = "cache:nearby:"
 CACHE_VERSION_KEY = "cache:version"
 USER_FAVORITES_KEY_PREFIX = "user:"
 USER_FAVORITES_KEY_SUFFIX = ":favorites"
-# Limpieza de claves legacy de versiones previas. No se escriben ya.
-LEGACY_GEO_KEY = "geo:parkings"
-LEGACY_SET_INDEX_PREFIX = "idx:"
 
 # Filenames que el importador NUNCA procesa, aunque estén físicamente en
 # `backend/data/`. `parkings_en_superficie.geojson` queda fuera porque sus
@@ -101,6 +98,5 @@ LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO").upper()
 # el cap (no recomendado en producción).
 FAVORITES_MAX_PER_USER = int(os.getenv("FAVORITES_MAX_PER_USER", "500"))
 # TTL en segundos del sorted set de favoritos por usuario. Se renueva en cada
-# `PUT` para que las cuentas activas no expiren. 0 desactiva el TTL (los datos
-# se mantienen indefinidamente, comportamiento previo).
+# `PUT` para que las cuentas activas no expiren. 0 desactiva el TTL.
 FAVORITES_TTL_SECONDS = int(os.getenv("FAVORITES_TTL_SECONDS", str(60 * 60 * 24 * 365)))

@@ -338,8 +338,7 @@ async def list_parkings(
     summary="Aparcamientos dentro de un radio, ordenados por distancia",
     description=(
         "Busca por `@location:[lng lat radio m]` en RediSearch y devuelve un "
-        "envelope paginado. `radius` se mantiene como alias legacy de "
-        "`radiusMeters`."
+        "envelope paginado."
     ),
     responses={200: {"content": {"application/json": {"example": _NEARBY_ENVELOPE_EXAMPLE}}}},
 )
@@ -349,8 +348,7 @@ async def get_parkings_nearby(
     response: Response,
     lat: float = Query(..., description="Latitud del centro de búsqueda."),
     lng: float = Query(..., description="Longitud del centro de búsqueda."),
-    radiusMeters: Optional[float] = Query(None, ge=0, description="Radio en metros."),
-    radius: Optional[float] = Query(None, ge=0, deprecated=True),
+    radiusMeters: float = Query(1000.0, ge=0, description="Radio en metros."),
     ids: Optional[list[str]] = Query(None),
     q: Optional[str] = Query(None),
     vehicleType: Optional[list[ParkingVehicleType]] = Query(None),
@@ -363,7 +361,7 @@ async def get_parkings_nearby(
     rdb: aioredis.Redis = Depends(get_redis),
     rdb_sync: redis.Redis = Depends(get_redis_sync),
 ):
-    effective_radius = radiusMeters if radiusMeters is not None else (radius or 1000.0)
+    effective_radius = radiusMeters
     effective_limit = _resolve_limit(limit)
     effective_offset = _resolve_offset(offset)
 
