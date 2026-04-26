@@ -15,8 +15,10 @@ de negocio (category, vehicleType, regulation) que no se pueden inferir del
 feature suelto, y un prefijo de id que permite generar fallbacks deterministas
 cuando no hay `mslink` ni id explícito.
 
-`feature_to_place(feat)` (sin source) sigue funcionando para tests y para los
-casos sintéticos: usa los defaults del enum y exige `mslink`/`id` explícito.
+El orquestador (`run_import_dir` / `run_import_sources`) implementa un doble
+buffer: construye la nueva generación bajo `parking_v2:*` con su propio
+índice y hace un swap atómico-en-lo-posible al catálogo activo. La caché de
+`/parkings/nearby` se invalida con un único `INCR cache:version`.
 """
 
 from __future__ import annotations
@@ -34,8 +36,6 @@ import redis
 from .config import (
     CACHE_VERSION_KEY,
     EXCLUDED_DATASET_FILENAMES,
-    LEGACY_GEO_KEY,
-    LEGACY_SET_INDEX_PREFIX,
     PARKING_KEY_PREFIX,
     SEARCH_INDEX_NAME,
     STAGING_INDEX_NAME,
@@ -701,8 +701,9 @@ def feature_to_place(
         properties, "streetName", "NOMBREVIA", "NOMBRE_VIA", "DIRECCION"
     )
     street_type = _first_present(properties, "streetType", "TIPOVIA", "TIPO_VIA")
-    # Preferimos DISTRITO (subzona: OESTE, CENTRO) sobre NUCLEO (la ciudad).
-    # Mantenemos NUCLEO como último recurso para compat con el dataset clásico.
+    # Preferimos DISTRITO (subzona: OESTE, CENTRO) sobre NUCLEO (la ciudad)
+    # como último recurso, porque algunos datasets municipales solo aportan
+    # NUCLEO.
     district = _first_present(properties, "district", "DISTRITO", "NUCLEO")
     neighborhood = _first_present(properties, "neighborhood", "BARRIO")
     management = _first_present(properties, "management", "GESTION")
@@ -812,15 +813,6 @@ def place_from_redis_hash(data: dict[str, str]) -> ParkingPlaceOut:
 # Orquestador del import (sin FastAPI para que sea testeable)
 # ============================================================
 
-def run_import(features: Iterable[dict], rdb: redis.Redis) -> dict[str, Any]:
-    """Importa una lista plana de features (sin source). Compat con tests legacy.
-
-    Internamente delega en el orquestador multi-fuente con `source=None`.
-    Útil cuando los tests pasan features sintéticos con propiedades explícitas.
-    """
-    return _run_import_paired(((feat, None) for feat in features), rdb)
-
-
 def run_import_sources(
     sources: Iterable[tuple[Iterable[dict], Optional[SourceProfile]]],
     rdb: redis.Redis,
@@ -846,19 +838,17 @@ def _run_import_paired(
 
     Pipeline:
     1. Cleanup de un staging huérfano de un import previo abortado.
-    2. Cleanup de claves legacy (`geo:parkings`, sets `idx:*` viejos). No
-       toca el catálogo activo `parking:*` ni el índice `idx:parkings_search`.
-    3. Build de la nueva generación bajo `parking_v2:{id}` con su propio
+    2. Build de la nueva generación bajo `parking_v2:{id}` con su propio
        índice `idx:parkings_search_v2`. Mientras dura este paso (el más
        caro), las lecturas siguen golpeando el catálogo activo sin notar
        nada.
-    4. Swap: `FT.DROPINDEX` del activo, `UNLINK` del catálogo activo,
+    3. Swap: `FT.DROPINDEX` del activo, `UNLINK` del catálogo activo,
        `RENAME` por clave del staging al activo, `FT.DROPINDEX` del staging,
        y recreación del índice activo. La ventana de catálogo "a medias"
        pasa de "toda la duración del import" a unos segundos.
-    5. Invalidación de caché por `INCR cache:version` (O(1)). Las claves
+    4. Invalidación de caché por `INCR cache:version` (O(1)). Las claves
        previas quedan inalcanzables tras el bump y caducan por su TTL.
-    6. Devuelve un resumen con totales + desglose por `sourceDataset` + el
+    5. Devuelve un resumen con totales + desglose por `sourceDataset` + el
        nuevo `cache_version`.
 
     Las `redis.ConnectionError` se propagan tal cual; el router las traducirá
@@ -919,12 +909,10 @@ def _run_import_paired(
     # Pasos:
     #   1. Limpieza de un staging anterior que pudiera quedar huérfano (si un
     #      import previo abortó a medias).
-    #   2. Cleanup de claves legacy (`geo:parkings`, índices `idx:*` viejos)
-    #      que no afectan al servicio actual.
-    #   3. Crear `idx:parkings_search_v2` sobre el prefijo de staging y
+    #   2. Crear `idx:parkings_search_v2` sobre el prefijo de staging y
     #      escribir todos los hashes nuevos (las lecturas en curso siguen
     #      golpeando el catálogo activo).
-    #   4. SWAP: drop del índice activo, UNLINK del catálogo activo, RENAME
+    #   3. SWAP: drop del índice activo, UNLINK del catálogo activo, RENAME
     #      en pipeline de staging → activo, drop del índice de staging,
     #      recreación del índice activo sobre los hashes ya migrados.
 
@@ -936,19 +924,7 @@ def _run_import_paired(
         _unlink_or_delete(prep, *stale_staging_keys)
         prep.execute()
 
-    # 2. Cleanup legacy (no afecta al catálogo activo).
-    legacy_index_keys = [
-        key
-        for key in rdb.scan_iter(match=f"{LEGACY_SET_INDEX_PREFIX}*")
-        if key not in {SEARCH_INDEX_NAME, STAGING_INDEX_NAME}
-    ]
-    legacy_pipe = rdb.pipeline()
-    if legacy_index_keys:
-        _unlink_or_delete(legacy_pipe, *legacy_index_keys)
-    _unlink_or_delete(legacy_pipe, LEGACY_GEO_KEY)
-    legacy_pipe.execute()
-
-    # 3. Build de la nueva generación en staging.
+    # 2. Build de la nueva generación en staging.
     recreate_search_index(
         rdb, name=STAGING_INDEX_NAME, key_prefix=STAGING_KEY_PREFIX
     )
@@ -960,7 +936,7 @@ def _run_import_paired(
         )
     write_pipe.execute()
 
-    # 4. Swap: dejamos el activo apuntando al contenido nuevo.
+    # 3. Swap: dejamos el activo apuntando al contenido nuevo.
     old_active_keys = list(rdb.scan_iter(match=f"{PARKING_KEY_PREFIX}*"))
     drop_search_index(rdb, name=SEARCH_INDEX_NAME)
     if old_active_keys:

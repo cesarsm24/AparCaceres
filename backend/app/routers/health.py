@@ -1,7 +1,7 @@
 """Endpoints de salud del servicio.
 
-`GET /` mantiene el saludo simple por compatibilidad con cualquier
-comprobación ligera previa. `GET /healthz` es el healthcheck real para
+`GET /` es un liveness check minimalista que solo confirma que el proceso
+arrancó (no toca dependencias). `GET /healthz` es el readiness real para
 loadbalancers, Kubernetes y docker-compose: comprueba el `PING` async a
 Redis y la disponibilidad del índice RediSearch (`FT.INFO`).
 
@@ -31,7 +31,7 @@ router = APIRouter(tags=["health"])
 
 @router.get("/")
 def read_root():
-    """Saludo plano. Útil como liveness check muy ligero."""
+    """Liveness mínimo: confirma que el proceso responde, sin tocar dependencias."""
     return {"status": "Backend configurado y listo"}
 
 

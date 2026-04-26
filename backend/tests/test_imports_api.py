@@ -48,9 +48,8 @@ def test_import_increments_cache_version_for_nearby_namespacing(
     seeded_client, fake_redis, monkeypatch
 ):
     """Tras un re-import, `cache:version` debe subir y la clave de caché de
-    `/parkings/nearby` la incluye como prefijo `v{n}`. Esto desacopla la
-    invalidación del SCAN+DEL antiguo: las entradas previas quedan inalcanzables
-    al cambiar el namespace y caducan por TTL.
+    `/parkings/nearby` la incluye como prefijo `v{n}`. Las entradas previas
+    quedan inalcanzables al cambiar el namespace y caducan por TTL (O(1)).
     """
     from app.config import CACHE_VERSION_KEY
     from app.routers import imports as imports_router

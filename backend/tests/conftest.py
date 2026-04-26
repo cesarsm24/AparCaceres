@@ -566,12 +566,6 @@ def api_features_with_source() -> list[tuple[str, dict]]:
 
 
 @pytest.fixture
-def api_features(api_features_with_source: list[tuple[str, dict]]) -> list[dict]:
-    """Solo las features (sin profile). Útil para tests legacy."""
-    return [feat for _, feat in api_features_with_source]
-
-
-@pytest.fixture
 def seeded_client(
     fake_redis: FakeRedis,
     api_features_with_source: list[tuple[str, dict]],

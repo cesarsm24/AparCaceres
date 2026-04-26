@@ -240,7 +240,7 @@ def test_feature_with_codigo_via_underscore_variant_normalizes_same():
     assert place.management == "AYUNTAMIENTO"
 
 
-def test_parkings_legacy_uses_denominaci_truncated_field():
+def test_parkings_uses_denominaci_truncated_shapefile_field():
     """`parkings.geojson` usa `DENOMINACI` (10 chars de shapefile) en vez de NOMBRE."""
     feat = _point(-6.374084, 39.475736)
     feat["properties"] = {
@@ -516,7 +516,7 @@ def test_run_import_dir_with_empty_directory_returns_zero(tmp_path: Path, fake_r
 
 
 # ============================================================
-# Compatibilidad estricta con el contrato móvil
+# Conformidad estricta con el contrato móvil
 # ============================================================
 
 def test_imported_features_round_trip_through_redis_hash(tmp_path: Path, fake_redis):
