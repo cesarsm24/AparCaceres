@@ -6,10 +6,12 @@ Los listados usan Redis Stack / RediSearch como índice principal. El hash
 
 from __future__ import annotations
 
+import asyncio
 import logging
 from typing import Optional
 
 import redis
+import redis.asyncio as aioredis
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
 
 from ..config import (
@@ -24,7 +26,7 @@ from ..config import (
 from ..enums import ParkingCategory, ParkingRegulation, ParkingVehicleType
 from ..importer import place_from_redis_hash
 from ..rate_limit import RATE_LIMIT_NEARBY, limiter
-from ..redis_client import get_redis, raise_redis_503
+from ..redis_client import get_redis, get_redis_sync, raise_redis_503
 from ..schemas import (
     ParkingFacetsOut,
     ParkingPlaceOut,
@@ -228,7 +230,7 @@ _FACETS_EXAMPLE = {
     ),
     responses={200: {"content": {"application/json": {"example": _LIST_ENVELOPE_EXAMPLE}}}},
 )
-def list_parkings(
+async def list_parkings(
     response: Response,
     ids: Optional[list[str]] = Query(None, description="Filtra por id, repetible."),
     q: Optional[str] = Query(None, description="Búsqueda libre accent-insensitive."),
@@ -240,13 +242,17 @@ def list_parkings(
     offset: int = Query(0, ge=0),
     limit: Optional[int] = Query(None, ge=0),
     includeFacets: bool = Query(False, description="Incluye facets globales del catálogo."),
-    rdb: redis.Redis = Depends(get_redis),
+    rdb_sync: redis.Redis = Depends(get_redis_sync),
 ):
     effective_limit = _resolve_limit(limit)
     effective_offset = _resolve_offset(offset)
     try:
-        result = search_parkings(
-            rdb,
+        # Las funciones de `app/search.py` son síncronas (parsing/build de
+        # queries pesado, llamadas a Redis bloqueantes). Las lanzamos en el
+        # threadpool para no bloquear el event loop.
+        result = await asyncio.to_thread(
+            search_parkings,
+            rdb_sync,
             ids=ids,
             q=q,
             vehicle_types=vehicleType,
@@ -257,7 +263,11 @@ def list_parkings(
             offset=effective_offset,
             limit=effective_limit,
         )
-        facets = get_facets(rdb) if includeFacets else None
+        facets = (
+            await asyncio.to_thread(get_facets, rdb_sync)
+            if includeFacets
+            else None
+        )
     except redis.ConnectionError as exc:
         raise raise_redis_503(exc) from exc
     except SearchIndexError as exc:
@@ -290,7 +300,7 @@ def list_parkings(
     responses={200: {"content": {"application/json": {"example": _NEARBY_ENVELOPE_EXAMPLE}}}},
 )
 @limiter.limit(RATE_LIMIT_NEARBY)
-def get_parkings_nearby(
+async def get_parkings_nearby(
     request: Request,
     response: Response,
     lat: float = Query(..., description="Latitud del centro de búsqueda."),
@@ -306,7 +316,8 @@ def get_parkings_nearby(
     minSpaces: int = Query(0, ge=0),
     offset: int = Query(0, ge=0),
     limit: Optional[int] = Query(None, ge=0),
-    rdb: redis.Redis = Depends(get_redis),
+    rdb: aioredis.Redis = Depends(get_redis),
+    rdb_sync: redis.Redis = Depends(get_redis_sync),
 ):
     effective_radius = radiusMeters if radiusMeters is not None else (radius or 1000.0)
     effective_limit = _resolve_limit(limit)
@@ -331,7 +342,7 @@ def get_parkings_nearby(
         # `cache:version` y todas las claves antiguas quedan inalcanzables sin
         # tener que hacer SCAN+DEL. Las huérfanas las recoge el TTL.
         try:
-            version = rdb.get(CACHE_VERSION_KEY) or "0"
+            version = await rdb.get(CACHE_VERSION_KEY) or "0"
         except redis.ConnectionError:
             version = "0"
         cache_key = (
@@ -339,7 +350,7 @@ def get_parkings_nearby(
             f"{lat:.4f}:{lng:.4f}:{int(effective_radius)}"
         )
         try:
-            cached = rdb.get(cache_key)
+            cached = await rdb.get(cache_key)
         except redis.ConnectionError:
             cached = None
         if cached is not None:
@@ -350,8 +361,9 @@ def get_parkings_nearby(
             )
 
     try:
-        result = search_nearby(
-            rdb,
+        result = await asyncio.to_thread(
+            search_nearby,
+            rdb_sync,
             lat=lat,
             lng=lng,
             radius_meters=effective_radius,
@@ -378,7 +390,7 @@ def get_parkings_nearby(
     )
     if cache_enabled and cache_key is not None:
         try:
-            rdb.setex(cache_key, CACHE_NEARBY_TTL, envelope.model_dump_json())
+            await rdb.setex(cache_key, CACHE_NEARBY_TTL, envelope.model_dump_json())
         except redis.ConnectionError:
             logger.warning("No se pudo escribir caché %s", cache_key)
 
@@ -405,7 +417,7 @@ def get_parkings_nearby(
         400: {"description": "Bounding box inválido."},
     },
 )
-def get_parkings_in_bounds(
+async def get_parkings_in_bounds(
     response: Response,
     minLat: float = Query(...),
     minLng: float = Query(...),
@@ -418,7 +430,7 @@ def get_parkings_in_bounds(
     minSpaces: int = Query(0, ge=0),
     offset: int = Query(0, ge=0),
     limit: Optional[int] = Query(None, ge=0),
-    rdb: redis.Redis = Depends(get_redis),
+    rdb_sync: redis.Redis = Depends(get_redis_sync),
 ):
     if minLat >= maxLat or minLng >= maxLng:
         raise HTTPException(
@@ -429,8 +441,9 @@ def get_parkings_in_bounds(
     effective_limit = _resolve_limit(limit)
     effective_offset = _resolve_offset(offset)
     try:
-        result = search_in_bounds(
-            rdb,
+        result = await asyncio.to_thread(
+            search_in_bounds,
+            rdb_sync,
             min_lat=minLat,
             min_lng=minLng,
             max_lat=maxLat,
@@ -468,9 +481,9 @@ def get_parkings_in_bounds(
     summary="Categorías presentes en el catálogo",
     responses={200: {"content": {"application/json": {"example": _CATEGORIES_EXAMPLE}}}},
 )
-def list_categories(rdb: redis.Redis = Depends(get_redis)):
+async def list_categories(rdb_sync: redis.Redis = Depends(get_redis_sync)):
     try:
-        facets = get_facets(rdb)
+        facets = await asyncio.to_thread(get_facets, rdb_sync)
     except redis.ConnectionError as exc:
         raise raise_redis_503(exc) from exc
     except SearchIndexError as exc:
@@ -484,9 +497,9 @@ def list_categories(rdb: redis.Redis = Depends(get_redis)):
     summary="Conteos del catálogo por categoría / vehículo / régimen / dataset",
     responses={200: {"content": {"application/json": {"example": _FACETS_EXAMPLE}}}},
 )
-def list_facets(rdb: redis.Redis = Depends(get_redis)):
+async def list_facets(rdb_sync: redis.Redis = Depends(get_redis_sync)):
     try:
-        return get_facets(rdb)
+        return await asyncio.to_thread(get_facets, rdb_sync)
     except redis.ConnectionError as exc:
         raise raise_redis_503(exc) from exc
     except SearchIndexError as exc:
@@ -503,12 +516,12 @@ def list_facets(rdb: redis.Redis = Depends(get_redis)):
         404: {"description": "El aparcamiento no existe en Redis."},
     },
 )
-def get_parking(
+async def get_parking(
     parking_id: str,
-    rdb: redis.Redis = Depends(get_redis),
+    rdb: aioredis.Redis = Depends(get_redis),
 ):
     try:
-        data = rdb.hgetall(f"{PARKING_KEY_PREFIX}{parking_id}")
+        data = await rdb.hgetall(f"{PARKING_KEY_PREFIX}{parking_id}")
     except redis.ConnectionError as exc:
         raise raise_redis_503(exc) from exc
 

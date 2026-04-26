@@ -28,10 +28,10 @@ def test_healthz_503_when_redis_down(api_client):
     real_redis = api_client.app.state.redis
 
     class DeadRedis:
-        def ping(self):
+        async def ping(self):
             raise redis.ConnectionError("nope")
 
-        def execute_command(self, *_args, **_kwargs):
+        async def execute_command(self, *_args, **_kwargs):
             raise redis.ConnectionError("nope")
 
     api_client.app.state.redis = DeadRedis()

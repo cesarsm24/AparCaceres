@@ -31,6 +31,7 @@ import logging
 from datetime import datetime, timezone
 
 import redis
+import redis.asyncio as aioredis
 from fastapi import APIRouter, Depends, HTTPException
 
 from ..auth import require_user
@@ -65,10 +66,10 @@ def _ms_to_iso(ms: int) -> str:
     return datetime.fromtimestamp(ms / 1000, tz=timezone.utc).isoformat()
 
 
-def _ensure_parking_exists(rdb: redis.Redis, parking_id: str) -> None:
+async def _ensure_parking_exists(rdb: aioredis.Redis, parking_id: str) -> None:
     """Lanza 404 si `parking:{id}` no existe en Redis."""
     try:
-        exists = rdb.exists(f"{PARKING_KEY_PREFIX}{parking_id}")
+        exists = await rdb.exists(f"{PARKING_KEY_PREFIX}{parking_id}")
     except redis.ConnectionError as exc:
         raise raise_redis_503(exc) from exc
     if not exists:
@@ -175,14 +176,14 @@ _FAVORITE_REMOVED_EXAMPLE = {
         401: {"description": "Falta o es inválido el token de sesión."},
     },
 )
-def list_favorites(
+async def list_favorites(
     user_id: str = Depends(require_user),
-    rdb: redis.Redis = Depends(get_redis),
+    rdb: aioredis.Redis = Depends(get_redis),
 ):
     key = _favorites_key(user_id)
     try:
         # ZREVRANGE 0 -1 → todos los miembros, score descendente (más reciente primero).
-        ids = rdb.zrevrange(key, 0, -1)
+        ids = await rdb.zrevrange(key, 0, -1)
     except redis.ConnectionError as exc:
         raise raise_redis_503(exc) from exc
 
@@ -194,7 +195,7 @@ def list_favorites(
     for pid in ids:
         pipe.hgetall(f"{PARKING_KEY_PREFIX}{pid}")
     try:
-        hashes = pipe.execute()
+        hashes = await pipe.execute()
     except redis.ConnectionError as exc:
         raise raise_redis_503(exc) from exc
 
@@ -238,16 +239,16 @@ def list_favorites(
         404: {"description": "El aparcamiento no existe en el catálogo."},
     },
 )
-def add_favorite(
+async def add_favorite(
     parking_id: str,
     user_id: str = Depends(require_user),
-    rdb: redis.Redis = Depends(get_redis),
+    rdb: aioredis.Redis = Depends(get_redis),
 ):
-    _ensure_parking_exists(rdb, parking_id)
+    await _ensure_parking_exists(rdb, parking_id)
 
     key = _favorites_key(user_id)
     try:
-        existing = rdb.zscore(key, parking_id)
+        existing = await rdb.zscore(key, parking_id)
     except redis.ConnectionError as exc:
         raise raise_redis_503(exc) from exc
 
@@ -258,7 +259,7 @@ def add_favorite(
     else:
         added_ms = _now_ms()
         try:
-            rdb.zadd(key, {parking_id: added_ms})
+            await rdb.zadd(key, {parking_id: added_ms})
         except redis.ConnectionError as exc:
             raise raise_redis_503(exc) from exc
         created = True
@@ -295,16 +296,16 @@ def add_favorite(
         404: {"description": "El aparcamiento no existe en el catálogo."},
     },
 )
-def remove_favorite(
+async def remove_favorite(
     parking_id: str,
     user_id: str = Depends(require_user),
-    rdb: redis.Redis = Depends(get_redis),
+    rdb: aioredis.Redis = Depends(get_redis),
 ):
-    _ensure_parking_exists(rdb, parking_id)
+    await _ensure_parking_exists(rdb, parking_id)
 
     key = _favorites_key(user_id)
     try:
-        removed = rdb.zrem(key, parking_id)
+        removed = await rdb.zrem(key, parking_id)
     except redis.ConnectionError as exc:
         raise raise_redis_503(exc) from exc
 

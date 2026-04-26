@@ -236,6 +236,92 @@ class FakePipeline:
         return results
 
 
+# ============================================================
+# Adaptador async sobre FakeRedis
+# ============================================================
+#
+# Los routers async esperan un cliente que se parezca a `redis.asyncio.Redis`:
+# coroutines en lugar de métodos síncronos y un `pipeline()` cuyo `execute()`
+# también sea coroutine.
+# `AsyncFakeRedis` envuelve un `FakeRedis` concreto y delega todo en él, así
+# los tests pueden seguir inspeccionando el estado a través del `FakeRedis`
+# síncrono compartido (`fake_redis.hashes`, etc.).
+
+class AsyncFakeRedis:
+    """Adaptador async mínimo: solo expone los comandos que usan los routers."""
+
+    def __init__(self, sync: FakeRedis) -> None:
+        self._sync = sync
+
+    async def ping(self) -> bool:
+        return self._sync.ping()
+
+    async def hgetall(self, key: str) -> dict[str, str]:
+        return self._sync.hgetall(key)
+
+    async def get(self, key: str):
+        return self._sync.get(key)
+
+    async def setex(self, key: str, ttl: int, value: str) -> bool:
+        return self._sync.setex(key, ttl, value)
+
+    async def incr(self, key: str, amount: int = 1) -> int:
+        return self._sync.incr(key, amount)
+
+    async def exists(self, *keys: str) -> int:
+        return self._sync.exists(*keys)
+
+    async def zrevrange(self, key: str, start: int, end: int) -> list[str]:
+        return self._sync.zrevrange(key, start, end)
+
+    async def zadd(self, key: str, mapping: dict[str, float]) -> int:
+        return self._sync.zadd(key, mapping)
+
+    async def zrem(self, key: str, *members: str) -> int:
+        return self._sync.zrem(key, *members)
+
+    async def zscore(self, key: str, member: str):
+        return self._sync.zscore(key, member)
+
+    async def aclose(self) -> None:
+        return None
+
+    def pipeline(self) -> "AsyncFakePipeline":
+        return AsyncFakePipeline(self._sync)
+
+
+class AsyncFakePipeline:
+    """Pipeline async: delega en `FakePipeline` y expone `execute()` async."""
+
+    def __init__(self, parent: FakeRedis) -> None:
+        self._inner = FakePipeline(parent)
+
+    def hset(self, key: str, mapping: dict | None = None) -> "AsyncFakePipeline":
+        self._inner.hset(key, mapping=mapping)
+        return self
+
+    def hgetall(self, key: str) -> "AsyncFakePipeline":
+        self._inner.hgetall(key)
+        return self
+
+    def delete(self, *keys: str) -> "AsyncFakePipeline":
+        self._inner.delete(*keys)
+        return self
+
+    def rename(self, src: str, dst: str) -> "AsyncFakePipeline":
+        self._inner.rename(src, dst)
+        return self
+
+    async def execute(self) -> list:
+        return self._inner.execute()
+
+    async def __aenter__(self) -> "AsyncFakePipeline":
+        return self
+
+    async def __aexit__(self, *_args) -> None:
+        return None
+
+
 @pytest.fixture
 def fake_redis() -> FakeRedis:
     return FakeRedis()
@@ -262,12 +348,18 @@ def _build_test_app(fake_redis: FakeRedis) -> FastAPI:
 
     Importamos los routers DENTRO de la función para que cada test arranque
     desde un estado limpio y no haya efectos colaterales del orden de imports.
+
+    `app.state.redis` es el cliente "async" (AsyncFakeRedis) y
+    `app.state.redis_sync` es el síncrono (FakeRedis). Comparten almacenamiento,
+    así que las inspecciones directas (`fake_redis.hashes`) ven los cambios
+    hechos por cualquiera de los dos.
     """
     from app.rate_limit import limiter
     from app.routers import auth, favorites, health, imports, parkings
 
     app = FastAPI()
-    app.state.redis = fake_redis
+    app.state.redis = AsyncFakeRedis(fake_redis)
+    app.state.redis_sync = fake_redis
     # slowapi exige `app.state.limiter`; con `enabled=False` (forzado en este
     # fichero) los decoradores `@limiter.limit(...)` no aplican cupo alguno.
     app.state.limiter = limiter
