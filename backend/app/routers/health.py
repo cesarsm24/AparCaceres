@@ -1,9 +1,9 @@
 """Endpoints de salud del servicio.
 
-`GET /` mantiene el saludo simple por compatibilidad con cualquier comprobación
-ligera previa. `GET /healthz` es el healthcheck real que se debe usar desde
-loadbalancers, Kubernetes y docker-compose: comprueba el PING a Redis y la
-disponibilidad del índice RediSearch (`FT.INFO`).
+`GET /` mantiene el saludo simple por compatibilidad con cualquier
+comprobación ligera previa. `GET /healthz` es el healthcheck real para
+loadbalancers, Kubernetes y docker-compose: comprueba el `PING` async a
+Redis y la disponibilidad del índice RediSearch (`FT.INFO`).
 
 Códigos:
 - 200 cuando todas las dependencias responden.
@@ -17,6 +17,7 @@ import logging
 from typing import Optional
 
 import redis
+import redis.asyncio as aioredis
 from fastapi import APIRouter, Depends, Response
 from redis.exceptions import ResponseError
 
@@ -38,7 +39,7 @@ def read_root():
     "/healthz",
     summary="Healthcheck con dependencias",
     description=(
-        "Comprueba PING a Redis y `FT.INFO` sobre el índice RediSearch. "
+        "Comprueba `PING` a Redis y `FT.INFO` sobre el índice RediSearch. "
         "Devuelve 200 cuando todo responde y 503 cuando alguna dependencia "
         "crítica falla, con desglose por componente para depuración."
     ),
@@ -72,12 +73,16 @@ def read_root():
         },
     },
 )
-def healthz(
+async def healthz(
     response: Response,
-    rdb: redis.Redis = Depends(get_redis),
+    rdb: aioredis.Redis = Depends(get_redis),
 ):
-    redis_status = _check_redis(rdb)
-    search_status = _check_search_index(rdb) if redis_status["status"] == "ok" else {"status": "unknown"}
+    redis_status = await _check_redis(rdb)
+    search_status = (
+        await _check_search_index(rdb)
+        if redis_status["status"] == "ok"
+        else {"status": "unknown"}
+    )
 
     overall_ok = (
         redis_status["status"] == "ok"
@@ -93,21 +98,22 @@ def healthz(
     }
 
 
-def _check_redis(rdb: redis.Redis) -> dict:
+async def _check_redis(rdb) -> dict:
     try:
-        rdb.ping()
+        await rdb.ping()
     except (redis.ConnectionError, redis.TimeoutError, OSError) as exc:
         logger.warning("Healthcheck: Redis no responde (%s)", exc)
         return {"status": "down", "error": str(exc)}
     return {"status": "ok"}
 
 
-def _check_search_index(rdb: redis.Redis) -> dict:
+async def _check_search_index(rdb) -> dict:
     if not hasattr(rdb, "execute_command"):
-        # Cliente sin soporte para comandos arbitrarios (p. ej. FakeRedis en tests).
+        # Cliente sin soporte para comandos arbitrarios (p. ej. AsyncFakeRedis
+        # en tests). Se trata como "ok" con num_docs desconocido.
         return {"status": "ok", "name": SEARCH_INDEX_NAME, "num_docs": None}
     try:
-        info = rdb.execute_command("FT.INFO", SEARCH_INDEX_NAME)
+        info = await rdb.execute_command("FT.INFO", SEARCH_INDEX_NAME)
     except ResponseError as exc:
         msg = str(exc).lower()
         if "unknown index" in msg or "no such index" in msg:

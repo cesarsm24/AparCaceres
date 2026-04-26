@@ -7,12 +7,12 @@ las versiones siguen [SemVer](https://semver.org/lang/es/). Cada release que se
 publique como release de producción debe estar etiquetada en git
 (`git tag vX.Y.Z`).
 
-## [Unreleased] — Fase 2 (en progreso)
+## [Unreleased] — Fase 2
 
-Trabajo en curso hacia v0.2.0 ("Fase 2 — producción" del informe técnico).
-Pendiente: migración del cliente Redis a `redis.asyncio` con connection pool
-y reintentos, documentación de despliegue (reverse proxy + TLS + backups),
-y un par de tests adicionales antes del tag.
+Cierra la "Fase 2 — producción" del informe técnico. Endurece la API para
+exponerla a tráfico real: cliente Redis async, autenticación firmada,
+rate limiting, métricas, doble buffer de imports y guía operativa de
+despliegue. Pendiente de tagear cuando se decida el corte de release.
 
 ### Added
 - Auth firmada para favoritos: nuevo módulo `app/auth.py` con JWT HS256
@@ -24,12 +24,22 @@ y un par de tests adicionales antes del tag.
 - Métricas Prometheus en `/metrics` con
   `prometheus-fastapi-instrumentator`. Excluye `/healthz` y `/metrics` de
   los logs de acceso para no inundar el JSON con scrapes.
-- Cierre de la fase 1: tests para `GET /healthz`, `RequestIdMiddleware` y
-  el versionado de caché `cache:version`. (Llegan tarde respecto al tag
-  `v0.1.0` original; se cuelan en este release porque convivían en la
-  misma rama de trabajo.)
+- Documentación operativa en `docs/operations.md`: topología nginx + TLS,
+  configuración de variables en producción, runbook rápido y procedimiento
+  de restore desde backup.
+- Script `scripts/redis-backup.sh`: BGSAVE + copia de `dump.rdb` y
+  `appendonlydir/` con retención configurable, listo para cron.
+- Tests para `GET /healthz`, `RequestIdMiddleware` y versionado de
+  `cache:version` (cierre de la fase 1 que se coló en esta rama).
 
 ### Changed
+- Cliente Redis dual: `redis.asyncio.Redis` con `ConnectionPool`
+  (`max_connections=50`, `health_check_interval=30`, `socket_keepalive`,
+  `retry_on_timeout`) como cliente principal de los handlers async.
+  Mantiene un cliente síncrono para el importador y para `app/search.py`,
+  que se invocan vía `asyncio.to_thread` para no bloquear el event loop.
+  Routers `health`, `favorites` y `parkings/{id}` resueltos directamente
+  en async sin threadpool.
 - Importador con doble buffer: la nueva generación se construye bajo
   `parking_v2:*` con su propio índice `idx:parkings_search_v2`. El swap al
   catálogo activo (drop + UNLINK + RENAME + recreación de índice) es la

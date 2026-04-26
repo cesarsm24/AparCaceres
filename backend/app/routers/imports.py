@@ -8,6 +8,7 @@ Protección con `X-Import-Token`:
   para que sea cómodo iterar localmente.
 """
 
+import asyncio
 import hmac
 import logging
 from typing import Optional
@@ -18,7 +19,7 @@ from fastapi import APIRouter, Depends, Header, HTTPException, Request
 from ..config import DATA_DIR, IMPORT_TOKEN
 from ..importer import run_import_dir
 from ..rate_limit import RATE_LIMIT_IMPORT, limiter
-from ..redis_client import get_redis, raise_redis_503
+from ..redis_client import get_redis_sync, raise_redis_503
 from ..search import SearchIndexError
 
 logger = logging.getLogger(__name__)
@@ -105,18 +106,21 @@ def _check_import_token(provided: Optional[str]) -> None:
     },
 )
 @limiter.limit(RATE_LIMIT_IMPORT)
-def import_parkings(
+async def import_parkings(
     request: Request,
     x_import_token: Optional[str] = Header(
         None,
         alias="X-Import-Token",
         description="Token de autorización. Obligatorio si `IMPORT_TOKEN` está configurado.",
     ),
-    rdb: redis.Redis = Depends(get_redis),
+    rdb_sync: redis.Redis = Depends(get_redis_sync),
 ):
     _check_import_token(x_import_token)
     try:
-        return run_import_dir(DATA_DIR, rdb)
+        # `run_import_dir` lee del disco, parsea GeoJSON y mete miles de
+        # HSET en pipeline: completamente síncrono. Lo lanzamos en el
+        # threadpool para no congelar el event loop durante el import.
+        return await asyncio.to_thread(run_import_dir, DATA_DIR, rdb_sync)
     except redis.ConnectionError as exc:
         raise raise_redis_503(exc) from exc
     except SearchIndexError as exc:
