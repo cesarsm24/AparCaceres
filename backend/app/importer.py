@@ -31,7 +31,14 @@ from typing import Any, Iterable, Iterator, Optional
 
 import redis
 
-from .config import CACHE_NEARBY_PREFIX, GEO_KEY, PARKING_KEY_PREFIX
+from .config import (
+    CACHE_NEARBY_PREFIX,
+    EXCLUDED_DATASET_FILENAMES,
+    GEO_KEY,
+    INDEX_KEY_PREFIX,
+    PARKING_KEY_PREFIX,
+    SEARCH_INDEX_NAME,
+)
 from .enums import (
     ParkingCategory,
     ParkingGeometryType,
@@ -39,19 +46,51 @@ from .enums import (
     ParkingVehicleType,
 )
 from .normalization import coerce_line_string, coerce_polygon
+from .search import build_location, build_search_text, recreate_search_index
 from .schemas import ParkingPlaceOut
 
 logger = logging.getLogger(__name__)
 
 
 # GeoJSON geometry.type -> miembro del enum del contrato móvil.
-# Multi* no se soporta: el dataset municipal no los usa y mezclar tipos en un
-# único Feature romperia el contrato (cada place = una sola geometría).
+# Multi* se soporta colapsando a su variante "single" (la primera componente),
+# porque el contrato móvil expone una geometría por place y el caso real
+# (`carga_descarga.geojson` con 2 MultiPolygon) viene de errores de digitalización
+# donde el primer polígono ya recoge la plaza completa.
 _GEOJSON_TYPE_TO_GEOMETRY: dict[str, ParkingGeometryType] = {
     "Point": ParkingGeometryType.POINT,
     "Polygon": ParkingGeometryType.POLYGON,
     "LineString": ParkingGeometryType.LINE_STRING,
+    "MultiPolygon": ParkingGeometryType.POLYGON,
+    "MultiLineString": ParkingGeometryType.LINE_STRING,
 }
+
+
+def _coerce_multi_geometry_coords(geom_type: str, raw_coords: object) -> object:
+    """Colapsa Multi* a la variante simple, para no perder el feature.
+
+    - `MultiPolygon` -> `Polygon` (el primer polígono no degenerado de la lista).
+    - `MultiLineString` -> `LineString` (la primera línea válida).
+    Si la entrada está vacía o no es coherente, devuelve `raw_coords` tal cual
+    para que las validaciones aguas abajo decidan si descartar el feature.
+    """
+    if geom_type == "MultiPolygon":
+        if not isinstance(raw_coords, (list, tuple)) or not raw_coords:
+            return raw_coords
+        for polygon in raw_coords:
+            polygon_clean = coerce_polygon(polygon)
+            if polygon_clean:
+                return [[list(pt) for pt in ring] for ring in polygon_clean]
+        return raw_coords[0]
+    if geom_type == "MultiLineString":
+        if not isinstance(raw_coords, (list, tuple)) or not raw_coords:
+            return raw_coords
+        for line in raw_coords:
+            line_clean = coerce_line_string(line)
+            if line_clean:
+                return [list(pt) for pt in line_clean]
+        return raw_coords[0]
+    return raw_coords
 
 # El dataset municipal expone un identificador estable como query param de la
 # URL de la ficha: http://sig.caceres.es/.../fichatoponimia.php?mslink=1903
@@ -96,7 +135,7 @@ class SourceProfile:
       los aporta (p. ej. `parkings_en_superficie.geojson` con `properties: {}`),
     - etiquetar `sourceDataset` con el nombre lógico del dataset,
     - generar un id determinista cuando no hay `mslink` ni id explícito
-      (`{short_id_prefix}-{sha1_de_filename_y_coords}`).
+      (`{sourceDataset}:{sha256_de_geometria_y_props}`).
     """
 
     filename: str
@@ -148,17 +187,6 @@ SOURCE_REGISTRY: dict[str, SourceProfile] = {
         default_regulation=ParkingRegulation.FREE,
         source_dataset="aparcamientos_en_linea",
         fallback_name="Aparcamiento en línea",
-    ),
-    "parkings_en_superficie.geojson": SourceProfile(
-        # 15.000+ LineStrings con `properties: {}`. Sin TIPO no podemos saber si
-        # son línea o batería; el default seguro es `parking` y free.
-        filename="parkings_en_superficie.geojson",
-        short_id_prefix="superficie",
-        default_category=ParkingCategory.PARKING,
-        default_vehicle_type=ParkingVehicleType.CAR,
-        default_regulation=ParkingRegulation.FREE,
-        source_dataset="parkings_en_superficie",
-        fallback_name="Aparcamiento en superficie",
     ),
     "zona_azul.geojson": SourceProfile(
         filename="zona_azul.geojson",
@@ -330,21 +358,57 @@ def _classify_urls(props: dict) -> dict[str, Optional[str]]:
 # Derivación de id y punto representativo
 # ============================================================
 
-def _coords_fingerprint(geometry_type: ParkingGeometryType, raw_coords: object) -> str:
-    """Hash sha1 truncado a 12 hex chars de (geometryType, coords).
+def _coords_fingerprint(
+    geometry_type: ParkingGeometryType,
+    raw_coords: object,
+    extra: Optional[tuple[str, ...]] = None,
+) -> str:
+    """Hash sha256 truncado a 20 hex chars de (geometryType, coords[, extra]).
 
     Determinista: el mismo feature en el mismo fichero produce siempre el mismo
     id, así que reimportar no genera duplicados aunque no haya mslink.
     Usamos `sort_keys=True` y `separators` compactos para que pequeñas
     diferencias de formato JSON no rompan la estabilidad.
+
+    `extra` permite incorporar propiedades clave (p. ej. `NOMBRE_VIA`) cuando
+    dos features pueden compartir geometría idéntica pero representar plazas
+    distintas (caso patológico, pero protege contra colisiones silenciosas).
     """
     payload = json.dumps(
-        [geometry_type.value, raw_coords],
+        [geometry_type.value, raw_coords, list(extra or ())],
         sort_keys=True,
         separators=(",", ":"),
         ensure_ascii=False,
     )
-    return hashlib.sha1(payload.encode("utf-8")).hexdigest()[:12]
+    return hashlib.sha256(payload.encode("utf-8")).hexdigest()[:20]
+
+
+# Claves municipales que son razonablemente estables y, junto con el dataset,
+# pueden funcionar como identificador alternativo cuando no hay mslink.
+_MUNICIPAL_STABLE_KEYS: tuple[str, ...] = (
+    "id", "ID",
+    "OBJECTID", "objectid",
+    "MSLINK", "mslink",
+    "CODIGO", "codigo",
+)
+
+# Propiedades que se incorporan al fingerprint para reducir el riesgo de
+# colisión entre features con misma geometría pero distinta plaza.
+_FINGERPRINT_PROPERTY_KEYS: tuple[str, ...] = (
+    "TIPO", "PLAZAS", "NOMBRE_VIA", "NOMBREVIA",
+    "TIPO_VIA", "TIPOVIA", "CODIGO_VIA", "CODIGOVIA",
+)
+
+
+def _namespace_for(source: Optional[SourceProfile]) -> str:
+    """Devuelve el segmento de namespace usado en los ids estables.
+
+    Sin source no hay namespace fiable; los callers que dependen de ello
+    obtendrán `None` desde `derive_stable_id`.
+    """
+    if source is None:
+        return ""
+    return source.source_dataset or source.short_id_prefix
 
 
 def derive_stable_id(
@@ -354,40 +418,61 @@ def derive_stable_id(
     geometry_type: Optional[ParkingGeometryType] = None,
     raw_coords: object = None,
 ) -> Optional[str]:
-    """Extrae un id estable para el feature.
+    """Extrae un id estable y namespaced por dataset para el feature.
 
-    Prioridad:
-    1. `mslink=NNNN` extraído de cualquier URL del feature (formato canónico
-       histórico: `aparcamiento-{mslink}`). Se respeta para mantener ids
-       compatibles entre reimports.
-    2. Campo `id` / `ID` explícito si llega del dataset.
-    3. Fallback determinista: `{source.short_id_prefix}-{sha1_de_coords}`.
-       Requiere `source`, `geometry_type` y `raw_coords`. Sin source no hay
-       fallback (compat: tests sintéticos sin source siguen exigiendo
-       mslink/id explícito).
+    Formato resultante: `{sourceDataset}:{key}`. El namespacing es obligatorio
+    porque los `mslink` se reciclan entre datasets municipales (p. ej. existen
+    `mslink=3` simultáneamente en `parking_bicis` y en `parking_motos_areas`)
+    y un id global colapsaría datos heterogéneos al mismo hash.
 
-    Devuelve `None` si no se puede derivar — el feature se descartará.
+    Prioridad para `key`:
+    1. `mslink=NNNN` extraído de cualquier URL del feature (estable entre
+       reimports porque proviene de la base municipal).
+    2. Clave municipal estable explícita (`id`/`ID`/`OBJECTID`/`CODIGO`...).
+    3. Hash determinista de geometryType + coords + propiedades clave.
+       Se incluye un subconjunto de propiedades (`TIPO`, `PLAZAS`,
+       `NOMBRE_VIA`, ...) para minimizar colisiones cuando dos features
+       distintos comparten geometría.
+
+    Devuelve `None` si no se puede derivar (p. ej. sin source y sin id
+    explícito) — el feature se descartará.
+
+    Nota: algunos datasets oficiales reutilizan el mismo `mslink` para varias
+    geometrías. El orquestador del import conserva el primer id y añade sufijos
+    ordinales estables (`:2`, `:3`, ...) a las repeticiones para no sobrescribir.
     """
+    namespace = _namespace_for(source)
+
     # 1) mslink de cualquier URL conocida.
     for key in ("URL", "url", "URL_FICHA", "urlFicha"):
         url = properties.get(key)
         if url:
             match = _MSLINK_RE.search(str(url))
             if match:
-                return f"aparcamiento-{match.group(1)}"
+                token = match.group(1)
+                return f"{namespace}:{token}" if namespace else None
 
-    # 2) id explícito.
-    explicit = properties.get("id") or properties.get("ID")
-    if explicit not in (None, ""):
+    # 2) id explícito o clave municipal estable.
+    for prop_key in _MUNICIPAL_STABLE_KEYS:
+        explicit = properties.get(prop_key)
+        if explicit in (None, ""):
+            continue
         stripped = str(explicit).strip()
-        if stripped:
-            return stripped
+        if not stripped:
+            continue
+        return f"{namespace}:{stripped}" if namespace else stripped
 
     # 3) fallback determinista (solo cuando viene un source).
-    if source is not None and geometry_type is not None and raw_coords is not None:
-        return f"{source.short_id_prefix}-{_coords_fingerprint(geometry_type, raw_coords)}"
+    if source is None or geometry_type is None or raw_coords is None:
+        return None
 
-    return None
+    extra_parts: list[str] = []
+    for prop_key in _FINGERPRINT_PROPERTY_KEYS:
+        value = properties.get(prop_key)
+        if value not in (None, ""):
+            extra_parts.append(f"{prop_key}={value}")
+    fp = _coords_fingerprint(geometry_type, raw_coords, tuple(extra_parts))
+    return f"{namespace}:{fp}"
 
 
 def representative_point(
@@ -455,11 +540,18 @@ def feature_to_place(
     geometry = feature.get("geometry") or {}
     properties = feature.get("properties") or {}
 
-    geom_type = _GEOJSON_TYPE_TO_GEOMETRY.get(geometry.get("type"))
+    raw_geom_type = geometry.get("type")
+    geom_type = _GEOJSON_TYPE_TO_GEOMETRY.get(raw_geom_type)
     if geom_type is None:
         return None
 
     raw_coords = geometry.get("coordinates")
+    # Multi* se colapsa a su variante simple antes de calcular el punto
+    # representativo y antes de fingerprintear; así no perdemos features
+    # válidos (p. ej. los 2 MultiPolygon de `carga_descarga.geojson`).
+    if raw_geom_type in ("MultiPolygon", "MultiLineString"):
+        raw_coords = _coerce_multi_geometry_coords(raw_geom_type, raw_coords)
+
     point = representative_point(geom_type, raw_coords)
     if point is None:
         return None
@@ -590,6 +682,9 @@ def place_to_redis_mapping(place: ParkingPlaceOut) -> dict[str, str]:
     if coords is not None:
         out["coordinates"] = json.dumps(coords)
 
+    out["location"] = build_location(place)
+    out["searchText"] = build_search_text(place)
+
     return out
 
 
@@ -659,16 +754,10 @@ def _run_import_paired(
     """
     pairs = list(features_with_profile)
 
-    old_keys = list(rdb.scan_iter(match=f"{PARKING_KEY_PREFIX}*"))
-
-    pipe = rdb.pipeline()
-    if old_keys:
-        pipe.delete(*old_keys)
-    pipe.delete(GEO_KEY)
-
     imported = 0
     skipped = 0
-    seen_ids: set[str] = set()
+    base_id_counts: dict[str, int] = {}
+    valid_places: list[ParkingPlaceOut] = []
     # Desglose por dataset: clave = sourceDataset (o "" si no hay profile).
     per_source: dict[str, dict[str, int]] = {}
 
@@ -682,23 +771,52 @@ def _run_import_paired(
             bucket["skipped"] += 1
             continue
 
-        if place.id in seen_ids:
-            # id duplicado entre features (mismo mslink en dos ficheros, o
-            # colisión de hash improbable). HSET sobreescribe; lo logueamos.
-            logger.warning(
-                "id duplicado %r al importar (sourceDataset=%r); sobrescribiendo",
-                place.id,
-                bucket_key,
-            )
-        seen_ids.add(place.id)
+        valid_places.append(place)
+        base_id_counts[place.id] = base_id_counts.get(place.id, 0) + 1
+        imported += 1
+        bucket["imported"] += 1
 
+    disambiguated = 0
+    if any(count > 1 for count in base_id_counts.values()):
+        occurrences: dict[str, int] = {}
+        unique_places: list[ParkingPlaceOut] = []
+        for place in valid_places:
+            if base_id_counts[place.id] == 1:
+                unique_places.append(place)
+                continue
+            occurrences[place.id] = occurrences.get(place.id, 0) + 1
+            occurrence = occurrences[place.id]
+            if occurrence == 1:
+                unique_places.append(place)
+                continue
+            disambiguated += 1
+            unique_places.append(place.model_copy(update={"id": f"{place.id}:{occurrence}"}))
+        valid_places = unique_places
+
+    final_ids = [place.id for place in valid_places]
+    if len(final_ids) != len(set(final_ids)):
+        raise ValueError("ids duplicados tras desambiguar la importación")
+
+    old_keys = list(rdb.scan_iter(match=f"{PARKING_KEY_PREFIX}*"))
+    old_index_keys = list(rdb.scan_iter(match=f"{INDEX_KEY_PREFIX}*"))
+
+    cleanup = rdb.pipeline()
+    if old_keys:
+        cleanup.delete(*old_keys)
+    if old_index_keys:
+        cleanup.delete(*old_index_keys)
+    cleanup.delete(GEO_KEY)
+    cleanup.execute()
+
+    recreate_search_index(rdb)
+
+    pipe = rdb.pipeline()
+    for place in valid_places:
         pipe.geoadd(GEO_KEY, (place.longitude, place.latitude, place.id))
         pipe.hset(
             f"{PARKING_KEY_PREFIX}{place.id}",
             mapping=place_to_redis_mapping(place),
         )
-        imported += 1
-        bucket["imported"] += 1
 
     pipe.execute()
 
@@ -716,6 +834,8 @@ def _run_import_paired(
         "imported": imported,
         "skipped": skipped,
         "geo_key": GEO_KEY,
+        "search_index": SEARCH_INDEX_NAME,
+        "ids_disambiguated": disambiguated,
         "cache_invalidated": len(cache_keys),
         "sources": [
             {
@@ -733,14 +853,22 @@ def _run_import_paired(
 # ============================================================
 
 def discover_geojson_files(data_dir: Path) -> list[Path]:
-    """Lista los `*.geojson` del directorio, ordenados por nombre.
+    """Lista los `*.geojson` activos del directorio, ordenados por nombre.
 
-    Orden alfabético para que el resultado sea reproducible (y para que los
-    contadores aparezcan en el mismo orden en logs y respuesta).
+    - Filtra explícitamente los ficheros listados en `EXCLUDED_DATASET_FILENAMES`
+      (p. ej. `parkings_en_superficie.geojson`): el fichero puede quedar
+      físicamente en disco, pero el backend lo ignora a todos los efectos
+      (no importa, no indexa, no aparece en endpoints).
+    - Orden alfabético para que el resultado sea reproducible (y los
+      contadores aparezcan en el mismo orden en logs y respuesta).
     """
     if not data_dir.exists() or not data_dir.is_dir():
         return []
-    return sorted(p for p in data_dir.glob("*.geojson") if p.is_file())
+    return sorted(
+        p
+        for p in data_dir.glob("*.geojson")
+        if p.is_file() and p.name not in EXCLUDED_DATASET_FILENAMES
+    )
 
 
 def _load_features(path: Path) -> list[dict]:
@@ -765,6 +893,17 @@ def run_import_dir(data_dir: Path, rdb: redis.Redis) -> dict[str, Any]:
     if not files:
         logger.warning("No se encontraron ficheros *.geojson en %s", data_dir)
 
+    excluded_present = sorted(
+        p.name
+        for p in data_dir.glob("*.geojson")
+        if p.is_file() and p.name in EXCLUDED_DATASET_FILENAMES
+    )
+    if excluded_present:
+        logger.info(
+            "Ignorando datasets excluidos presentes en disco: %s",
+            ", ".join(excluded_present),
+        )
+
     sources: list[tuple[list[dict], SourceProfile]] = []
     skipped_files: list[dict[str, str]] = []
 
@@ -781,4 +920,5 @@ def run_import_dir(data_dir: Path, rdb: redis.Redis) -> dict[str, Any]:
     summary = run_import_sources(sources, rdb)
     summary["files_processed"] = len(sources)
     summary["files_skipped"] = skipped_files
+    summary["excluded_datasets"] = excluded_present
     return summary

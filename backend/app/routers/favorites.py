@@ -118,7 +118,7 @@ def _ensure_parking_exists(rdb: redis.Redis, parking_id: str) -> None:
 
 _FAVORITES_LIST_EXAMPLE = [
     {
-        "id": "aparcamiento-5500",
+        "id": "aparcamientos_en_linea:5500",
         "name": "Calle Dalia",
         "category": "street_line",
         "vehicleType": "car",
@@ -147,7 +147,7 @@ _FAVORITES_LIST_EXAMPLE = [
         "management": None,
     },
     {
-        "id": "aparcamiento-1903",
+        "id": "aparcamientos:1903",
         "name": "Escuela Politecnica",
         "category": "parking",
         "vehicleType": "car",
@@ -161,7 +161,7 @@ _FAVORITES_LIST_EXAMPLE = [
         "streetType": None,
         "district": "CÁCERES",
         "neighborhood": None,
-        "sourceDataset": None,
+        "sourceDataset": "aparcamientos",
         "imageUrl": None,
         "urlFicha": "http://sig.caceres.es/serweb/fichasig/fichatoponimia.php?mslink=1903",
         "urlVia": None,
@@ -170,13 +170,13 @@ _FAVORITES_LIST_EXAMPLE = [
 ]
 
 _FAVORITE_ADDED_EXAMPLE = {
-    "id": "aparcamiento-5500",
+    "id": "aparcamientos_en_linea:5500",
     "addedAt": "2026-04-25T19:30:00+00:00",
     "created": True,
 }
 
 _FAVORITE_REMOVED_EXAMPLE = {
-    "id": "aparcamiento-5500",
+    "id": "aparcamientos_en_linea:5500",
     "removed": True,
 }
 

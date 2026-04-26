@@ -45,14 +45,16 @@ def _haversine_m(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
 class FakeRedis:
     """Subset de `redis.Redis(decode_responses=True)` en memoria.
 
-    Modela cuatro tipos de claves:
+    Modela cinco tipos de claves:
     - `strings`: para `SET`/`SETEX`/`GET` (caché `cache:nearby:*`).
     - `hashes`: para `HSET`/`HGETALL` (`parking:{id}`).
     - `geo`: para `GEOADD`/`GEOSEARCH` (índice `geo:parkings`). Se guarda
       `{member: (lon, lat)}`; suficiente para verificar que el feature se
       indexó en la posición correcta.
-    - `zsets`: sorted sets genéricos para `ZADD`/`ZREM`/`ZREVRANGE`/`ZSCORE`
-      (favoritos por usuario `user:{id}:favorites`). `{member: score}`.
+    - `zsets`: sorted sets para `ZADD`/`ZREM`/`ZREVRANGE`/`ZSCORE` (favoritos
+      por usuario `user:{id}:favorites`). `{member: score}`.
+    - `sets`: sets simples para `SADD`/`SMEMBERS`/`SCARD`/`SREM` (índices
+      secundarios `idx:*`). `{member}`.
     """
 
     def __init__(self) -> None:
@@ -60,6 +62,7 @@ class FakeRedis:
         self.hashes: dict[str, dict[str, str]] = {}
         self.geo: dict[str, dict[str, tuple[float, float]]] = {}
         self.zsets: dict[str, dict[str, float]] = {}
+        self.sets: dict[str, set[str]] = {}
 
     # ---------- API directa (no pipeline) ----------
 
@@ -103,7 +106,7 @@ class FakeRedis:
     def delete(self, *keys: str) -> int:
         n = 0
         for k in keys:
-            for store in (self.hashes, self.strings, self.geo, self.zsets):
+            for store in (self.hashes, self.strings, self.geo, self.zsets, self.sets):
                 if k in store:
                     del store[k]
                     n += 1
@@ -114,7 +117,7 @@ class FakeRedis:
         # cualquier tipo). Suficiente para los chequeos de "parking:{id}".
         n = 0
         for k in keys:
-            for store in (self.hashes, self.strings, self.geo, self.zsets):
+            for store in (self.hashes, self.strings, self.geo, self.zsets, self.sets):
                 if k in store:
                     n += 1
                     break
@@ -126,6 +129,7 @@ class FakeRedis:
             + list(self.strings.keys())
             + list(self.geo.keys())
             + list(self.zsets.keys())
+            + list(self.sets.keys())
         )
         if match is None:
             yield from all_keys
@@ -206,6 +210,40 @@ class FakeRedis:
     def zcard(self, key: str) -> int:
         return len(self.zsets.get(key, {}))
 
+    # ---------- Sets simples (índices secundarios `idx:*`) ----------
+
+    def sadd(self, key: str, *members: str) -> int:
+        bucket = self.sets.setdefault(key, set())
+        added = 0
+        for m in members:
+            sm = str(m)
+            if sm not in bucket:
+                bucket.add(sm)
+                added += 1
+        return added
+
+    def srem(self, key: str, *members: str) -> int:
+        bucket = self.sets.get(key)
+        if not bucket:
+            return 0
+        n = 0
+        for m in members:
+            if m in bucket:
+                bucket.discard(m)
+                n += 1
+        if not bucket:
+            del self.sets[key]
+        return n
+
+    def smembers(self, key: str) -> set[str]:
+        return set(self.sets.get(key, set()))
+
+    def scard(self, key: str) -> int:
+        return len(self.sets.get(key, set()))
+
+    def sismember(self, key: str, member: str) -> bool:
+        return member in self.sets.get(key, set())
+
     def geosearch(
         self,
         key: str,
@@ -276,6 +314,10 @@ class FakePipeline:
         self._cmds.append(("hgetall", key))
         return self
 
+    def sadd(self, key: str, *members: str) -> "FakePipeline":
+        self._cmds.append(("sadd", key, members))
+        return self
+
     def execute(self) -> list:
         results = []
         for cmd in self._cmds:
@@ -287,6 +329,8 @@ class FakePipeline:
                 results.append(self.parent.hset(cmd[1], mapping=cmd[2]))
             elif cmd[0] == "hgetall":
                 results.append(self.parent.hgetall(cmd[1]))
+            elif cmd[0] == "sadd":
+                results.append(self.parent.sadd(cmd[1], *cmd[2]))
         self._cmds.clear()
         return results
 
@@ -334,147 +378,174 @@ def api_client(fake_redis: FakeRedis) -> Iterator[TestClient]:
 #
 # Mezcla los 3 tipos de geometría + variedad de category/regulation/vehicleType
 # y de campos opcionales (totalSpaces, accent-insensitive en `name`/`district`).
-# Diseñado para ejercitar los filtros de los endpoints sin necesidad de leer
-# ficheros reales.
+# Cada feature está emparejado con su `SourceProfile` real para que los ids
+# resultantes sean namespaced (`{sourceDataset}:{mslink}`).
 
-_API_FEATURES: list[dict] = [
-    {  # POINT, parking público gratuito, sin totalSpaces.
-        "type": "Feature",
-        "geometry": {"type": "Point", "coordinates": [-6.34204232, 39.47848638]},
-        "properties": {
-            "NOMBRE": "Escuela Politécnica",
-            "NUCLEO": "CÁCERES",
-            "URL": "http://sig.caceres.es/serweb/fichasig/fichatoponimia.php?mslink=1903",
+# (filename del dataset en SOURCE_REGISTRY, feature)
+_API_FEATURES_WITH_SOURCE: list[tuple[str, dict]] = [
+    (
+        "aparcamientos.geojson",
+        {  # POINT, parking público gratuito, sin totalSpaces.
+            "type": "Feature",
+            "geometry": {"type": "Point", "coordinates": [-6.34204232, 39.47848638]},
+            "properties": {
+                "NOMBRE": "Escuela Politécnica",
+                "NUCLEO": "CÁCERES",
+                "URL": "http://sig.caceres.es/serweb/fichasig/fichatoponimia.php?mslink=1903",
+            },
         },
-    },
-    {  # POINT, paid_parking en el centro.
-        "type": "Feature",
-        "geometry": {"type": "Point", "coordinates": [-6.3743148782, 39.4757325603]},
-        "properties": {
-            "name": "Obispo Galarza",
-            "category": "paid_parking",
-            "vehicleType": "car",
-            "regulation": "paid",
-            "streetName": "OBISPO GALARZA",
-            "streetType": "CALLE",
-            "district": "CENTRO",
-            "neighborhood": "CENTRO",
-            "URL": "?mslink=2001",
+    ),
+    (
+        "parkings.geojson",
+        {  # POINT, paid_parking en el centro.
+            "type": "Feature",
+            "geometry": {"type": "Point", "coordinates": [-6.3743148782, 39.4757325603]},
+            "properties": {
+                "name": "Obispo Galarza",
+                "streetName": "OBISPO GALARZA",
+                "streetType": "CALLE",
+                "district": "CENTRO",
+                "neighborhood": "CENTRO",
+                "URL": "?mslink=2001",
+            },
         },
-    },
-    {  # POLYGON, street_line con totalSpaces.
-        "type": "Feature",
-        "geometry": {
-            "type": "Polygon",
-            "coordinates": [
-                [
-                    [-6.3994515, 39.4670139],
-                    [-6.3991710, 39.4663191],
-                    [-6.3991416, 39.4663258],
-                    [-6.3994238, 39.4670207],
-                    [-6.3994515, 39.4670139],
-                ]
-            ],
+    ),
+    (
+        "aparcamientos_en_linea.geojson",
+        {  # POLYGON, street_line con totalSpaces.
+            "type": "Feature",
+            "geometry": {
+                "type": "Polygon",
+                "coordinates": [
+                    [
+                        [-6.3994515, 39.4670139],
+                        [-6.3991710, 39.4663191],
+                        [-6.3991416, 39.4663258],
+                        [-6.3994238, 39.4670207],
+                        [-6.3994515, 39.4670139],
+                    ]
+                ],
+            },
+            "properties": {
+                "name": "Calle Dalia",
+                "totalSpaces": 16,
+                "streetName": "DALIA",
+                "streetType": "CALLE",
+                "district": "OESTE",
+                "neighborhood": "EL JUNQUILLO",
+                "URL": "?mslink=5500",
+            },
         },
-        "properties": {
-            "name": "Calle Dalia",
-            "category": "street_line",
-            "vehicleType": "car",
-            "regulation": "free",
-            "totalSpaces": 16,
-            "streetName": "DALIA",
-            "streetType": "CALLE",
-            "district": "OESTE",
-            "neighborhood": "EL JUNQUILLO",
-            "URL": "?mslink=5500",
+    ),
+    (
+        "aparcamientos_en_linea.geojson",
+        {  # LINE_STRING.
+            "type": "Feature",
+            "geometry": {
+                "type": "LineString",
+                "coordinates": [
+                    [-6.4022597, 39.4775947],
+                    [-6.4022522, 39.4775983],
+                    [-6.4022077, 39.4776199],
+                ],
+            },
+            "properties": {
+                "name": "Superficie Esquiladores",
+                "URL": "?mslink=7700",
+            },
         },
-    },
-    {  # LINE_STRING.
-        "type": "Feature",
-        "geometry": {
-            "type": "LineString",
-            "coordinates": [
-                [-6.4022597, 39.4775947],
-                [-6.4022522, 39.4775983],
-                [-6.4022077, 39.4776199],
-            ],
+    ),
+    (
+        "zona_azul.geojson",
+        {  # POLYGON, blue_zone con muchas plazas.
+            "type": "Feature",
+            "geometry": {
+                "type": "Polygon",
+                "coordinates": [
+                    [
+                        [-6.3828, 39.4711],
+                        [-6.3825, 39.4714],
+                        [-6.3824, 39.4714],
+                        [-6.3828, 39.4711],
+                    ]
+                ],
+            },
+            "properties": {
+                "name": "Rodriguez de Ledesma",
+                "totalSpaces": 19,
+                "streetName": "RODRIGUEZ DE LEDESMA",
+                "district": "OESTE",
+                "URL": "?mslink=9001",
+            },
         },
-        "properties": {
-            "name": "Superficie Esquiladores",
-            "category": "street_line",
-            "regulation": "free",
-            "URL": "?mslink=7700",
+    ),
+    (
+        "parking_motos_puntos.geojson",
+        {  # POINT, parking de motos.
+            "type": "Feature",
+            "geometry": {"type": "Point", "coordinates": [-6.38917, 39.46839]},
+            "properties": {
+                "name": "Calle Londres",
+                "totalSpaces": 15,
+                "streetName": "LONDRES",
+                "URL": "?mslink=9100",
+            },
         },
-    },
-    {  # POLYGON, blue_zone con muchas plazas.
-        "type": "Feature",
-        "geometry": {
-            "type": "Polygon",
-            "coordinates": [
-                [
-                    [-6.3828, 39.4711],
-                    [-6.3825, 39.4714],
-                    [-6.3824, 39.4714],
-                    [-6.3828, 39.4711],
-                ]
-            ],
+    ),
+    (
+        "parking_bicis.geojson",
+        {  # POINT, parking de bicis.
+            "type": "Feature",
+            "geometry": {"type": "Point", "coordinates": [-6.3729966, 39.4707513]},
+            "properties": {
+                "name": "Calle Colon",
+                "totalSpaces": 5,
+                "streetName": "COLON",
+                "district": "CENTRO",
+                "URL": "?mslink=9200",
+            },
         },
-        "properties": {
-            "name": "Rodriguez de Ledesma",
-            "category": "blue_zone",
-            "vehicleType": "car",
-            "regulation": "blue_zone",
-            "totalSpaces": 19,
-            "streetName": "RODRIGUEZ DE LEDESMA",
-            "district": "OESTE",
-            "URL": "?mslink=9001",
-        },
-    },
-    {  # POINT, parking de motos.
-        "type": "Feature",
-        "geometry": {"type": "Point", "coordinates": [-6.38917, 39.46839]},
-        "properties": {
-            "name": "Calle Londres",
-            "category": "motorbike",
-            "vehicleType": "motorbike",
-            "regulation": "reserved",
-            "totalSpaces": 15,
-            "streetName": "LONDRES",
-            "URL": "?mslink=9100",
-        },
-    },
-    {  # POINT, parking de bicis.
-        "type": "Feature",
-        "geometry": {"type": "Point", "coordinates": [-6.3729966, 39.4707513]},
-        "properties": {
-            "name": "Calle Colon",
-            "category": "bicycle",
-            "vehicleType": "bike",
-            "regulation": "reserved",
-            "totalSpaces": 5,
-            "streetName": "COLON",
-            "district": "CENTRO",
-            "URL": "?mslink=9200",
-        },
-    },
+    ),
 ]
 
 
 @pytest.fixture
-def api_features() -> list[dict]:
+def api_features_with_source() -> list[tuple[str, dict]]:
     """Devuelve copias frescas (los tests no comparten mutación entre sí)."""
     import copy
-    return copy.deepcopy(_API_FEATURES)
+    return copy.deepcopy(_API_FEATURES_WITH_SOURCE)
+
+
+@pytest.fixture
+def api_features(api_features_with_source: list[tuple[str, dict]]) -> list[dict]:
+    """Solo las features (sin profile). Útil para tests legacy."""
+    return [feat for _, feat in api_features_with_source]
 
 
 @pytest.fixture
 def seeded_client(
-    fake_redis: FakeRedis, api_features: list[dict]
+    fake_redis: FakeRedis,
+    api_features_with_source: list[tuple[str, dict]],
 ) -> Iterator[TestClient]:
-    """`TestClient` con el dataset sintético ya importado en Redis."""
-    from app.importer import run_import
+    """`TestClient` con el dataset sintético ya importado en Redis.
 
-    run_import(api_features, fake_redis)
+    Cada feature se empareja con su `SourceProfile` para que los ids sean
+    namespaced (`{sourceDataset}:{mslink}`), igual que en producción.
+    """
+    from app.importer import SOURCE_REGISTRY, run_import_sources
+
+    # Bucket por filename para conservar el agrupamiento por dataset que usa
+    # `run_import_sources`.
+    buckets: dict[str, list[dict]] = {}
+    for filename, feat in api_features_with_source:
+        buckets.setdefault(filename, []).append(feat)
+
+    sources = [
+        (features, SOURCE_REGISTRY[filename])
+        for filename, features in buckets.items()
+    ]
+    run_import_sources(sources, fake_redis)
+
     app = _build_test_app(fake_redis)
     with TestClient(app) as client:
         yield client

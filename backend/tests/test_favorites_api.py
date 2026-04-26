@@ -63,12 +63,12 @@ def freeze_time(monkeypatch):
 
 def test_put_favorite_creates_entry_and_returns_payload(seeded_client):
     response = seeded_client.put(
-        "/users/me/favorites/aparcamiento-5500",
+        "/users/me/favorites/aparcamientos_en_linea:5500",
         headers={"X-User-Id": "alice"},
     )
     assert response.status_code == 200
     body = response.json()
-    assert body["id"] == "aparcamiento-5500"
+    assert body["id"] == "aparcamientos_en_linea:5500"
     assert body["created"] is True
     # `addedAt` debe ser un ISO 8601 UTC (no validamos exacto: solo el formato).
     assert body["addedAt"].endswith("+00:00")
@@ -77,14 +77,14 @@ def test_put_favorite_creates_entry_and_returns_payload(seeded_client):
 def test_put_favorite_is_idempotent_keeps_added_at(seeded_client, freeze_time):
     headers = {"X-User-Id": "alice"}
 
-    first = seeded_client.put("/users/me/favorites/aparcamiento-5500", headers=headers)
+    first = seeded_client.put("/users/me/favorites/aparcamientos_en_linea:5500", headers=headers)
     assert first.json()["created"] is True
     original_added_at = first.json()["addedAt"]
 
     # Avanzamos el reloj un buen rato; el segundo PUT no debe reescribir el score.
     freeze_time(60_000)
 
-    second = seeded_client.put("/users/me/favorites/aparcamiento-5500", headers=headers)
+    second = seeded_client.put("/users/me/favorites/aparcamientos_en_linea:5500", headers=headers)
     assert second.status_code == 200
     assert second.json()["created"] is False
     assert second.json()["addedAt"] == original_added_at
@@ -100,14 +100,14 @@ def test_put_favorite_404_when_parking_does_not_exist(seeded_client):
 
 
 def test_put_favorite_400_when_x_user_id_missing(seeded_client):
-    response = seeded_client.put("/users/me/favorites/aparcamiento-5500")
+    response = seeded_client.put("/users/me/favorites/aparcamientos_en_linea:5500")
     assert response.status_code == 400
     assert "X-User-Id" in response.json()["detail"]
 
 
 def test_put_favorite_400_when_x_user_id_blank(seeded_client):
     response = seeded_client.put(
-        "/users/me/favorites/aparcamiento-5500",
+        "/users/me/favorites/aparcamientos_en_linea:5500",
         headers={"X-User-Id": "   "},
     )
     assert response.status_code == 400
@@ -116,7 +116,7 @@ def test_put_favorite_400_when_x_user_id_blank(seeded_client):
 def test_put_favorite_400_when_x_user_id_has_forbidden_chars(seeded_client):
     # ":" rompería la convención de claves Redis user:{id}:favorites.
     response = seeded_client.put(
-        "/users/me/favorites/aparcamiento-5500",
+        "/users/me/favorites/aparcamientos_en_linea:5500",
         headers={"X-User-Id": "ali:ce"},
     )
     assert response.status_code == 400
@@ -128,15 +128,15 @@ def test_put_favorite_400_when_x_user_id_has_forbidden_chars(seeded_client):
 
 def test_delete_favorite_removes_existing_entry(seeded_client):
     headers = {"X-User-Id": "alice"}
-    seeded_client.put("/users/me/favorites/aparcamiento-5500", headers=headers)
+    seeded_client.put("/users/me/favorites/aparcamientos_en_linea:5500", headers=headers)
 
     response = seeded_client.delete(
-        "/users/me/favorites/aparcamiento-5500",
+        "/users/me/favorites/aparcamientos_en_linea:5500",
         headers=headers,
     )
     assert response.status_code == 200
     body = response.json()
-    assert body == {"id": "aparcamiento-5500", "removed": True}
+    assert body == {"id": "aparcamientos_en_linea:5500", "removed": True}
 
     # Tras el DELETE, el GET ya no lo trae.
     listing = seeded_client.get("/users/me/favorites", headers=headers).json()
@@ -145,12 +145,12 @@ def test_delete_favorite_removes_existing_entry(seeded_client):
 
 def test_delete_favorite_returns_removed_false_when_not_in_list(seeded_client):
     response = seeded_client.delete(
-        "/users/me/favorites/aparcamiento-5500",
+        "/users/me/favorites/aparcamientos_en_linea:5500",
         headers={"X-User-Id": "alice"},
     )
     # El parking existe pero no estaba en favoritos: 200, removed=False.
     assert response.status_code == 200
-    assert response.json() == {"id": "aparcamiento-5500", "removed": False}
+    assert response.json() == {"id": "aparcamientos_en_linea:5500", "removed": False}
 
 
 def test_delete_favorite_404_when_parking_does_not_exist(seeded_client):
@@ -162,7 +162,7 @@ def test_delete_favorite_404_when_parking_does_not_exist(seeded_client):
 
 
 def test_delete_favorite_400_when_x_user_id_missing(seeded_client):
-    response = seeded_client.delete("/users/me/favorites/aparcamiento-5500")
+    response = seeded_client.delete("/users/me/favorites/aparcamientos_en_linea:5500")
     assert response.status_code == 400
 
 
@@ -181,14 +181,14 @@ def test_get_favorites_empty_when_user_has_none(seeded_client):
 
 def test_get_favorites_returns_full_parking_place_shape(seeded_client):
     headers = {"X-User-Id": "alice"}
-    seeded_client.put("/users/me/favorites/aparcamiento-5500", headers=headers)
+    seeded_client.put("/users/me/favorites/aparcamientos_en_linea:5500", headers=headers)
 
     response = seeded_client.get("/users/me/favorites", headers=headers)
     assert response.status_code == 200
     body = response.json()
     assert len(body) == 1
     _assert_place_shape(body[0])
-    assert body[0]["id"] == "aparcamiento-5500"
+    assert body[0]["id"] == "aparcamientos_en_linea:5500"
     assert body[0]["name"] == "Calle Dalia"
     assert body[0]["totalSpaces"] == 16
     # POLYGON: el coordinates debe sobrevivir al round-trip por Redis.
@@ -200,24 +200,24 @@ def test_get_favorites_orders_by_most_recent_first(seeded_client, freeze_time):
     headers = {"X-User-Id": "alice"}
 
     # Tres favoritos añadidos con 1s entre cada uno.
-    seeded_client.put("/users/me/favorites/aparcamiento-1903", headers=headers)
+    seeded_client.put("/users/me/favorites/aparcamientos:1903", headers=headers)
     freeze_time(1_000)
-    seeded_client.put("/users/me/favorites/aparcamiento-5500", headers=headers)
+    seeded_client.put("/users/me/favorites/aparcamientos_en_linea:5500", headers=headers)
     freeze_time(1_000)
-    seeded_client.put("/users/me/favorites/aparcamiento-9100", headers=headers)
+    seeded_client.put("/users/me/favorites/parking_motos_puntos:9100", headers=headers)
 
     response = seeded_client.get("/users/me/favorites", headers=headers)
     ids = [p["id"] for p in response.json()]
-    assert ids == ["aparcamiento-9100", "aparcamiento-5500", "aparcamiento-1903"]
+    assert ids == ["parking_motos_puntos:9100", "aparcamientos_en_linea:5500", "aparcamientos:1903"]
 
 
 def test_get_favorites_isolated_per_user(seeded_client):
     seeded_client.put(
-        "/users/me/favorites/aparcamiento-5500",
+        "/users/me/favorites/aparcamientos_en_linea:5500",
         headers={"X-User-Id": "alice"},
     )
     seeded_client.put(
-        "/users/me/favorites/aparcamiento-1903",
+        "/users/me/favorites/aparcamientos:1903",
         headers={"X-User-Id": "bob"},
     )
 
@@ -228,8 +228,8 @@ def test_get_favorites_isolated_per_user(seeded_client):
         "/users/me/favorites", headers={"X-User-Id": "bob"}
     ).json()
 
-    assert [p["id"] for p in alice] == ["aparcamiento-5500"]
-    assert [p["id"] for p in bob] == ["aparcamiento-1903"]
+    assert [p["id"] for p in alice] == ["aparcamientos_en_linea:5500"]
+    assert [p["id"] for p in bob] == ["aparcamientos:1903"]
 
 
 def test_get_favorites_400_when_x_user_id_missing(seeded_client):
@@ -243,17 +243,17 @@ def test_get_favorites_skips_orphan_entries_silently(
     """Si un favorito apunta a un parking borrado del catálogo, GET lo omite."""
     headers = {"X-User-Id": "alice"}
 
-    seeded_client.put("/users/me/favorites/aparcamiento-5500", headers=headers)
-    seeded_client.put("/users/me/favorites/aparcamiento-1903", headers=headers)
+    seeded_client.put("/users/me/favorites/aparcamientos_en_linea:5500", headers=headers)
+    seeded_client.put("/users/me/favorites/aparcamientos:1903", headers=headers)
 
     # Simulamos que el catálogo pierde uno de los aparcamientos (p. ej. tras
     # un re-import del dataset municipal). El favorito queda huérfano.
-    fake_redis.delete("parking:aparcamiento-5500")
+    fake_redis.delete("parking:aparcamientos_en_linea:5500")
 
     response = seeded_client.get("/users/me/favorites", headers=headers)
     assert response.status_code == 200
     ids = [p["id"] for p in response.json()]
-    assert ids == ["aparcamiento-1903"]  # 5500 desaparece del listado
+    assert ids == ["aparcamientos:1903"]  # 5500 desaparece del listado
 
 
 # ============================================================
@@ -263,23 +263,23 @@ def test_get_favorites_skips_orphan_entries_silently(
 def test_full_favorite_lifecycle(seeded_client, freeze_time):
     headers = {"X-User-Id": "alice"}
 
-    seeded_client.put("/users/me/favorites/aparcamiento-1903", headers=headers)
+    seeded_client.put("/users/me/favorites/aparcamientos:1903", headers=headers)
     freeze_time(500)
-    seeded_client.put("/users/me/favorites/aparcamiento-5500", headers=headers)
+    seeded_client.put("/users/me/favorites/aparcamientos_en_linea:5500", headers=headers)
 
     listing = seeded_client.get("/users/me/favorites", headers=headers).json()
     assert [p["id"] for p in listing] == [
-        "aparcamiento-5500",
-        "aparcamiento-1903",
+        "aparcamientos_en_linea:5500",
+        "aparcamientos:1903",
     ]
 
     delete = seeded_client.delete(
-        "/users/me/favorites/aparcamiento-1903", headers=headers
+        "/users/me/favorites/aparcamientos:1903", headers=headers
     )
     assert delete.json()["removed"] is True
 
     after = seeded_client.get("/users/me/favorites", headers=headers).json()
-    assert [p["id"] for p in after] == ["aparcamiento-5500"]
+    assert [p["id"] for p in after] == ["aparcamientos_en_linea:5500"]
 
 
 # ============================================================
