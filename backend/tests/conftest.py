@@ -104,6 +104,13 @@ class FakeRedis:
     def get(self, key: str) -> str | None:
         return self.strings.get(key)
 
+    def incr(self, key: str, amount: int = 1) -> int:
+        """Subset de `INCR` / `INCRBY`: inicializa a 0 si no existe."""
+        current = int(self.strings.get(key, "0") or "0")
+        new_value = current + int(amount)
+        self.strings[key] = str(new_value)
+        return new_value
+
     def zscore(self, key: str, member: str) -> float | None:
         zset = self.zsets.get(key)
         if zset is not None:

@@ -1,0 +1,24 @@
+# Configuración mínima de ruff para el backend.
+# Mantenida deliberadamente ligera: queremos detectar errores reales sin
+# imponer reescrituras estilísticas masivas en esta primera pasada de CI.
+
+target-version = "py311"
+line-length = 100
+
+extend-exclude = ["venv", ".venv"]
+
+[lint]
+# `E`+`F` son los chequeos básicos heredados de pyflakes/pycodestyle, `I`
+# ordena imports, `B` detecta bugs comunes. La familia `UP` (modernización
+# automática a sintaxis de Python más reciente) queda fuera porque el
+# codebase usa `Optional[T]` y `typing.Iterable` de forma consistente y
+# deliberada; un cambio masivo a `T | None` no aporta valor en esta fase.
+select = ["E", "F", "I", "B"]
+ignore = [
+    "E501",  # line-too-long: se trata aparte cuando moleste de verdad.
+    "B008",  # function-call-in-default-argument: FastAPI lo usa en Depends/Header/Query.
+    "B905",  # zip-without-strict: solo aparece en sitios donde la longitud está garantizada por construcción.
+]
+
+[lint.per-file-ignores]
+"tests/*" = ["E402"]

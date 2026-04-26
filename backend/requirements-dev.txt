@@ -1,3 +1,9 @@
+# Dependencias adicionales solo para desarrollo y CI.
+# Producción usa exclusivamente requirements.txt.
+
 -r requirements.txt
+
 pytest>=8,<9
 httpx>=0.27,<1
+pip-tools>=7,<8
+ruff>=0.6,<1

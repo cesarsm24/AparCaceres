@@ -21,13 +21,15 @@ DATA_DIR = BACKEND_DIR / "data"
 DATA_FILE = DATA_DIR / "aparcamientos.geojson"
 
 # Claves de Redis que usa la app:
-#   parking:{id}                       -> hash con metadatos del aparcamiento (HSET / HGETALL)
-#   idx:parkings_search                -> índice RediSearch sobre hashes parking:*
-#   cache:nearby:{lat}:{lng}:{radius}  -> JSON cacheado del resultado de /parkings/nearby (SETEX)
-#   user:{user_id}:favorites           -> sorted set con ids favoritados, score = epoch ms (ZREVRANGE para newest-first)
+#   parking:{id}                              -> hash con metadatos del aparcamiento (HSET / HGETALL)
+#   idx:parkings_search                       -> índice RediSearch sobre hashes parking:*
+#   cache:nearby:v{n}:{lat}:{lng}:{radius}    -> JSON cacheado del resultado de /parkings/nearby (SETEX)
+#   cache:version                             -> entero monotónico que namespacia las claves de caché
+#   user:{user_id}:favorites                  -> sorted set con ids favoritados, score = epoch ms (ZREVRANGE para newest-first)
 PARKING_KEY_PREFIX = "parking:"
 SEARCH_INDEX_NAME = "idx:parkings_search"
 CACHE_NEARBY_PREFIX = "cache:nearby:"
+CACHE_VERSION_KEY = "cache:version"
 USER_FAVORITES_KEY_PREFIX = "user:"
 USER_FAVORITES_KEY_SUFFIX = ":favorites"
 # Limpieza de claves legacy de versiones previas. No se escriben ya.
@@ -46,8 +48,33 @@ EXCLUDED_DATASET_FILENAMES: frozenset[str] = frozenset({
 REDIS_HOST = os.getenv("REDIS_HOST", "localhost")
 REDIS_PORT = int(os.getenv("REDIS_PORT", "6379"))
 REDIS_DB = int(os.getenv("REDIS_DB", "0"))
-# CORS_ORIGINS: lista separada por comas. "*" = cualquier origen (solo dev).
-CORS_ORIGINS = [o.strip() for o in os.getenv("CORS_ORIGINS", "*").split(",") if o.strip()]
+
+# CORS_ORIGINS: lista separada por comas con los orígenes permitidos. El
+# default es la lista vacía (CORS cerrado) para que producción nunca se exponga
+# a `*` por accidente. En desarrollo se sirve un default ergonómico cuando la
+# variable se deja sin definir.
+#
+# El cliente nativo Android/iOS no envía `Origin`, así que CORS no le afecta.
+# Solo hace falta declarar orígenes para Flutter web (`flutter run -d chrome`)
+# y para cualquier panel web futuro. Valores aceptados:
+#   - lista explícita: "https://aparcaceres.app,https://staging.aparcaceres.app"
+#   - "*"             -> permite cualquier origen (solo dev; nunca producción).
+#   - vacío           -> CORS deshabilitado (no se añaden cabeceras).
+_CORS_RAW = os.getenv("CORS_ORIGINS")
+_CORS_ENV = os.getenv("APP_ENV", "production").strip().lower()
+_DEV_DEFAULT_ORIGINS = (
+    # Puertos típicos del runner de Flutter web en dev (`--web-port` aleatorio
+    # por defecto, los más comunes en plantillas son 3000, 5000, 8080).
+    "http://localhost:3000,http://127.0.0.1:3000,"
+    "http://localhost:5000,http://127.0.0.1:5000,"
+    "http://localhost:8080,http://127.0.0.1:8080"
+)
+if _CORS_RAW is None:
+    _CORS_RAW = _DEV_DEFAULT_ORIGINS if _CORS_ENV in {"dev", "development", "local"} else ""
+CORS_ORIGINS = [o.strip() for o in _CORS_RAW.split(",") if o.strip()]
+# `*` solo tiene sentido cuando se usa solo (no se mezcla con orígenes concretos).
+CORS_ALLOW_ALL = CORS_ORIGINS == ["*"]
+
 # TTL de la caché de /parkings/nearby en segundos. 0 = caché desactivada.
 CACHE_NEARBY_TTL = int(os.getenv("CACHE_NEARBY_TTL", "60"))
 # Token requerido para `POST /import-parkings`. Si está vacío, el endpoint
@@ -58,3 +85,6 @@ IMPORT_TOKEN = os.getenv("IMPORT_TOKEN", "").strip()
 # El cliente puede subirlo hasta MAX_PARKING_LIMIT con el query param `limit`.
 DEFAULT_PARKING_LIMIT = int(os.getenv("DEFAULT_PARKING_LIMIT", "100"))
 MAX_PARKING_LIMIT = int(os.getenv("MAX_PARKING_LIMIT", "500"))
+# Nivel de logging raíz del proceso. Se aplica desde `main.py` vía
+# `configure_logging(LOG_LEVEL)`.
+LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO").upper()
