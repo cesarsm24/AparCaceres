@@ -28,6 +28,12 @@ DATA_FILE = DATA_DIR / "aparcamientos.geojson"
 #   user:{user_id}:favorites                  -> sorted set con ids favoritados, score = epoch ms (ZREVRANGE para newest-first)
 PARKING_KEY_PREFIX = "parking:"
 SEARCH_INDEX_NAME = "idx:parkings_search"
+# Doble buffer para imports sin downtime: el importador construye la nueva
+# generación bajo el prefijo de staging y, una vez completa, hace el swap
+# atómico-en-lo-posible (drop índice viejo + UNLINK viejo + RENAME staging
+# → activo + recrear índice).
+STAGING_KEY_PREFIX = "parking_v2:"
+STAGING_INDEX_NAME = "idx:parkings_search_v2"
 CACHE_NEARBY_PREFIX = "cache:nearby:"
 CACHE_VERSION_KEY = "cache:version"
 USER_FAVORITES_KEY_PREFIX = "user:"

@@ -7,10 +7,45 @@ las versiones siguen [SemVer](https://semver.org/lang/es/). Cada release que se
 publique como release de producción debe estar etiquetada en git
 (`git tag vX.Y.Z`).
 
-## [Unreleased]
+## [Unreleased] — Fase 2 (en progreso)
+
+Trabajo en curso hacia v0.2.0 ("Fase 2 — producción" del informe técnico).
+Pendiente: migración del cliente Redis a `redis.asyncio` con connection pool
+y reintentos, documentación de despliegue (reverse proxy + TLS + backups),
+y un par de tests adicionales antes del tag.
 
 ### Added
-- Estructura para releases futuros.
+- Auth firmada para favoritos: nuevo módulo `app/auth.py` con JWT HS256
+  (`Authorization: Bearer <token>` o `X-Session-Token`) y endpoint
+  `POST /auth/session` que emite tokens con TTL de 30 días. Sustituye al
+  `X-User-Id` opaco previo y endurece el aislamiento entre usuarios.
+- Rate limiting por IP con `slowapi`: 1/min en `POST /import-parkings` y
+  120/min en `GET /parkings/nearby`. Configurable vía `RATE_LIMIT_ENABLED`.
+- Métricas Prometheus en `/metrics` con
+  `prometheus-fastapi-instrumentator`. Excluye `/healthz` y `/metrics` de
+  los logs de acceso para no inundar el JSON con scrapes.
+- Cierre de la fase 1: tests para `GET /healthz`, `RequestIdMiddleware` y
+  el versionado de caché `cache:version`. (Llegan tarde respecto al tag
+  `v0.1.0` original; se cuelan en este release porque convivían en la
+  misma rama de trabajo.)
+
+### Changed
+- Importador con doble buffer: la nueva generación se construye bajo
+  `parking_v2:*` con su propio índice `idx:parkings_search_v2`. El swap al
+  catálogo activo (drop + UNLINK + RENAME + recreación de índice) es la
+  única ventana en la que las lecturas pueden ver datos a medias; antes
+  era toda la duración del import.
+- `RequestIdMiddleware` ahora se monta DESPUÉS de `CORSMiddleware` para que
+  sea el outermost: el `X-Request-ID` se asigna también en las respuestas
+  de preflight `OPTIONS`. (Cierre de un detalle de la fase 1 detectado al
+  revisar el orden de middlewares.)
+- Docstrings en `importer.py` y `routers/imports.py` actualizados para
+  reflejar `INCR cache:version` y `UNLINK` en lugar del SCAN+DEL antiguo.
+
+### Dependencies
+- `slowapi==0.1.9`, `prometheus-fastapi-instrumentator==7.0.0`,
+  `PyJWT==2.10.1` añadidas como directas. Lockfile actualizado con sus
+  transitivas.
 
 ## [0.1.0] - 2026-04-26
 

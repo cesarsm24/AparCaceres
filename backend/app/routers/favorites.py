@@ -1,8 +1,14 @@
 """Favoritos persistentes por usuario.
 
-Solución pragmática sin sistema de auth real: el cliente identifica al usuario
-con la cabecera HTTP `X-User-Id`. Por usuario guardamos un sorted set
-`user:{user_id}:favorites` con score = epoch ms del momento en que se favoritó.
+Autenticación: cada request pasa por `require_user` (`app.auth`), que valida
+un JWT firmado (`Authorization: Bearer <token>` o `X-Session-Token: <token>`)
+y devuelve el `sub` del token. El cliente obtiene el token llamando a
+`POST /auth/session`. Esto sustituye al `X-User-Id` opaco previo: ahora el
+cliente no puede asumir la identidad de otro sin la clave secreta del
+servidor.
+
+Por usuario guardamos un sorted set `user:{sub}:favorites` con
+score = epoch ms del momento en que se favoritó.
 `ZREVRANGE` nos da los favoritos newest-first listos para la pantalla.
 
 Reglas:
@@ -23,11 +29,11 @@ from __future__ import annotations
 
 import logging
 from datetime import datetime, timezone
-from typing import Optional
 
 import redis
-from fastapi import APIRouter, Depends, Header, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 
+from ..auth import require_user
 from ..config import (
     PARKING_KEY_PREFIX,
     USER_FAVORITES_KEY_PREFIX,
@@ -40,46 +46,6 @@ from ..schemas import FavoriteAdded, FavoriteRemoved, ParkingPlaceOut
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/users/me/favorites", tags=["favorites"])
-
-
-# ============================================================
-# Validación del header X-User-Id
-# ============================================================
-
-# Caracteres prohibidos en el user-id: los que romperían la clave de Redis
-# (`:` separa segmentos, `*?[]` son comodines de KEYS/SCAN) más whitespace.
-_FORBIDDEN_USER_ID_CHARS = frozenset(":*?[] \t\n\r")
-_USER_ID_MAX_LEN = 128
-
-
-def require_user_id(
-    x_user_id: Optional[str] = Header(
-        None,
-        alias="X-User-Id",
-        description="Identificador opaco del usuario. Pragmatismo: sin auth real.",
-    ),
-) -> str:
-    """Dependency: extrae y valida `X-User-Id`.
-
-    400 (no 422) cuando falta o está mal formado, para que el cliente lo
-    distinga de errores de validación de body/query.
-    """
-    if x_user_id is None:
-        raise HTTPException(status_code=400, detail="Falta cabecera X-User-Id")
-    user_id = x_user_id.strip()
-    if not user_id:
-        raise HTTPException(status_code=400, detail="Cabecera X-User-Id vacía")
-    if len(user_id) > _USER_ID_MAX_LEN:
-        raise HTTPException(
-            status_code=400,
-            detail=f"X-User-Id excede {_USER_ID_MAX_LEN} caracteres",
-        )
-    if any(c in _FORBIDDEN_USER_ID_CHARS for c in user_id):
-        raise HTTPException(
-            status_code=400,
-            detail="X-User-Id contiene caracteres inválidos (espacios o ':*?[]')",
-        )
-    return user_id
 
 
 # ============================================================
@@ -190,9 +156,10 @@ _FAVORITE_REMOVED_EXAMPLE = {
     response_model=list[ParkingPlaceOut],
     summary="Lista los favoritos del usuario, más recientes primero",
     description=(
-        "Devuelve los aparcamientos favoritos del usuario identificado por "
-        "`X-User-Id`, ordenados por fecha de adición descendente "
-        "(`ZREVRANGE` sobre el sorted set `user:{userId}:favorites`).\n\n"
+        "Devuelve los aparcamientos favoritos del usuario identificado por el "
+        "JWT (cabecera `Authorization: Bearer ...` o `X-Session-Token`), "
+        "ordenados por fecha de adición descendente "
+        "(`ZREVRANGE` sobre el sorted set `user:{sub}:favorites`).\n\n"
         "El payload es directamente `list[ParkingPlace]` con el mismo shape "
         "que `/parkings`, listo para alimentar la pantalla de favoritos.\n\n"
         "Si la lista contiene un id cuyo `parking:{id}` ha sido borrado del "
@@ -205,11 +172,11 @@ _FAVORITE_REMOVED_EXAMPLE = {
                 "application/json": {"example": _FAVORITES_LIST_EXAMPLE}
             }
         },
-        400: {"description": "Falta o es inválida la cabecera X-User-Id."},
+        401: {"description": "Falta o es inválido el token de sesión."},
     },
 )
 def list_favorites(
-    user_id: str = Depends(require_user_id),
+    user_id: str = Depends(require_user),
     rdb: redis.Redis = Depends(get_redis),
 ):
     key = _favorites_key(user_id)
@@ -267,13 +234,13 @@ def list_favorites(
                 "application/json": {"example": _FAVORITE_ADDED_EXAMPLE}
             }
         },
-        400: {"description": "Falta o es inválida la cabecera X-User-Id."},
+        401: {"description": "Falta o es inválido el token de sesión."},
         404: {"description": "El aparcamiento no existe en el catálogo."},
     },
 )
 def add_favorite(
     parking_id: str,
-    user_id: str = Depends(require_user_id),
+    user_id: str = Depends(require_user),
     rdb: redis.Redis = Depends(get_redis),
 ):
     _ensure_parking_exists(rdb, parking_id)
@@ -324,13 +291,13 @@ def add_favorite(
                 "application/json": {"example": _FAVORITE_REMOVED_EXAMPLE}
             }
         },
-        400: {"description": "Falta o es inválida la cabecera X-User-Id."},
+        401: {"description": "Falta o es inválido el token de sesión."},
         404: {"description": "El aparcamiento no existe en el catálogo."},
     },
 )
 def remove_favorite(
     parking_id: str,
-    user_id: str = Depends(require_user_id),
+    user_id: str = Depends(require_user),
     rdb: redis.Redis = Depends(get_redis),
 ):
     _ensure_parking_exists(rdb, parking_id)

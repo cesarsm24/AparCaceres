@@ -38,6 +38,8 @@ from .config import (
     LEGACY_SET_INDEX_PREFIX,
     PARKING_KEY_PREFIX,
     SEARCH_INDEX_NAME,
+    STAGING_INDEX_NAME,
+    STAGING_KEY_PREFIX,
 )
 from .enums import (
     ParkingCategory,
@@ -47,7 +49,12 @@ from .enums import (
 )
 from .normalization import coerce_line_string, coerce_polygon
 from .schemas import ParkingPlaceOut
-from .search import build_location, build_search_text, recreate_search_index
+from .search import (
+    build_location,
+    build_search_text,
+    drop_search_index,
+    recreate_search_index,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -739,15 +746,24 @@ def _run_import_paired(
     features_with_profile: Iterator[tuple[dict, Optional[SourceProfile]]],
     rdb: redis.Redis,
 ) -> dict[str, Any]:
-    """Orquestador real: limpia, indexa y resume.
+    """Orquestador real: doble buffer de import + invalidación de caché.
 
-    1. Borra todos los hashes `parking:*` del import previo (SCAN_ITER + DEL).
-    2. Borra claves legacy (`geo:parkings`, `idx:*`) si quedaron de versiones previas.
-    3. Recrea el índice RediSearch y escribe cada `parking:{id}` con campos
-       indexables (`location`, `searchText`, TAGs y NUMERICs).
-    4. Invalida la caché `cache:nearby:*` (best-effort: si Redis falla aquí,
-       el TTL acabará limpiándola).
-    5. Devuelve un resumen con totales + desglose por `sourceDataset`.
+    Pipeline:
+    1. Cleanup de un staging huérfano de un import previo abortado.
+    2. Cleanup de claves legacy (`geo:parkings`, sets `idx:*` viejos). No
+       toca el catálogo activo `parking:*` ni el índice `idx:parkings_search`.
+    3. Build de la nueva generación bajo `parking_v2:{id}` con su propio
+       índice `idx:parkings_search_v2`. Mientras dura este paso (el más
+       caro), las lecturas siguen golpeando el catálogo activo sin notar
+       nada.
+    4. Swap: `FT.DROPINDEX` del activo, `UNLINK` del catálogo activo,
+       `RENAME` por clave del staging al activo, `FT.DROPINDEX` del staging,
+       y recreación del índice activo. La ventana de catálogo "a medias"
+       pasa de "toda la duración del import" a unos segundos.
+    5. Invalidación de caché por `INCR cache:version` (O(1)). Las claves
+       previas quedan inalcanzables tras el bump y caducan por su TTL.
+    6. Devuelve un resumen con totales + desglose por `sourceDataset` + el
+       nuevo `cache_version`.
 
     Las `redis.ConnectionError` se propagan tal cual; el router las traducirá
     a HTTP 503.
@@ -797,37 +813,76 @@ def _run_import_paired(
     if len(final_ids) != len(set(final_ids)):
         raise ValueError("ids duplicados tras desambiguar la importación")
 
-    old_keys = list(rdb.scan_iter(match=f"{PARKING_KEY_PREFIX}*"))
-    # Legacy: índices set basados en `idx:*` de versiones previas. El índice
-    # actual de RediSearch (`idx:parkings_search`) también encaja en el patrón,
-    # pero se borra explícitamente con `FT.DROPINDEX` desde `recreate_search_index`,
-    # por lo que se excluye aquí para no desindexar antes de tiempo.
-    old_index_keys = [
+    # ---------- Doble buffer ----------
+    # Construimos la nueva generación bajo el prefijo de staging mientras el
+    # catálogo activo (`parking:*`) sigue sirviendo lecturas. Una vez completo
+    # el staging, hacemos el swap más estrecho posible (drop + UNLINK +
+    # RENAME). El tiempo de "catálogo a medias" pasa de "toda la duración del
+    # import" a un puñado de segundos en el peor caso.
+    #
+    # Pasos:
+    #   1. Limpieza de un staging anterior que pudiera quedar huérfano (si un
+    #      import previo abortó a medias).
+    #   2. Cleanup de claves legacy (`geo:parkings`, índices `idx:*` viejos)
+    #      que no afectan al servicio actual.
+    #   3. Crear `idx:parkings_search_v2` sobre el prefijo de staging y
+    #      escribir todos los hashes nuevos (las lecturas en curso siguen
+    #      golpeando el catálogo activo).
+    #   4. SWAP: drop del índice activo, UNLINK del catálogo activo, RENAME
+    #      en pipeline de staging → activo, drop del índice de staging,
+    #      recreación del índice activo sobre los hashes ya migrados.
+
+    # 1. Staging huérfano de runs anteriores.
+    drop_search_index(rdb, name=STAGING_INDEX_NAME)
+    stale_staging_keys = list(rdb.scan_iter(match=f"{STAGING_KEY_PREFIX}*"))
+    if stale_staging_keys:
+        prep = rdb.pipeline()
+        _unlink_or_delete(prep, *stale_staging_keys)
+        prep.execute()
+
+    # 2. Cleanup legacy (no afecta al catálogo activo).
+    legacy_index_keys = [
         key
         for key in rdb.scan_iter(match=f"{LEGACY_SET_INDEX_PREFIX}*")
-        if key != SEARCH_INDEX_NAME
+        if key not in {SEARCH_INDEX_NAME, STAGING_INDEX_NAME}
     ]
+    legacy_pipe = rdb.pipeline()
+    if legacy_index_keys:
+        _unlink_or_delete(legacy_pipe, *legacy_index_keys)
+    _unlink_or_delete(legacy_pipe, LEGACY_GEO_KEY)
+    legacy_pipe.execute()
 
-    # Preferimos UNLINK sobre DEL: libera la memoria de forma asíncrona y no
-    # bloquea el event loop de Redis cuando hay decenas de miles de claves.
-    cleanup = rdb.pipeline()
-    if old_keys:
-        _unlink_or_delete(cleanup, *old_keys)
-    if old_index_keys:
-        _unlink_or_delete(cleanup, *old_index_keys)
-    _unlink_or_delete(cleanup, LEGACY_GEO_KEY)
-    cleanup.execute()
-
-    recreate_search_index(rdb)
-
-    pipe = rdb.pipeline()
+    # 3. Build de la nueva generación en staging.
+    recreate_search_index(
+        rdb, name=STAGING_INDEX_NAME, key_prefix=STAGING_KEY_PREFIX
+    )
+    write_pipe = rdb.pipeline()
     for place in valid_places:
-        pipe.hset(
-            f"{PARKING_KEY_PREFIX}{place.id}",
+        write_pipe.hset(
+            f"{STAGING_KEY_PREFIX}{place.id}",
             mapping=place_to_redis_mapping(place),
         )
+    write_pipe.execute()
 
-    pipe.execute()
+    # 4. Swap: dejamos el activo apuntando al contenido nuevo.
+    old_active_keys = list(rdb.scan_iter(match=f"{PARKING_KEY_PREFIX}*"))
+    drop_search_index(rdb, name=SEARCH_INDEX_NAME)
+    if old_active_keys:
+        cleanup_active = rdb.pipeline()
+        _unlink_or_delete(cleanup_active, *old_active_keys)
+        cleanup_active.execute()
+
+    rename_pipe = rdb.pipeline()
+    for place in valid_places:
+        _rename(
+            rename_pipe,
+            f"{STAGING_KEY_PREFIX}{place.id}",
+            f"{PARKING_KEY_PREFIX}{place.id}",
+        )
+    rename_pipe.execute()
+
+    drop_search_index(rdb, name=STAGING_INDEX_NAME)
+    recreate_search_index(rdb)
 
     # Invalidación de caché por versionado: O(1). En lugar de recorrer
     # `cache:nearby:*` con SCAN_ITER y borrar miles de claves, incrementamos
@@ -869,6 +924,14 @@ def _unlink_or_delete(pipe, *keys: str) -> None:
         pipe.unlink(*keys)
     else:
         pipe.delete(*keys)
+
+
+def _rename(pipe, src: str, dst: str) -> None:
+    """Encola RENAME en el pipeline. Para FakeRedis cae a copy + delete."""
+    if hasattr(pipe, "rename"):
+        pipe.rename(src, dst)
+    else:
+        pipe.execute_command("RENAME", src, dst)
 
 
 # ============================================================

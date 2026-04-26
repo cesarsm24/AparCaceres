@@ -10,7 +10,7 @@ import logging
 from typing import Optional
 
 import redis
-from fastapi import APIRouter, Depends, HTTPException, Query, Response
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
 
 from ..config import (
     CACHE_NEARBY_PREFIX,
@@ -23,6 +23,7 @@ from ..config import (
 )
 from ..enums import ParkingCategory, ParkingRegulation, ParkingVehicleType
 from ..importer import place_from_redis_hash
+from ..rate_limit import RATE_LIMIT_NEARBY, limiter
 from ..redis_client import get_redis, raise_redis_503
 from ..schemas import (
     ParkingFacetsOut,
@@ -288,7 +289,9 @@ def list_parkings(
     ),
     responses={200: {"content": {"application/json": {"example": _NEARBY_ENVELOPE_EXAMPLE}}}},
 )
+@limiter.limit(RATE_LIMIT_NEARBY)
 def get_parkings_nearby(
+    request: Request,
     response: Response,
     lat: float = Query(..., description="Latitud del centro de búsqueda."),
     lng: float = Query(..., description="Longitud del centro de búsqueda."),
