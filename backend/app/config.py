@@ -94,3 +94,13 @@ MAX_PARKING_LIMIT = int(os.getenv("MAX_PARKING_LIMIT", "500"))
 # Nivel de logging raíz del proceso. Se aplica desde `main.py` vía
 # `configure_logging(LOG_LEVEL)`.
 LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO").upper()
+
+# ---------- Favoritos por usuario ----------
+# Tope superior de favoritos por usuario. Cuando el usuario añade uno nuevo y
+# ya tiene >= MAX, el más antiguo se elimina con `ZREMRANGEBYRANK`. 0 desactiva
+# el cap (no recomendado en producción).
+FAVORITES_MAX_PER_USER = int(os.getenv("FAVORITES_MAX_PER_USER", "500"))
+# TTL en segundos del sorted set de favoritos por usuario. Se renueva en cada
+# `PUT` para que las cuentas activas no expiren. 0 desactiva el TTL (los datos
+# se mantienen indefinidamente, comportamiento previo).
+FAVORITES_TTL_SECONDS = int(os.getenv("FAVORITES_TTL_SECONDS", str(60 * 60 * 24 * 365)))

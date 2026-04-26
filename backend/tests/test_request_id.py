@@ -19,8 +19,8 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from app.logging_config import (
-    JsonFormatter,
     REQUEST_ID_HEADER,
+    JsonFormatter,
     RequestIdMiddleware,
     _request_id_ctx,
     configure_logging,

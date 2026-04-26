@@ -7,14 +7,61 @@ las versiones siguen [SemVer](https://semver.org/lang/es/). Cada release que se
 publique como release de producción debe estar etiquetada en git
 (`git tag vX.Y.Z`).
 
-## [Unreleased] — Fase 2
+## [Unreleased] — Fase 2 + Fase 3 oportunista
 
-Cierra la "Fase 2 — producción" del informe técnico. Endurece la API para
-exponerla a tráfico real: cliente Redis async, autenticación firmada,
-rate limiting, métricas, doble buffer de imports y guía operativa de
-despliegue. Pendiente de tagear cuando se decida el corte de release.
+Cierra la "Fase 2 — producción" del informe técnico (cliente Redis async,
+autenticación firmada, rate limiting, métricas, doble buffer de imports y
+guía operativa de despliegue) e incorpora la "Fase 3 oportunista" con el
+subconjunto de items independientes implementables sobre la fase 2 ya
+cerrada. Pendiente de tagear cuando se decida el corte de release.
 
-### Added
+Fase 3 (oportunista): empezada con un subconjunto de items independientes
+del resto de la fase 3. Quedan fuera por ahora soporte multi-ciudad,
+testcontainers (CI ya tiene Redis Stack como service) y cluster con
+hash-tags (prematuro sin métricas).
+
+### Added (Fase 3)
+- **Caché de `/parkings/nearby` con filtros de baja cardinalidad**: la clave
+  canónica incorpora ahora `vehicleType`/`category`/`regulation`/`dataset`/
+  `minSpaces` ordenados alfabéticamente, así que la combinación típica del
+  cliente (centro + chip de filtro) reutiliza la misma entrada en lugar de
+  hacer `BYPASS`. Solo `q`/`ids`/`limit`/`offset` siguen forzando bypass
+  porque inflan la cardinalidad de la clave hasta hacerla contraproducente.
+- **Logging cuando se descartan componentes de `MultiPolygon`/`MultiLineString`**
+  en el importador: una entrada `INFO` por feature con más de una componente,
+  con `dataset:hint_id`, `total`, `kept_index` y `dropped`. Facilita auditar
+  datasets con digitalización heterogénea sin reventar el import.
+- **Cap y TTL en favoritos por usuario**: `FAVORITES_MAX_PER_USER` (default
+  500) recorta los más antiguos con `ZREMRANGEBYRANK` cuando se excede, y
+  `FAVORITES_TTL_SECONDS` (default 365 días) renueva el TTL del sorted set
+  en cada `PUT` como heartbeat de actividad. Ambos configurables por env;
+  `FAVORITES_MAX_PER_USER=0` desactiva el cap (modo legacy).
+- Tests nuevos: `test_polygon_centroid_weights_by_area_for_asymmetric_l`,
+  `test_polygon_centroid_falls_back_when_collinear`,
+  `test_favorites_cap_drops_oldest_when_max_reached`,
+  `test_favorites_cap_disabled_when_zero`,
+  `test_nearby_caches_low_cardinality_filters`,
+  `test_nearby_cache_key_is_filter_aware`,
+  `test_nearby_bypasses_cache_for_text_search`. Suite total: 227 tests.
+
+### Changed (Fase 3)
+- **`/parkings` y `/parkings/in-bounds` evitan el round-trip extra**:
+  `FT.SEARCH` se llama sin `NOCONTENT`, así devuelve los hashes completos
+  en la misma respuesta (antes: `FT.SEARCH NOCONTENT → ids → pipeline
+  HGETALL`). Reduce a la mitad las llamadas Redis por request.
+- **`/parkings/nearby` usa `FT.AGGREGATE … LOAD *`**: una sola llamada
+  carga el hash completo + el `distance` calculado por `APPLY geodistance`,
+  eliminando el pipeline `HGETALL` posterior. La respuesta se hidrata
+  directamente como `ParkingPlaceNearbyOut`.
+- **Centroide de polígono ponderado por área (Shoelace)** en
+  `representative_point`: para polígonos no convexos el resultado siempre
+  cae dentro de la envolvente convexa (el promedio aritmético podía
+  salirse). Para polígonos colineales o degenerados cae al promedio
+  aritmético como fallback para no perder el feature.
+- `_load_places` eliminado de `app/search.py` al quedar sin callers tras
+  la migración a `FT.SEARCH` con payload.
+
+### Added (Fase 2)
 - Auth firmada para favoritos: nuevo módulo `app/auth.py` con JWT HS256
   (`Authorization: Bearer <token>` o `X-Session-Token`) y endpoint
   `POST /auth/session` que emite tokens con TTL de 30 días. Sustituye al

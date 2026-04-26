@@ -179,6 +179,39 @@ class FakeRedis:
     def zcard(self, key: str) -> int:
         return len(self.zsets.get(key, {}))
 
+    def zremrangebyrank(self, key: str, start: int, stop: int) -> int:
+        """Subset de `ZREMRANGEBYRANK`: elimina por rango ascendente de score.
+
+        Soporta índices negativos como Redis (`-1` = último). Empates de
+        score: se ordena por miembro ASC para que el resultado sea determinista
+        en los tests. Si tras el borrado el sorted set queda vacío, eliminamos
+        la clave (igual que Redis).
+        """
+        bucket = self.zsets.get(key)
+        if not bucket:
+            return 0
+        ordered = sorted(bucket.items(), key=lambda kv: (kv[1], kv[0]))
+        n = len(ordered)
+        # Normaliza índices negativos al estilo Redis.
+        s = start if start >= 0 else max(n + start, 0)
+        e = stop if stop >= 0 else n + stop
+        if s > e or s >= n:
+            return 0
+        e = min(e, n - 1)
+        victims = [member for member, _ in ordered[s : e + 1]]
+        for m in victims:
+            bucket.pop(m, None)
+        if not bucket:
+            del self.zsets[key]
+        return len(victims)
+
+    def expire(self, key: str, seconds: int) -> bool:
+        """Subset de `EXPIRE`: aceptamos la llamada como no-op (no simulamos TTL)."""
+        for store in (self.hashes, self.strings, self.zsets):
+            if key in store:
+                return True
+        return False
+
     def rename(self, src: str, dst: str) -> bool:
         """Subset de RENAME: mueve la clave entre stores. Lanza KeyError si no existe."""
         for store in (self.hashes, self.strings, self.zsets):
@@ -282,6 +315,12 @@ class AsyncFakeRedis:
 
     async def zscore(self, key: str, member: str):
         return self._sync.zscore(key, member)
+
+    async def zremrangebyrank(self, key: str, start: int, stop: int) -> int:
+        return self._sync.zremrangebyrank(key, start, stop)
+
+    async def expire(self, key: str, seconds: int) -> bool:
+        return self._sync.expire(key, seconds)
 
     async def aclose(self) -> None:
         return None
