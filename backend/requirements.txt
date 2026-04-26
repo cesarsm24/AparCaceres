@@ -32,7 +32,7 @@ PyJWT==2.10.1
 python-dotenv==1.2.2
 redis==7.4.0
 slowapi==0.1.9
-starlette==1.0.0
+starlette==0.50.0
 typing-inspection==0.4.2
 typing_extensions==4.15.0
 uvicorn==0.46.0

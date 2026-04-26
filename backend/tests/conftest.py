@@ -3,7 +3,7 @@
 `fake_redis` es una implementación minimalista en memoria del subset de la
 API de `redis-py` que usan el importador y los routers (`scan_iter`, `delete`,
 `exists`, `hset`, `pipeline`, `hgetall`, `setex`, `get`, `zadd`, `zrem`,
-`zrevrange`, `zscore`).
+`zrevrange`, `zscore`, `ping`).
 
 Mantenerla aquí (en lugar de añadir `fakeredis` como dependencia) tiene dos
 ventajas:
@@ -53,6 +53,9 @@ class FakeRedis:
         self.zsets: dict[str, dict[str, float]] = {}
 
     # ---------- API directa (no pipeline) ----------
+
+    def ping(self) -> bool:
+        return True
 
     def hgetall(self, key: str) -> dict[str, str]:
         return dict(self.hashes.get(key, {}))
