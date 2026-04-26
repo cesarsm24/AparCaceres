@@ -7,7 +7,7 @@ from app.routers import favorites, health, imports, parkings
 
 app = FastAPI(
     title="AparCaceres API",
-    description="API para localización de aparcamientos públicos en Cáceres usando RedisDB",
+    description="API para localización de aparcamientos públicos en Cáceres usando Redis Stack",
     version="0.1.0",
     lifespan=lifespan,
 )

@@ -1,22 +1,11 @@
 """Endpoints de lectura del catálogo de aparcamientos.
 
-Forman el contrato HTTP que consume el cliente Flutter (`ParkingPlace.fromJson`).
-Las respuestas usan los schemas del contrato móvil (`ParkingPlaceOut`,
-`ParkingPlaceNearbyOut`) y las query params replican los filtros del
-`ParkingQuery` y de `searchParking` del cliente.
-
-Reglas de routing:
-- `/parkings/nearby` y `/parkings/categories` se declaran ANTES que
-  `/parkings/{parking_id}` para que el path param no los capture.
-
-Cache:
-- `/parkings/nearby` aplica look-aside SOLO cuando no llegan filtros: con
-  filtros la cardinalidad de la clave explotaría y la caché perdería sentido.
+Los listados usan Redis Stack / RediSearch como índice principal. El hash
+`parking:{id}` sigue siendo la fuente canónica del contrato Flutter.
 """
 
 from __future__ import annotations
 
-import json
 import logging
 from typing import Optional
 
@@ -26,58 +15,97 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from ..config import (
     CACHE_NEARBY_PREFIX,
     CACHE_NEARBY_TTL,
-    GEO_KEY,
+    DEFAULT_PARKING_LIMIT,
+    MAX_PARKING_LIMIT,
     PARKING_KEY_PREFIX,
+    SEARCH_INDEX_NAME,
 )
 from ..enums import ParkingCategory, ParkingRegulation, ParkingVehicleType
-from ..filters import apply_filters, normalize_for_search
 from ..importer import place_from_redis_hash
 from ..redis_client import get_redis, raise_redis_503
-from ..schemas import ParkingPlaceNearbyOut, ParkingPlaceOut
+from ..schemas import (
+    ParkingFacetsOut,
+    ParkingPlaceOut,
+    ParkingPlacesEnvelopeOut,
+    ParkingPlacesNearbyEnvelopeOut,
+)
+from ..search import (
+    SearchIndexError,
+    get_facets,
+    search_in_bounds,
+    search_nearby,
+    search_parkings,
+)
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/parkings", tags=["parkings"])
 
 
-# ============================================================
-# Helpers internos
-# ============================================================
-
-def _scan_all_ids(rdb: redis.Redis) -> list[str]:
-    """Lista los ids de aparcamiento presentes en Redis (sin el prefijo)."""
-    prefix_len = len(PARKING_KEY_PREFIX)
-    return [k[prefix_len:] for k in rdb.scan_iter(match=f"{PARKING_KEY_PREFIX}*")]
+def _resolve_limit(value: Optional[int]) -> int:
+    if value is None or value <= 0:
+        return DEFAULT_PARKING_LIMIT
+    return min(value, MAX_PARKING_LIMIT)
 
 
-def _load_places(rdb: redis.Redis, parking_ids: list[str]) -> list[ParkingPlaceOut]:
-    """Pipeline de `HGETALL` -> lista de `ParkingPlaceOut`.
-
-    Mantiene el orden de `parking_ids`. Salta silenciosamente los ids cuyo
-    hash no exista (caso degradado: id en el índice geo pero borrado del hash).
-    """
-    if not parking_ids:
-        return []
-    pipe = rdb.pipeline()
-    for pid in parking_ids:
-        pipe.hgetall(f"{PARKING_KEY_PREFIX}{pid}")
-    hashes = pipe.execute()
-
-    out: list[ParkingPlaceOut] = []
-    for pid, data in zip(parking_ids, hashes):
-        if not data:
-            logger.warning("parking:%s sin hash; ignorando", pid)
-            continue
-        out.append(place_from_redis_hash(data))
-    return out
+def _resolve_offset(value: int) -> int:
+    return max(0, value)
 
 
-# ============================================================
-# Ejemplos OpenAPI compartidos
-# ============================================================
+def _set_pagination_headers(
+    response: Response,
+    *,
+    total: int,
+    limit: int,
+    offset: int,
+) -> None:
+    response.headers["X-Total-Count"] = str(total)
+    response.headers["X-Truncated"] = "true" if offset + limit < total else "false"
+    response.headers["X-Limit"] = str(limit)
+    response.headers["X-Offset"] = str(offset)
+
+
+def _to_envelope(
+    *,
+    items: list[ParkingPlaceOut],
+    total: int,
+    limit: int,
+    offset: int,
+    facets: Optional[ParkingFacetsOut] = None,
+) -> ParkingPlacesEnvelopeOut:
+    return ParkingPlacesEnvelopeOut(
+        items=items,
+        total=total,
+        limit=limit,
+        offset=offset,
+        truncated=offset + len(items) < total,
+        facets=facets,
+    )
+
+
+def _to_nearby_envelope(
+    *,
+    items,
+    total: int,
+    limit: int,
+    offset: int,
+) -> ParkingPlacesNearbyEnvelopeOut:
+    return ParkingPlacesNearbyEnvelopeOut(
+        items=items,
+        total=total,
+        limit=limit,
+        offset=offset,
+        truncated=offset + len(items) < total,
+        facets=None,
+    )
+
+
+def _search_error(exc: SearchIndexError) -> HTTPException:
+    return HTTPException(status_code=503, detail=str(exc))
+
 
 _PLACE_POINT_EXAMPLE = {
-    "id": "aparcamiento-1903",
+    "id": "aparcamientos:1903",
     "name": "Escuela Politecnica",
     "category": "parking",
     "vehicleType": "car",
@@ -91,7 +119,7 @@ _PLACE_POINT_EXAMPLE = {
     "streetType": None,
     "district": "CÁCERES",
     "neighborhood": None,
-    "sourceDataset": None,
+    "sourceDataset": "aparcamientos",
     "imageUrl": None,
     "urlFicha": "http://sig.caceres.es/serweb/fichasig/fichatoponimia.php?mslink=1903",
     "urlVia": None,
@@ -99,7 +127,7 @@ _PLACE_POINT_EXAMPLE = {
 }
 
 _PLACE_POLYGON_EXAMPLE = {
-    "id": "aparcamiento-5500",
+    "id": "aparcamientos_en_linea:5500",
     "name": "Calle Dalia",
     "category": "street_line",
     "vehicleType": "car",
@@ -130,147 +158,166 @@ _PLACE_POLYGON_EXAMPLE = {
 
 _PLACE_NEARBY_EXAMPLE = {**_PLACE_POINT_EXAMPLE, "distanceMeters": 124.7}
 
+_LIST_ENVELOPE_EXAMPLE = {
+    "items": [_PLACE_POINT_EXAMPLE, _PLACE_POLYGON_EXAMPLE],
+    "total": 2,
+    "limit": DEFAULT_PARKING_LIMIT,
+    "offset": 0,
+    "truncated": False,
+    "facets": None,
+}
+
+_NEARBY_ENVELOPE_EXAMPLE = {
+    "items": [_PLACE_NEARBY_EXAMPLE],
+    "total": 1,
+    "limit": DEFAULT_PARKING_LIMIT,
+    "offset": 0,
+    "truncated": False,
+    "facets": None,
+}
+
 _CATEGORIES_EXAMPLE = ["parking", "paid_parking", "street_line", "blue_zone"]
 
+_FACETS_EXAMPLE = {
+    "total": 7314,
+    "categories": {
+        "parking": 24,
+        "paid_parking": 8,
+        "street_line": 4779,
+        "street_battery": 1424,
+        "blue_zone": 101,
+        "accessible": 743,
+        "motorbike": 94,
+        "bicycle": 68,
+        "loading": 73,
+    },
+    "vehicleTypes": {"car": 7152, "motorbike": 94, "bike": 68},
+    "regulations": {
+        "free": 6227,
+        "paid": 8,
+        "blue_zone": 101,
+        "loading": 73,
+        "reserved": 905,
+    },
+    "datasets": {
+        "aparcamientos": 24,
+        "aparcamientos_en_bateria": 1424,
+        "aparcamientos_en_linea": 4779,
+        "carga_descarga": 73,
+        "movilidad_reducida": 743,
+        "parking_bicis": 68,
+        "parking_motos_areas": 48,
+        "parking_motos_puntos": 46,
+        "parkings": 8,
+        "zona_azul": 101,
+    },
+}
 
-# ============================================================
-# GET /parkings — listado completo con filtros opcionales
-# ============================================================
 
 @router.get(
     "",
-    response_model=list[ParkingPlaceOut],
+    response_model=ParkingPlacesEnvelopeOut,
     summary="Lista aparcamientos con filtros opcionales",
     description=(
-        "Devuelve todos los aparcamientos del catálogo, con el shape de "
-        "`ParkingPlace.fromJson`. Sin paginación obligatoria.\n\n"
-        "Si se pasan `ids`, solo se cargan esas claves (uso típico: pantalla "
-        "de favoritos). Los filtros restantes (`q`, `vehicleType`, `category`, "
-        "`regulation`, `minSpaces`) se aplican como AND.\n\n"
-        "`q` es accent-insensitive y busca en `name`, `streetName`, "
-        "`streetType`, `district` y `neighborhood` (mismo subset que el "
-        "buscador del cliente Flutter)."
+        "Devuelve un envelope paginado `{items,total,limit,offset,truncated,facets}`. "
+        f"Las consultas se resuelven con RediSearch (`{SEARCH_INDEX_NAME}`) sobre "
+        "los hashes `parking:{id}`. OR dentro de cada filtro repetible y AND "
+        "entre dimensiones distintas."
     ),
-    responses={
-        200: {
-            "content": {
-                "application/json": {
-                    "example": [_PLACE_POINT_EXAMPLE, _PLACE_POLYGON_EXAMPLE]
-                }
-            }
-        }
-    },
+    responses={200: {"content": {"application/json": {"example": _LIST_ENVELOPE_EXAMPLE}}}},
 )
 def list_parkings(
-    ids: Optional[list[str]] = Query(
-        None,
-        description="Filtra por id (repetible). Si se pasa, los demás filtros operan sobre ese subconjunto.",
-    ),
-    q: Optional[str] = Query(
-        None,
-        description="Búsqueda libre (accent-insensitive) sobre name/streetName/streetType/district/neighborhood.",
-        examples=["dalia", "polit", "centro"],
-    ),
-    vehicleType: Optional[list[ParkingVehicleType]] = Query(
-        None,
-        description="Filtra por tipo de vehículo (repetible). OR dentro del param.",
-    ),
-    category: Optional[list[ParkingCategory]] = Query(
-        None,
-        description="Filtra por categoría (repetible). OR dentro del param.",
-    ),
-    regulation: Optional[list[ParkingRegulation]] = Query(
-        None,
-        description="Filtra por régimen (repetible). OR dentro del param.",
-    ),
-    minSpaces: int = Query(
-        0,
-        ge=0,
-        description="Plazas mínimas. Aparcamientos sin `totalSpaces` se descartan si > 0.",
-    ),
+    response: Response,
+    ids: Optional[list[str]] = Query(None, description="Filtra por id, repetible."),
+    q: Optional[str] = Query(None, description="Búsqueda libre accent-insensitive."),
+    vehicleType: Optional[list[ParkingVehicleType]] = Query(None),
+    category: Optional[list[ParkingCategory]] = Query(None),
+    regulation: Optional[list[ParkingRegulation]] = Query(None),
+    dataset: Optional[list[str]] = Query(None, description="Dataset de origen, repetible."),
+    minSpaces: int = Query(0, ge=0),
+    offset: int = Query(0, ge=0),
+    limit: Optional[int] = Query(None, ge=0),
+    includeFacets: bool = Query(False, description="Incluye facets globales del catálogo."),
     rdb: redis.Redis = Depends(get_redis),
 ):
+    effective_limit = _resolve_limit(limit)
+    effective_offset = _resolve_offset(offset)
     try:
-        # Optimización: si vienen ids explícitos, cargamos solo esos en lugar
-        # de escanear todo el catálogo y filtrar después.
-        target_ids = ids if ids else _scan_all_ids(rdb)
-        places = _load_places(rdb, target_ids)
+        result = search_parkings(
+            rdb,
+            ids=ids,
+            q=q,
+            vehicle_types=vehicleType,
+            categories=category,
+            regulations=regulation,
+            datasets=dataset,
+            min_spaces=minSpaces,
+            offset=effective_offset,
+            limit=effective_limit,
+        )
+        facets = get_facets(rdb) if includeFacets else None
     except redis.ConnectionError as exc:
         raise raise_redis_503(exc) from exc
+    except SearchIndexError as exc:
+        raise _search_error(exc) from exc
 
-    return apply_filters(
-        places,
-        # `ids` ya restringió la carga; no hace falta refiltrar.
-        ids=None,
-        normalized_q=normalize_for_search(q) if q else None,
-        vehicle_types=set(vehicleType) if vehicleType else None,
-        categories=set(category) if category else None,
-        regulations=set(regulation) if regulation else None,
-        min_spaces=minSpaces,
+    _set_pagination_headers(
+        response,
+        total=result.total,
+        limit=effective_limit,
+        offset=effective_offset,
+    )
+    return _to_envelope(
+        items=result.items,
+        total=result.total,
+        limit=effective_limit,
+        offset=effective_offset,
+        facets=facets,
     )
 
 
-# ============================================================
-# GET /parkings/nearby — búsqueda por proximidad con GEOSEARCH
-# ============================================================
-
 @router.get(
     "/nearby",
-    response_model=list[ParkingPlaceNearbyOut],
+    response_model=ParkingPlacesNearbyEnvelopeOut,
     summary="Aparcamientos dentro de un radio, ordenados por distancia",
     description=(
-        "Resuelve por `GEOSEARCH` sobre `geo:parkings` (centroide del polígono "
-        "/ punto medio de la línea para no-points) y luego aplica los mismos "
-        "filtros que `GET /parkings`.\n\n"
-        "El campo extra `distanceMeters` viene en metros y NO forma parte del "
-        "contrato `ParkingPlace.fromJson` — el cliente puede ignorarlo.\n\n"
-        "`radius` se admite como alias legacy de `radiusMeters` (deprecado). "
-        "Si llegan ambos, `radiusMeters` gana.\n\n"
-        "La caché look-aside (`cache:nearby:*`, header `X-Cache: HIT|MISS|BYPASS`) "
-        "solo se usa cuando no se aplican filtros, para no inflar el espacio "
-        "de claves."
+        "Busca por `@location:[lng lat radio m]` en RediSearch y devuelve un "
+        "envelope paginado. `radius` se mantiene como alias legacy de "
+        "`radiusMeters`."
     ),
-    responses={
-        200: {
-            "content": {
-                "application/json": {"example": [_PLACE_NEARBY_EXAMPLE]}
-            }
-        }
-    },
+    responses={200: {"content": {"application/json": {"example": _NEARBY_ENVELOPE_EXAMPLE}}}},
 )
 def get_parkings_nearby(
     response: Response,
     lat: float = Query(..., description="Latitud del centro de búsqueda."),
     lng: float = Query(..., description="Longitud del centro de búsqueda."),
-    radiusMeters: Optional[float] = Query(
-        None,
-        ge=0,
-        description="Radio en metros. Default 1000. Alias preferido frente a `radius`.",
-    ),
-    radius: Optional[float] = Query(
-        None,
-        ge=0,
-        deprecated=True,
-        description="Alias legacy de `radiusMeters`. Mantener solo por compatibilidad.",
-    ),
-    ids: Optional[list[str]] = Query(None, description="Restringe a este subconjunto de ids."),
-    q: Optional[str] = Query(None, description="Búsqueda accent-insensitive (mismos campos que `/parkings`)."),
+    radiusMeters: Optional[float] = Query(None, ge=0, description="Radio en metros."),
+    radius: Optional[float] = Query(None, ge=0, deprecated=True),
+    ids: Optional[list[str]] = Query(None),
+    q: Optional[str] = Query(None),
     vehicleType: Optional[list[ParkingVehicleType]] = Query(None),
     category: Optional[list[ParkingCategory]] = Query(None),
     regulation: Optional[list[ParkingRegulation]] = Query(None),
+    dataset: Optional[list[str]] = Query(None),
     minSpaces: int = Query(0, ge=0),
+    offset: int = Query(0, ge=0),
+    limit: Optional[int] = Query(None, ge=0),
     rdb: redis.Redis = Depends(get_redis),
 ):
-    # Resolución de radio: explícito > legacy > default.
-    if radiusMeters is not None:
-        effective_radius = radiusMeters
-    elif radius is not None:
-        effective_radius = radius
-    else:
-        effective_radius = 1000.0
+    effective_radius = radiusMeters if radiusMeters is not None else (radius or 1000.0)
+    effective_limit = _resolve_limit(limit)
+    effective_offset = _resolve_offset(offset)
 
     has_filters = bool(
-        ids or q or vehicleType or category or regulation or minSpaces > 0
+        ids
+        or q
+        or vehicleType
+        or category
+        or regulation
+        or dataset
+        or minSpaces > 0
+        or limit is not None
+        or effective_offset > 0
     )
     cache_enabled = CACHE_NEARBY_TTL > 0 and not has_filters
     cache_key = f"{CACHE_NEARBY_PREFIX}{lat:.4f}:{lng:.4f}:{int(effective_radius)}"
@@ -288,93 +335,148 @@ def get_parkings_nearby(
             )
 
     try:
-        # GEOSEARCH devuelve [[member, distance], ...] ordenado por distancia.
-        results = rdb.geosearch(
-            GEO_KEY,
-            longitude=lng,
-            latitude=lat,
-            radius=effective_radius,
-            unit="m",
-            withdist=True,
-            sort="ASC",
+        result = search_nearby(
+            rdb,
+            lat=lat,
+            lng=lng,
+            radius_meters=effective_radius,
+            ids=ids,
+            q=q,
+            vehicle_types=vehicleType,
+            categories=category,
+            regulations=regulation,
+            datasets=dataset,
+            min_spaces=minSpaces,
+            offset=effective_offset,
+            limit=effective_limit,
         )
     except redis.ConnectionError as exc:
         raise raise_redis_503(exc) from exc
+    except SearchIndexError as exc:
+        raise _search_error(exc) from exc
 
-    results = results or []
-    ids_in_radius = [row[0] for row in results]
-    distance_by_id = {row[0]: float(row[1]) for row in results}
-
-    try:
-        places = _load_places(rdb, ids_in_radius)
-    except redis.ConnectionError as exc:
-        raise raise_redis_503(exc) from exc
-
-    filtered = apply_filters(
-        places,
-        ids=set(ids) if ids else None,
-        normalized_q=normalize_for_search(q) if q else None,
-        vehicle_types=set(vehicleType) if vehicleType else None,
-        categories=set(category) if category else None,
-        regulations=set(regulation) if regulation else None,
-        min_spaces=minSpaces,
+    envelope = _to_nearby_envelope(
+        items=result.items,
+        total=result.total,
+        limit=effective_limit,
+        offset=effective_offset,
     )
-
-    out = [
-        ParkingPlaceNearbyOut(
-            **place.model_dump(),
-            distanceMeters=distance_by_id[place.id],
-        )
-        for place in filtered
-    ]
-
     if cache_enabled:
         try:
-            payload = json.dumps([p.model_dump(mode="json") for p in out])
-            rdb.setex(cache_key, CACHE_NEARBY_TTL, payload)
+            rdb.setex(cache_key, CACHE_NEARBY_TTL, envelope.model_dump_json())
         except redis.ConnectionError:
-            logger.warning("No se pudo escribir caché %s (Redis no disponible)", cache_key)
+            logger.warning("No se pudo escribir caché %s", cache_key)
 
     response.headers["X-Cache"] = "MISS" if cache_enabled else "BYPASS"
-    return out
+    _set_pagination_headers(
+        response,
+        total=result.total,
+        limit=effective_limit,
+        offset=effective_offset,
+    )
+    return envelope
 
 
-# ============================================================
-# GET /parkings/categories — catálogo de categorías presentes
-# ============================================================
+@router.get(
+    "/in-bounds",
+    response_model=ParkingPlacesEnvelopeOut,
+    summary="Aparcamientos dentro de un viewport rectangular",
+    description=(
+        "Filtra por rango numérico indexado de `latitude` y `longitude`, pensado "
+        "para cargar solo lo visible en el mapa."
+    ),
+    responses={
+        200: {"content": {"application/json": {"example": _LIST_ENVELOPE_EXAMPLE}}},
+        400: {"description": "Bounding box inválido."},
+    },
+)
+def get_parkings_in_bounds(
+    response: Response,
+    minLat: float = Query(...),
+    minLng: float = Query(...),
+    maxLat: float = Query(...),
+    maxLng: float = Query(...),
+    vehicleType: Optional[list[ParkingVehicleType]] = Query(None),
+    category: Optional[list[ParkingCategory]] = Query(None),
+    regulation: Optional[list[ParkingRegulation]] = Query(None),
+    dataset: Optional[list[str]] = Query(None),
+    minSpaces: int = Query(0, ge=0),
+    offset: int = Query(0, ge=0),
+    limit: Optional[int] = Query(None, ge=0),
+    rdb: redis.Redis = Depends(get_redis),
+):
+    if minLat >= maxLat or minLng >= maxLng:
+        raise HTTPException(
+            status_code=400,
+            detail="bounds inválidos: minLat<maxLat y minLng<maxLng requerido",
+        )
+
+    effective_limit = _resolve_limit(limit)
+    effective_offset = _resolve_offset(offset)
+    try:
+        result = search_in_bounds(
+            rdb,
+            min_lat=minLat,
+            min_lng=minLng,
+            max_lat=maxLat,
+            max_lng=maxLng,
+            vehicle_types=vehicleType,
+            categories=category,
+            regulations=regulation,
+            datasets=dataset,
+            min_spaces=minSpaces,
+            offset=effective_offset,
+            limit=effective_limit,
+        )
+    except redis.ConnectionError as exc:
+        raise raise_redis_503(exc) from exc
+    except SearchIndexError as exc:
+        raise _search_error(exc) from exc
+
+    _set_pagination_headers(
+        response,
+        total=result.total,
+        limit=effective_limit,
+        offset=effective_offset,
+    )
+    return _to_envelope(
+        items=result.items,
+        total=result.total,
+        limit=effective_limit,
+        offset=effective_offset,
+    )
+
 
 @router.get(
     "/categories",
     response_model=list[ParkingCategory],
     summary="Categorías presentes en el catálogo",
-    description=(
-        "Devuelve la lista de `ParkingCategory` que tienen al menos un "
-        "aparcamiento en Redis, ordenadas por orden de declaración del enum "
-        "(idéntico a `LocalParkingRepository.getCategories` en Flutter)."
-    ),
-    responses={
-        200: {
-            "content": {
-                "application/json": {"example": _CATEGORIES_EXAMPLE}
-            }
-        }
-    },
+    responses={200: {"content": {"application/json": {"example": _CATEGORIES_EXAMPLE}}}},
 )
 def list_categories(rdb: redis.Redis = Depends(get_redis)):
     try:
-        all_ids = _scan_all_ids(rdb)
-        places = _load_places(rdb, all_ids)
+        facets = get_facets(rdb)
     except redis.ConnectionError as exc:
         raise raise_redis_503(exc) from exc
+    except SearchIndexError as exc:
+        raise _search_error(exc) from exc
+    return [cat for cat in ParkingCategory if facets.categories.get(cat.value, 0) > 0]
 
-    present = {p.category for p in places}
-    # Orden por declaración del enum: equivalente a `a.index.compareTo(b.index)`.
-    return [c for c in ParkingCategory if c in present]
 
+@router.get(
+    "/facets",
+    response_model=ParkingFacetsOut,
+    summary="Conteos del catálogo por categoría / vehículo / régimen / dataset",
+    responses={200: {"content": {"application/json": {"example": _FACETS_EXAMPLE}}}},
+)
+def list_facets(rdb: redis.Redis = Depends(get_redis)):
+    try:
+        return get_facets(rdb)
+    except redis.ConnectionError as exc:
+        raise raise_redis_503(exc) from exc
+    except SearchIndexError as exc:
+        raise _search_error(exc) from exc
 
-# ============================================================
-# GET /parkings/{parking_id} — detalle (DEBE ir al final del archivo)
-# ============================================================
 
 @router.get(
     "/{parking_id}",
@@ -382,11 +484,7 @@ def list_categories(rdb: redis.Redis = Depends(get_redis)):
     summary="Detalle de un aparcamiento",
     description="Devuelve un único `ParkingPlace` por id. 404 si no existe.",
     responses={
-        200: {
-            "content": {
-                "application/json": {"example": _PLACE_POLYGON_EXAMPLE}
-            }
-        },
+        200: {"content": {"application/json": {"example": _PLACE_POLYGON_EXAMPLE}}},
         404: {"description": "El aparcamiento no existe en Redis."},
     },
 )

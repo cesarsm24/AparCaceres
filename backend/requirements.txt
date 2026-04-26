@@ -1,3 +1,4 @@
+# Runtime: Python >=3.11. Producción requiere Redis Stack / RediSearch.
 annotated-doc==0.0.4
 annotated-types==0.7.0
 anyio==4.13.0

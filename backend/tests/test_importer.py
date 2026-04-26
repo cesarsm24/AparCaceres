@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import json
 
-from app.config import CACHE_NEARBY_PREFIX, GEO_KEY, PARKING_KEY_PREFIX
+from app.config import CACHE_NEARBY_PREFIX, PARKING_KEY_PREFIX
 from app.enums import (
     ParkingCategory,
     ParkingGeometryType,
@@ -24,13 +24,19 @@ from app.enums import (
     ParkingVehicleType,
 )
 from app.importer import (
+    SOURCE_REGISTRY,
     derive_stable_id,
     feature_to_place,
     place_from_redis_hash,
     place_to_redis_mapping,
     representative_point,
     run_import,
+    run_import_sources,
 )
+
+
+_PROFILE_APARCAMIENTOS = SOURCE_REGISTRY["aparcamientos.geojson"]
+_PROFILE_LINEA = SOURCE_REGISTRY["aparcamientos_en_linea.geojson"]
 
 
 # ============================================================
@@ -77,7 +83,6 @@ def _polygon_feature() -> dict:
             "streetType": "CALLE",
             "district": "OESTE",
             "neighborhood": "EL JUNQUILLO",
-            "sourceDataset": "aparcamientos_en_linea",
             "URL": "http://sig.caceres.es/serweb/fichasig/fichatoponimia.php?mslink=5500",
         },
     }
@@ -103,34 +108,81 @@ def _line_string_feature() -> dict:
     }
 
 
+# Helper para los tests que usan un único source. Empaqueta la lista en el
+# formato que espera `run_import_sources`.
+def _import_with_source(features, profile, rdb):
+    return run_import_sources([(features, profile)], rdb)
+
+
 # ============================================================
 # derive_stable_id
 # ============================================================
 
-def test_derive_stable_id_uses_mslink_from_url():
+def test_derive_stable_id_uses_mslink_namespaced_by_dataset():
+    """El id resultante incluye el namespace del dataset (sin colisiones entre
+    ficheros que reutilicen mslink)."""
     assert (
         derive_stable_id(
-            {"URL": "http://sig.caceres.es/.../fichatoponimia.php?mslink=1903"}
+            {"URL": "http://sig.caceres.es/.../fichatoponimia.php?mslink=1903"},
+            source=_PROFILE_APARCAMIENTOS,
         )
-        == "aparcamiento-1903"
+        == "aparcamientos:1903"
     )
 
 
 def test_derive_stable_id_accepts_lowercase_url_key():
     assert (
-        derive_stable_id({"url": "https://example.org/x?mslink=42&foo=bar"})
-        == "aparcamiento-42"
+        derive_stable_id(
+            {"url": "https://example.org/x?mslink=42&foo=bar"},
+            source=_PROFILE_LINEA,
+        )
+        == "aparcamientos_en_linea:42"
     )
 
 
-def test_derive_stable_id_falls_back_to_explicit_id():
-    assert derive_stable_id({"id": "custom-123"}) == "custom-123"
-    assert derive_stable_id({"ID": "  custom-456  "}) == "custom-456"
+def test_derive_stable_id_namespaces_explicit_id():
+    """`id`/`ID` explícito gana sobre el hash, pero también se namespaceea."""
+    assert (
+        derive_stable_id({"id": "custom-123"}, source=_PROFILE_LINEA)
+        == "aparcamientos_en_linea:custom-123"
+    )
+    assert (
+        derive_stable_id({"ID": "  custom-456  "}, source=_PROFILE_LINEA)
+        == "aparcamientos_en_linea:custom-456"
+    )
 
 
-def test_derive_stable_id_returns_none_when_no_signal():
+def test_derive_stable_id_returns_none_without_source():
+    """Sin source no podemos namespacear, así que mslink/URL devuelve None.
+
+    Esto fuerza al importador a pasar siempre un `SourceProfile` y elimina la
+    posibilidad de generar ids globales `aparcamiento-{mslink}` que pisarían
+    datos entre datasets distintos."""
+    assert derive_stable_id({"URL": "?mslink=1903"}) is None
     assert derive_stable_id({}) is None
-    assert derive_stable_id({"URL": "http://example.org/no-mslink-here"}) is None
+
+
+def test_derive_stable_id_returns_none_when_no_signal_with_source():
+    """Sin mslink, sin id explícito y sin geometría no podemos generar fallback."""
+    assert (
+        derive_stable_id({"URL": "http://example.org/no-mslink-here"}, source=_PROFILE_LINEA)
+        is None
+    )
+
+
+def test_derive_stable_id_namespaces_collide_only_within_dataset():
+    """Mismo `mslink=3` en dos ficheros distintos -> ids distintos."""
+    a = derive_stable_id(
+        {"URL_FICHA": "?mslink=3"},
+        source=SOURCE_REGISTRY["parking_bicis.geojson"],
+    )
+    b = derive_stable_id(
+        {"URL_FICHA": "?mslink=3"},
+        source=SOURCE_REGISTRY["parking_motos_areas.geojson"],
+    )
+    assert a == "parking_bicis:3"
+    assert b == "parking_motos_areas:3"
+    assert a != b
 
 
 # ============================================================
@@ -180,9 +232,9 @@ def test_representative_point_returns_none_for_degenerate_polygon():
 # ============================================================
 
 def test_feature_to_place_point_maps_municipal_properties():
-    place = feature_to_place(_point_feature())
+    place = feature_to_place(_point_feature(), source=_PROFILE_APARCAMIENTOS)
     assert place is not None
-    assert place.id == "aparcamiento-1903"
+    assert place.id == "aparcamientos:1903"
     assert place.name == "Escuela Politecnica"
     assert place.geometryType == ParkingGeometryType.POINT
     # POINT no almacena coordinates en el contrato móvil.
@@ -197,11 +249,14 @@ def test_feature_to_place_point_maps_municipal_properties():
     # `NUCLEO` se mapea a `district`; URL al campo `urlFicha`.
     assert place.district == "CÁCERES"
     assert place.urlFicha == _point_feature()["properties"]["URL"]
+    # `sourceDataset` viene del profile, no del feature.
+    assert place.sourceDataset == "aparcamientos"
 
 
 def test_feature_to_place_polygon_preserves_coordinates_and_total_spaces():
-    place = feature_to_place(_polygon_feature())
+    place = feature_to_place(_polygon_feature(), source=_PROFILE_LINEA)
     assert place is not None
+    assert place.id == "aparcamientos_en_linea:5500"
     assert place.geometryType == ParkingGeometryType.POLYGON
     assert place.totalSpaces == 16
     assert place.category == ParkingCategory.STREET_LINE
@@ -215,8 +270,9 @@ def test_feature_to_place_polygon_preserves_coordinates_and_total_spaces():
 
 
 def test_feature_to_place_line_string_keeps_track_coordinates():
-    place = feature_to_place(_line_string_feature())
+    place = feature_to_place(_line_string_feature(), source=_PROFILE_LINEA)
     assert place is not None
+    assert place.id == "aparcamientos_en_linea:7700"
     assert place.geometryType == ParkingGeometryType.LINE_STRING
     assert place.coordinates == [
         (-6.4022597, 39.4775947),
@@ -226,19 +282,24 @@ def test_feature_to_place_line_string_keeps_track_coordinates():
 
 
 def test_feature_to_place_returns_none_for_unsupported_geometry():
+    """`GeometryCollection` no se soporta — el contrato móvil expone una
+    geometría por place. Multi* sí se soporta vía colapso a su variante
+    simple (ver tests de MultiPolygon)."""
     assert (
         feature_to_place(
             {
                 "type": "Feature",
-                "geometry": {"type": "MultiPolygon", "coordinates": []},
+                "geometry": {"type": "GeometryCollection", "geometries": []},
                 "properties": {"URL": "?mslink=1"},
-            }
+            },
+            source=_PROFILE_LINEA,
         )
         is None
     )
 
 
 def test_feature_to_place_returns_none_when_id_cannot_be_derived():
+    # Sin source ni id explícito → no hay forma de generar un id estable.
     assert (
         feature_to_place(
             {
@@ -256,7 +317,7 @@ def test_feature_to_place_returns_none_when_id_cannot_be_derived():
 # ============================================================
 
 def test_place_to_redis_mapping_omits_none_fields_and_serializes_coordinates():
-    place = feature_to_place(_polygon_feature())
+    place = feature_to_place(_polygon_feature(), source=_PROFILE_LINEA)
     assert place is not None
     mapping = place_to_redis_mapping(place)
 
@@ -272,13 +333,17 @@ def test_place_to_redis_mapping_omits_none_fields_and_serializes_coordinates():
     coords = json.loads(mapping["coordinates"])
     assert coords[0][0] == [-6.3994515, 39.4670139]
 
+    # Campos indexables para Redis Stack / RediSearch.
+    assert mapping["location"].startswith("-6.399")
+    assert "calle dalia" in mapping["searchText"]
+
     # Campos None del contrato no aparecen en el hash.
     assert "imageUrl" not in mapping
     assert "management" not in mapping
 
 
 def test_place_to_redis_mapping_skips_coordinates_for_point():
-    place = feature_to_place(_point_feature())
+    place = feature_to_place(_point_feature(), source=_PROFILE_APARCAMIENTOS)
     assert place is not None
     mapping = place_to_redis_mapping(place)
     assert "coordinates" not in mapping
@@ -287,8 +352,13 @@ def test_place_to_redis_mapping_skips_coordinates_for_point():
 
 def test_place_round_trip_through_redis_hash_preserves_contract():
     """El round-trip por el hash no debe perder ningún campo del contrato."""
-    for build in (_point_feature, _polygon_feature, _line_string_feature):
-        original = feature_to_place(build())
+    cases = (
+        (_point_feature, _PROFILE_APARCAMIENTOS),
+        (_polygon_feature, _PROFILE_LINEA),
+        (_line_string_feature, _PROFILE_LINEA),
+    )
+    for build, profile in cases:
+        original = feature_to_place(build(), source=profile)
         assert original is not None
 
         mapping = place_to_redis_mapping(original)
@@ -304,40 +374,43 @@ def test_place_round_trip_through_redis_hash_preserves_contract():
 # run_import (orquestador completo contra fake_redis)
 # ============================================================
 
-def _all_geometries_features() -> list[dict]:
-    return [_point_feature(), _polygon_feature(), _line_string_feature()]
+def _all_geometries_sources() -> list[tuple[list[dict], object]]:
+    """Pareja (features, profile) para los 3 tipos geométricos del fixture."""
+    return [
+        ([_point_feature()], _PROFILE_APARCAMIENTOS),
+        ([_polygon_feature(), _line_string_feature()], _PROFILE_LINEA),
+    ]
 
 
 def test_run_import_persists_full_contract_for_each_geometry(fake_redis):
-    summary = run_import(_all_geometries_features(), fake_redis)
+    summary = run_import_sources(_all_geometries_sources(), fake_redis)
 
     assert summary["status"] == "ok"
     assert summary["imported"] == 3
     assert summary["skipped"] == 0
-    assert summary["geo_key"] == GEO_KEY
-
-    # Los 3 features deben quedar indexados en el sorted set geoespacial.
-    assert set(fake_redis.geo[GEO_KEY].keys()) == {
-        "aparcamiento-1903",
-        "aparcamiento-5500",
-        "aparcamiento-7700",
-    }
 
     # Cada hash contiene los campos clave del contrato y se puede reconstruir.
-    for parking_id in ("aparcamiento-1903", "aparcamiento-5500", "aparcamiento-7700"):
+    expected_ids = (
+        "aparcamientos:1903",
+        "aparcamientos_en_linea:5500",
+        "aparcamientos_en_linea:7700",
+    )
+    for parking_id in expected_ids:
         hash_data = fake_redis.hgetall(f"{PARKING_KEY_PREFIX}{parking_id}")
         assert hash_data["id"] == parking_id
         # Campos obligatorios del contrato presentes y serializados como string.
         for required in ("name", "category", "vehicleType", "regulation",
-                         "geometryType", "latitude", "longitude"):
+                         "geometryType", "latitude", "longitude", "location", "searchText"):
             assert required in hash_data, f"{parking_id} sin {required}"
         # Reconstrucción coherente con el feature original.
         place_from_redis_hash(hash_data)
 
 
 def test_run_import_polygon_stores_coordinates_as_parseable_json(fake_redis):
-    run_import([_polygon_feature()], fake_redis)
-    hash_data = fake_redis.hgetall(f"{PARKING_KEY_PREFIX}aparcamiento-5500")
+    run_import_sources([([_polygon_feature()], _PROFILE_LINEA)], fake_redis)
+    hash_data = fake_redis.hgetall(
+        f"{PARKING_KEY_PREFIX}aparcamientos_en_linea:5500"
+    )
     assert hash_data["geometryType"] == "polygon"
     assert hash_data["totalSpaces"] == "16"
     coords = json.loads(hash_data["coordinates"])
@@ -345,8 +418,10 @@ def test_run_import_polygon_stores_coordinates_as_parseable_json(fake_redis):
 
 
 def test_run_import_line_string_stores_track(fake_redis):
-    run_import([_line_string_feature()], fake_redis)
-    hash_data = fake_redis.hgetall(f"{PARKING_KEY_PREFIX}aparcamiento-7700")
+    run_import_sources([([_line_string_feature()], _PROFILE_LINEA)], fake_redis)
+    hash_data = fake_redis.hgetall(
+        f"{PARKING_KEY_PREFIX}aparcamientos_en_linea:7700"
+    )
     assert hash_data["geometryType"] == "line_string"
     coords = json.loads(hash_data["coordinates"])
     assert coords == [
@@ -357,8 +432,10 @@ def test_run_import_line_string_stores_track(fake_redis):
 
 
 def test_run_import_point_does_not_store_coordinates_field(fake_redis):
-    run_import([_point_feature()], fake_redis)
-    hash_data = fake_redis.hgetall(f"{PARKING_KEY_PREFIX}aparcamiento-1903")
+    run_import_sources([([_point_feature()], _PROFILE_APARCAMIENTOS)], fake_redis)
+    hash_data = fake_redis.hgetall(
+        f"{PARKING_KEY_PREFIX}aparcamientos:1903"
+    )
     assert hash_data["geometryType"] == "point"
     assert "coordinates" not in hash_data
 
@@ -366,17 +443,17 @@ def test_run_import_point_does_not_store_coordinates_field(fake_redis):
 def test_run_import_is_idempotent_and_clears_stale_entries(fake_redis):
     """Reimportar con un dataset distinto debe dejar Redis solo con lo nuevo."""
     # Primera carga: los 3 features.
-    run_import(_all_geometries_features(), fake_redis)
-    assert f"{PARKING_KEY_PREFIX}aparcamiento-1903" in fake_redis.hashes
+    run_import_sources(_all_geometries_sources(), fake_redis)
+    assert f"{PARKING_KEY_PREFIX}aparcamientos:1903" in fake_redis.hashes
 
     # Segunda carga: solo el LineString. El resto debe desaparecer.
-    summary = run_import([_line_string_feature()], fake_redis)
+    summary = run_import_sources(
+        [([_line_string_feature()], _PROFILE_LINEA)], fake_redis
+    )
     assert summary["imported"] == 1
 
     surviving = [k for k in fake_redis.hashes if k.startswith(PARKING_KEY_PREFIX)]
-    assert surviving == [f"{PARKING_KEY_PREFIX}aparcamiento-7700"]
-    # El índice geo solo conserva el nuevo miembro.
-    assert list(fake_redis.geo[GEO_KEY].keys()) == ["aparcamiento-7700"]
+    assert surviving == [f"{PARKING_KEY_PREFIX}aparcamientos_en_linea:7700"]
 
 
 def test_run_import_invalidates_nearby_cache(fake_redis):
@@ -386,7 +463,7 @@ def test_run_import_invalidates_nearby_cache(fake_redis):
     # Y una clave ajena que NO debe tocarse.
     fake_redis.setex("other:key", 60, "stay")
 
-    summary = run_import(_all_geometries_features(), fake_redis)
+    summary = run_import_sources(_all_geometries_sources(), fake_redis)
 
     assert summary["cache_invalidated"] == 2
     assert not any(
@@ -395,41 +472,64 @@ def test_run_import_invalidates_nearby_cache(fake_redis):
     assert fake_redis.get("other:key") == "stay"
 
 
+def test_run_import_disambiguates_duplicate_municipal_ids(fake_redis):
+    first = _point_feature()
+    second = _point_feature()
+    second["properties"] = dict(second["properties"])
+    second["properties"]["NOMBRE"] = "Duplicado"
+    second["geometry"] = {"type": "Point", "coordinates": [-6.34, 39.47]}
+
+    summary = run_import_sources([([first, second], _PROFILE_APARCAMIENTOS)], fake_redis)
+
+    assert summary["imported"] == 2
+    assert summary["ids_disambiguated"] == 1
+    assert f"{PARKING_KEY_PREFIX}aparcamientos:1903" in fake_redis.hashes
+    assert f"{PARKING_KEY_PREFIX}aparcamientos:1903:2" in fake_redis.hashes
+
+
 def test_run_import_skips_invalid_features_without_failing(fake_redis):
-    features = [
-        _point_feature(),
-        # geometría no soportada
+    """Features con geometría rota se cuentan como skipped sin abortar."""
+    bad_features = [
+        # Geometría no soportada (GeometryCollection no entra al contrato).
         {
             "type": "Feature",
-            "geometry": {"type": "MultiPolygon", "coordinates": []},
+            "geometry": {"type": "GeometryCollection", "geometries": []},
             "properties": {"URL": "?mslink=999"},
         },
-        # sin id estable derivable
+        # Feature sin geometría: descarta limpiamente.
         {
             "type": "Feature",
-            "geometry": {"type": "Point", "coordinates": [0, 0]},
-            "properties": {"NOMBRE": "huérfano"},
+            "geometry": None,
+            "properties": {"id": "broken"},
         },
     ]
-    summary = run_import(features, fake_redis)
+    summary = run_import_sources(
+        [
+            ([_point_feature()], _PROFILE_APARCAMIENTOS),
+            (bad_features, _PROFILE_LINEA),
+        ],
+        fake_redis,
+    )
     assert summary["imported"] == 1
     assert summary["skipped"] == 2
-    assert list(fake_redis.geo[GEO_KEY].keys()) == ["aparcamiento-1903"]
+    assert list(fake_redis.hashes.keys()) == [f"{PARKING_KEY_PREFIX}aparcamientos:1903"]
 
 
-def test_run_import_indexes_each_place_at_its_representative_point(fake_redis):
-    run_import(_all_geometries_features(), fake_redis)
-    geo = fake_redis.geo[GEO_KEY]
+def test_run_import_stores_representative_location_for_search(fake_redis):
+    run_import_sources(_all_geometries_sources(), fake_redis)
 
     # POINT: lat/lon = la coordenada original.
-    lon, lat = geo["aparcamiento-1903"]
+    point_hash = fake_redis.hgetall(f"{PARKING_KEY_PREFIX}aparcamientos:1903")
+    lon, lat = (float(v) for v in point_hash["location"].split(",", 1))
     assert (lon, lat) == (-6.34204232, 39.47848638)
 
     # POLYGON: dentro del bounding box del primer anillo.
-    lon, lat = geo["aparcamiento-5500"]
+    polygon_hash = fake_redis.hgetall(f"{PARKING_KEY_PREFIX}aparcamientos_en_linea:5500")
+    lon, lat = (float(v) for v in polygon_hash["location"].split(",", 1))
     assert -6.40 < lon < -6.39
     assert 39.46 < lat < 39.47
 
     # LINE_STRING: el punto medio por índice.
-    lon, lat = geo["aparcamiento-7700"]
+    line_hash = fake_redis.hgetall(f"{PARKING_KEY_PREFIX}aparcamientos_en_linea:7700")
+    lon, lat = (float(v) for v in line_hash["location"].split(",", 1))
     assert (lon, lat) == (-6.4022522, 39.4775983)

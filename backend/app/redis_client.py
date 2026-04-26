@@ -5,6 +5,7 @@ import redis
 from fastapi import FastAPI, HTTPException, Request
 
 from .config import REDIS_DB, REDIS_HOST, REDIS_PORT
+from .search import SearchIndexError, ensure_search_index
 
 logger = logging.getLogger(__name__)
 
@@ -28,6 +29,10 @@ async def lifespan(app: FastAPI):
         # los endpoints devolverán 503 cuando intenten usarlo.
         client.ping()
         logger.info("Conexión a Redis establecida en %s:%s (db=%s)", REDIS_HOST, REDIS_PORT, REDIS_DB)
+        try:
+            ensure_search_index(client)
+        except SearchIndexError as exc:
+            logger.warning("Redis Stack / RediSearch no disponible: %s", exc)
     except redis.ConnectionError as exc:
         logger.warning("No se pudo conectar a Redis al arrancar: %s", exc)
 

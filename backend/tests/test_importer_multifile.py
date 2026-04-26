@@ -5,9 +5,8 @@ Cubre las garantías que añade el procesamiento por lotes:
 - Procesa todos los `*.geojson` del directorio de datos.
 - Tolera claves heterogéneas entre ficheros (`CODIGO_VIA` vs `CODIGOVIA`,
   `NOMBREVIA` vs `NOMBRE_VIA`, etc.) sin fallar.
-- Infiere `category`/`vehicleType`/`regulation` del nombre del fichero
-  cuando el feature no los aporta (caso límite: `parkings_en_superficie.geojson`
-  con `properties: {}`).
+- Infiere `category`/`vehicleType`/`regulation` del nombre del fichero cuando
+  el feature no los aporta.
 - Genera ids deterministas y únicos cuando no hay `mslink` (`{prefix}-{hash}`).
 - Clasifica URLs heterogéneas (`URL_FOTO` -> imageUrl, `fichacalle.php` -> urlVia,
   `mslink=` -> urlFicha, `*.JPG` -> imageUrl).
@@ -22,7 +21,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from app.config import GEO_KEY, PARKING_KEY_PREFIX
+from app.config import PARKING_KEY_PREFIX
 from app.enums import (
     ParkingCategory,
     ParkingGeometryType,
@@ -84,13 +83,12 @@ def _point(lon: float, lat: float, properties: dict | None = None):
 # Registry / profile_for
 # ============================================================
 
-def test_source_registry_covers_all_known_files():
+def test_source_registry_covers_all_active_files():
     expected = {
         "aparcamientos.geojson",
         "parkings.geojson",
         "aparcamientos_en_bateria.geojson",
         "aparcamientos_en_linea.geojson",
-        "parkings_en_superficie.geojson",
         "zona_azul.geojson",
         "carga_descarga.geojson",
         "movilidad_reducida.geojson",
@@ -99,6 +97,14 @@ def test_source_registry_covers_all_known_files():
         "parking_motos_puntos.geojson",
     }
     assert expected.issubset(SOURCE_REGISTRY.keys())
+
+
+def test_source_registry_excludes_parkings_en_superficie():
+    """`parkings_en_superficie.geojson` no es un dataset activo: ni siquiera
+    debe tener profile, para que cualquier intento de importarlo caiga en
+    `profile_for` -> profile genérico Y luego sea filtrado por
+    `discover_geojson_files` antes de llegar al importer."""
+    assert "parkings_en_superficie.geojson" not in SOURCE_REGISTRY
 
 
 def test_profile_for_known_file_returns_registered_profile():
@@ -122,15 +128,15 @@ def test_profile_for_unknown_file_returns_generic_with_stem():
 # ============================================================
 
 def test_feature_with_empty_properties_inherits_profile_defaults():
-    """`parkings_en_superficie.geojson` llega con `properties: {}`. Sin profile
-    esto era un descarte (sin id derivable); con profile produce un place
+    """`carga_descarga.geojson` y `aparcamientos_en_linea.geojson` no siempre
+    incluyen `category`/`regulation`. Con profile producen un place
     completamente válido y el contrato lo guarda sin huecos."""
     feat = _line_string([
         [-6.401, 39.477],
         [-6.402, 39.478],
         [-6.403, 39.479],
     ])
-    profile = SOURCE_REGISTRY["parkings_en_superficie.geojson"]
+    profile = SOURCE_REGISTRY["aparcamientos_en_linea.geojson"]
 
     place = feature_to_place(feat, source=profile)
     assert place is not None
@@ -250,8 +256,8 @@ def test_parkings_legacy_uses_denominaci_truncated_field():
     # parkings.geojson mapea a paid_parking + paid (parkings públicos de pago).
     assert place.category == ParkingCategory.PAID_PARKING
     assert place.regulation == ParkingRegulation.PAID
-    # Mslink prevalece sobre el id-hash del profile.
-    assert place.id == "aparcamiento-1882"
+    # Mslink prevalece sobre el id-hash del profile, namespaced por dataset.
+    assert place.id == "parkings:1882"
 
 
 # ============================================================
@@ -289,7 +295,7 @@ def test_url_classification_routes_fichacalle_to_urlvia():
 # ============================================================
 
 def test_derive_stable_id_falls_back_to_hash_when_source_present():
-    profile = SOURCE_REGISTRY["parkings_en_superficie.geojson"]
+    profile = SOURCE_REGISTRY["aparcamientos_en_linea.geojson"]
     coords = [[-6.40, 39.47], [-6.41, 39.48]]
     parking_id = derive_stable_id(
         {},  # properties vacías
@@ -298,14 +304,15 @@ def test_derive_stable_id_falls_back_to_hash_when_source_present():
         raw_coords=coords,
     )
     assert parking_id is not None
-    assert parking_id.startswith("superficie-")
-    # 12 hex chars de hash + prefijo + guion.
-    assert len(parking_id.split("-", 1)[1]) == 12
+    # Formato: `{sourceDataset}:{sha256[:20]}`.
+    namespace, fp = parking_id.split(":", 1)
+    assert namespace == "aparcamientos_en_linea"
+    assert len(fp) == 20
 
 
 def test_hash_id_is_deterministic_across_calls():
     """Reimportar el mismo dataset debe producir los mismos ids → no duplica."""
-    profile = SOURCE_REGISTRY["parkings_en_superficie.geojson"]
+    profile = SOURCE_REGISTRY["aparcamientos_en_linea.geojson"]
     coords = [[-6.40, 39.47], [-6.41, 39.48]]
     a = derive_stable_id({}, source=profile,
                          geometry_type=ParkingGeometryType.LINE_STRING,
@@ -317,7 +324,7 @@ def test_hash_id_is_deterministic_across_calls():
 
 
 def test_hash_ids_differ_between_distinct_features_in_same_source():
-    profile = SOURCE_REGISTRY["parkings_en_superficie.geojson"]
+    profile = SOURCE_REGISTRY["aparcamientos_en_linea.geojson"]
     a = derive_stable_id(
         {}, source=profile,
         geometry_type=ParkingGeometryType.LINE_STRING,
@@ -336,7 +343,7 @@ def test_hash_ids_namespace_by_profile_prefix():
     coords = [[-6.40, 39.47], [-6.41, 39.48]]
     a = derive_stable_id(
         {},
-        source=SOURCE_REGISTRY["parkings_en_superficie.geojson"],
+        source=SOURCE_REGISTRY["aparcamientos_en_bateria.geojson"],
         geometry_type=ParkingGeometryType.LINE_STRING,
         raw_coords=coords,
     )
@@ -347,8 +354,8 @@ def test_hash_ids_namespace_by_profile_prefix():
         raw_coords=coords,
     )
     assert a is not None and b is not None
-    assert a.split("-")[0] == "superficie"
-    assert b.split("-")[0] == "linea"
+    assert a.split(":", 1)[0] == "aparcamientos_en_bateria"
+    assert b.split(":", 1)[0] == "aparcamientos_en_linea"
     assert a != b
 
 
@@ -364,6 +371,13 @@ def test_discover_geojson_files_lists_only_geojson_sorted(tmp_path: Path):
     assert [p.name for p in files] == ["a.geojson", "b.geojson"]
 
 
+def test_discover_geojson_files_excludes_surface_dataset(tmp_path: Path):
+    _write_geojson(tmp_path, "aparcamientos_en_linea.geojson", [])
+    _write_geojson(tmp_path, "parkings_en_superficie.geojson", [])
+    files = discover_geojson_files(tmp_path)
+    assert [p.name for p in files] == ["aparcamientos_en_linea.geojson"]
+
+
 def test_discover_geojson_files_returns_empty_for_missing_dir(tmp_path: Path):
     assert discover_geojson_files(tmp_path / "no-existe") == []
 
@@ -373,7 +387,7 @@ def test_discover_geojson_files_returns_empty_for_missing_dir(tmp_path: Path):
 # ============================================================
 
 def test_run_import_sources_imports_per_profile_defaults(fake_redis):
-    surface_features = [
+    linea_features = [
         _line_string([[-6.40, 39.47], [-6.41, 39.48]]),
         _line_string([[-6.42, 39.49], [-6.43, 39.50]]),
     ]
@@ -383,7 +397,7 @@ def test_run_import_sources_imports_per_profile_defaults(fake_redis):
 
     summary = run_import_sources(
         [
-            (surface_features, SOURCE_REGISTRY["parkings_en_superficie.geojson"]),
+            (linea_features, SOURCE_REGISTRY["aparcamientos_en_linea.geojson"]),
             (bici_features, SOURCE_REGISTRY["parking_bicis.geojson"]),
         ],
         fake_redis,
@@ -395,12 +409,11 @@ def test_run_import_sources_imports_per_profile_defaults(fake_redis):
 
     # Desglose por sourceDataset.
     by_dataset = {s["sourceDataset"]: s for s in summary["sources"]}
-    assert by_dataset["parkings_en_superficie"]["imported"] == 2
+    assert by_dataset["aparcamientos_en_linea"]["imported"] == 2
     assert by_dataset["parking_bicis"]["imported"] == 1
 
-    # En Redis: 3 hashes y 3 miembros geo.
+    # En Redis: 3 hashes canónicos `parking:{id}`.
     assert sum(1 for k in fake_redis.hashes if k.startswith(PARKING_KEY_PREFIX)) == 3
-    assert len(fake_redis.geo[GEO_KEY]) == 3
 
 
 def test_run_import_dir_processes_all_files_in_directory(tmp_path: Path, fake_redis):
@@ -408,7 +421,7 @@ def test_run_import_dir_processes_all_files_in_directory(tmp_path: Path, fake_re
     _write_geojson(tmp_path, "parking_bicis.geojson", [
         _point(-6.37, 39.47, {"NOMBRE_VIA": "COLON", "TIPO_VIA": "CALLE", "PLAZAS": "5"}),
     ])
-    _write_geojson(tmp_path, "parkings_en_superficie.geojson", [
+    _write_geojson(tmp_path, "aparcamientos_en_linea.geojson", [
         _line_string([[-6.40, 39.47], [-6.41, 39.48]]),
         _line_string([[-6.42, 39.49], [-6.43, 39.50]]),
     ])
@@ -426,18 +439,18 @@ def test_run_import_dir_processes_all_files_in_directory(tmp_path: Path, fake_re
     # Comprobamos que cada fichero contribuyó con el contrato esperado.
     by_dataset = {s["sourceDataset"]: s for s in summary["sources"]}
     assert by_dataset["parking_bicis"]["imported"] == 1
-    assert by_dataset["parkings_en_superficie"]["imported"] == 2
+    assert by_dataset["aparcamientos_en_linea"]["imported"] == 2
     assert by_dataset["zona_azul"]["imported"] == 1
 
     # Y verificamos los enums por hash en Redis (al menos uno por dataset).
-    surface_keys = [
+    linea_keys = [
         k for k in fake_redis.hashes
-        if k.startswith(PARKING_KEY_PREFIX) and "superficie" in k
+        if k.startswith(PARKING_KEY_PREFIX) and "aparcamientos_en_linea" in k
     ]
-    assert surface_keys
-    surface_place = place_from_redis_hash(fake_redis.hgetall(surface_keys[0]))
-    assert surface_place.sourceDataset == "parkings_en_superficie"
-    assert surface_place.geometryType == ParkingGeometryType.LINE_STRING
+    assert linea_keys
+    linea_place = place_from_redis_hash(fake_redis.hgetall(linea_keys[0]))
+    assert linea_place.sourceDataset == "aparcamientos_en_linea"
+    assert linea_place.geometryType == ParkingGeometryType.LINE_STRING
 
 
 def test_run_import_dir_handles_unknown_filename_gracefully(tmp_path: Path, fake_redis):
@@ -474,7 +487,7 @@ def test_run_import_dir_skips_corrupt_files(tmp_path: Path, fake_redis):
 
 def test_run_import_dir_is_idempotent(tmp_path: Path, fake_redis):
     """Reimportar dos veces deja Redis con el mismo contenido (no duplica)."""
-    _write_geojson(tmp_path, "parkings_en_superficie.geojson", [
+    _write_geojson(tmp_path, "aparcamientos_en_linea.geojson", [
         _line_string([[-6.40, 39.47], [-6.41, 39.48]]),
         _line_string([[-6.42, 39.49], [-6.43, 39.50]]),
     ])
@@ -520,7 +533,7 @@ def test_imported_features_round_trip_through_redis_hash(tmp_path: Path, fake_re
             "URL_FOTO": "https://sig.caceres.es/foto.jpg",
         }),
     ])
-    _write_geojson(tmp_path, "parkings_en_superficie.geojson", [
+    _write_geojson(tmp_path, "aparcamientos_en_linea.geojson", [
         _line_string([[-6.40, 39.47], [-6.41, 39.48], [-6.42, 39.49]]),
     ])
 

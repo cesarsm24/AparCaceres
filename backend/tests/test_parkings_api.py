@@ -34,6 +34,14 @@ def _assert_place_shape(place: dict) -> None:
     )
 
 
+def _items(response) -> list[dict]:
+    """Extrae `items` del envelope paginado."""
+    body = response.json()
+    assert set(body.keys()) == {"items", "total", "limit", "offset", "truncated", "facets"}
+    assert isinstance(body["items"], list)
+    return body["items"]
+
+
 # ============================================================
 # GET /parkings
 # ============================================================
@@ -43,17 +51,21 @@ def test_list_parkings_returns_full_catalog_with_contract_shape(seeded_client):
     assert response.status_code == 200
 
     body = response.json()
-    assert isinstance(body, list)
+    assert isinstance(body, dict)
     # El dataset sintético tiene 7 places (todos con mslink).
-    assert len(body) == 7
-    for place in body:
+    assert body["total"] == 7
+    assert body["limit"] == 100
+    assert body["offset"] == 0
+    assert body["truncated"] is False
+    assert len(body["items"]) == 7
+    for place in body["items"]:
         _assert_place_shape(place)
 
 
 def test_list_parkings_filters_by_q_accent_insensitive(seeded_client):
     response = seeded_client.get("/parkings", params={"q": "politecnica"})
     assert response.status_code == 200
-    names = [p["name"] for p in response.json()]
+    names = [p["name"] for p in _items(response)]
     assert names == ["Escuela Politécnica"]
 
 
@@ -61,8 +73,8 @@ def test_list_parkings_q_matches_street_and_district_fields(seeded_client):
     # "centro" aparece en district/neighborhood de Obispo Galarza y en district
     # de Calle Colon.
     response = seeded_client.get("/parkings", params={"q": "centro"})
-    ids = sorted(p["id"] for p in response.json())
-    assert ids == ["aparcamiento-2001", "aparcamiento-9200"]
+    ids = sorted(p["id"] for p in _items(response))
+    assert ids == ["parking_bicis:9200", "parkings:2001"]
 
 
 def test_list_parkings_filters_by_repeated_vehicle_type(seeded_client):
@@ -71,7 +83,7 @@ def test_list_parkings_filters_by_repeated_vehicle_type(seeded_client):
         params=[("vehicleType", "bike"), ("vehicleType", "motorbike")],
     )
     assert response.status_code == 200
-    cats = sorted(p["category"] for p in response.json())
+    cats = sorted(p["category"] for p in _items(response))
     assert cats == ["bicycle", "motorbike"]
 
 
@@ -80,40 +92,44 @@ def test_list_parkings_filters_by_repeated_category(seeded_client):
         "/parkings",
         params=[("category", "paid_parking"), ("category", "blue_zone")],
     )
-    ids = sorted(p["id"] for p in response.json())
-    assert ids == ["aparcamiento-2001", "aparcamiento-9001"]
+    ids = sorted(p["id"] for p in _items(response))
+    assert ids == ["parkings:2001", "zona_azul:9001"]
 
 
 def test_list_parkings_filters_by_regulation(seeded_client):
     response = seeded_client.get("/parkings", params={"regulation": "paid"})
-    body = response.json()
+    body = _items(response)
     assert len(body) == 1
-    assert body[0]["id"] == "aparcamiento-2001"
+    assert body[0]["id"] == "parkings:2001"
 
 
 def test_list_parkings_filters_by_min_spaces_drops_unknown(seeded_client):
     response = seeded_client.get("/parkings", params={"minSpaces": 10})
-    ids = sorted(p["id"] for p in response.json())
+    ids = sorted(p["id"] for p in _items(response))
     # Quedan los que tienen >= 10 plazas: Dalia (16), Ledesma (19), Londres (15).
-    assert ids == ["aparcamiento-5500", "aparcamiento-9001", "aparcamiento-9100"]
+    assert ids == [
+        "aparcamientos_en_linea:5500",
+        "parking_motos_puntos:9100",
+        "zona_azul:9001",
+    ]
 
 
 def test_list_parkings_filters_by_repeated_ids(seeded_client):
     response = seeded_client.get(
         "/parkings",
-        params=[("ids", "aparcamiento-1903"), ("ids", "aparcamiento-7700")],
+        params=[("ids", "aparcamientos:1903"), ("ids", "aparcamientos_en_linea:7700")],
     )
-    ids = sorted(p["id"] for p in response.json())
-    assert ids == ["aparcamiento-1903", "aparcamiento-7700"]
+    ids = sorted(p["id"] for p in _items(response))
+    assert ids == ["aparcamientos:1903", "aparcamientos_en_linea:7700"]
 
 
 def test_list_parkings_ids_with_unknown_id_returns_only_known(seeded_client):
     response = seeded_client.get(
         "/parkings",
-        params=[("ids", "aparcamiento-1903"), ("ids", "no-existe")],
+        params=[("ids", "aparcamientos:1903"), ("ids", "no-existe")],
     )
-    ids = [p["id"] for p in response.json()]
-    assert ids == ["aparcamiento-1903"]
+    ids = [p["id"] for p in _items(response)]
+    assert ids == ["aparcamientos:1903"]
 
 
 def test_list_parkings_combines_filters_as_and(seeded_client):
@@ -123,8 +139,8 @@ def test_list_parkings_combines_filters_as_and(seeded_client):
         "/parkings",
         params={"category": "street_line", "minSpaces": 10},
     )
-    ids = [p["id"] for p in response.json()]
-    assert ids == ["aparcamiento-5500"]
+    ids = [p["id"] for p in _items(response)]
+    assert ids == ["aparcamientos_en_linea:5500"]
 
 
 def test_list_parkings_invalid_enum_returns_422(seeded_client):
@@ -133,16 +149,16 @@ def test_list_parkings_invalid_enum_returns_422(seeded_client):
 
 
 def test_list_parkings_polygon_coordinates_round_trip(seeded_client):
-    response = seeded_client.get("/parkings", params={"ids": "aparcamiento-5500"})
-    place = response.json()[0]
+    response = seeded_client.get("/parkings", params={"ids": "aparcamientos_en_linea:5500"})
+    place = _items(response)[0]
     assert place["geometryType"] == "polygon"
     assert place["coordinates"][0][0] == [-6.3994515, 39.4670139]
     assert place["totalSpaces"] == 16
 
 
 def test_list_parkings_line_string_coordinates_round_trip(seeded_client):
-    response = seeded_client.get("/parkings", params={"ids": "aparcamiento-7700"})
-    place = response.json()[0]
+    response = seeded_client.get("/parkings", params={"ids": "aparcamientos_en_linea:7700"})
+    place = _items(response)[0]
     assert place["geometryType"] == "line_string"
     assert place["coordinates"] == [
         [-6.4022597, 39.4775947],
@@ -152,10 +168,34 @@ def test_list_parkings_line_string_coordinates_round_trip(seeded_client):
 
 
 def test_list_parkings_point_has_null_coordinates(seeded_client):
-    response = seeded_client.get("/parkings", params={"ids": "aparcamiento-1903"})
-    place = response.json()[0]
+    response = seeded_client.get("/parkings", params={"ids": "aparcamientos:1903"})
+    place = _items(response)[0]
     assert place["geometryType"] == "point"
     assert place["coordinates"] is None
+
+
+def test_list_parkings_envelope_supports_limit_and_offset(seeded_client):
+    response = seeded_client.get("/parkings", params={"limit": 2, "offset": 1})
+    assert response.status_code == 200
+    body = response.json()
+    assert body["total"] == 7
+    assert body["limit"] == 2
+    assert body["offset"] == 1
+    assert body["truncated"] is True
+    assert len(body["items"]) == 2
+    assert response.headers["X-Total-Count"] == "7"
+    assert response.headers["X-Limit"] == "2"
+    assert response.headers["X-Offset"] == "1"
+
+
+def test_list_parkings_can_include_global_facets(seeded_client):
+    response = seeded_client.get("/parkings", params={"includeFacets": "true"})
+    assert response.status_code == 200
+    facets = response.json()["facets"]
+    assert facets["total"] == 7
+    assert facets["categories"]["street_line"] == 2
+    assert facets["vehicleTypes"]["bike"] == 1
+    assert facets["datasets"]["aparcamientos_en_linea"] == 2
 
 
 # ============================================================
@@ -171,7 +211,7 @@ def test_nearby_returns_distance_and_orders_by_proximity(seeded_client):
     assert response.status_code == 200
     assert response.headers.get("X-Cache") == "MISS"
 
-    body = response.json()
+    body = _items(response)
     assert len(body) >= 5
     for place in body:
         _assert_place_shape(place)
@@ -190,7 +230,7 @@ def test_nearby_default_radius_is_1000_meters(seeded_client):
         params={"lat": 39.4753, "lng": -6.3724},
     )
     assert response.status_code == 200
-    for place in response.json():
+    for place in _items(response):
         assert place["distanceMeters"] <= 1000
 
 
@@ -200,7 +240,7 @@ def test_nearby_legacy_radius_alias_still_works(seeded_client):
         params={"lat": 39.4753, "lng": -6.3724, "radius": 200},
     )
     assert response.status_code == 200
-    for place in response.json():
+    for place in _items(response):
         assert place["distanceMeters"] <= 200
 
 
@@ -210,7 +250,7 @@ def test_nearby_radius_meters_takes_precedence_over_radius(seeded_client):
         "/parkings/nearby",
         params={"lat": 39.4753, "lng": -6.3724, "radiusMeters": 200, "radius": 5000},
     )
-    for place in response.json():
+    for place in _items(response):
         assert place["distanceMeters"] <= 200
 
 
@@ -224,7 +264,7 @@ def test_nearby_applies_category_filter(seeded_client):
             "category": "bicycle",
         },
     )
-    body = response.json()
+    body = _items(response)
     assert len(body) == 1
     assert body[0]["category"] == "bicycle"
 
@@ -234,7 +274,7 @@ def test_nearby_applies_q_filter(seeded_client):
         "/parkings/nearby",
         params={"lat": 39.4753, "lng": -6.3724, "radiusMeters": 10000, "q": "dalia"},
     )
-    names = [p["name"] for p in response.json()]
+    names = [p["name"] for p in _items(response)]
     assert names == ["Calle Dalia"]
 
 
@@ -263,7 +303,39 @@ def test_nearby_returns_empty_when_outside_any_radius(seeded_client):
         "/parkings/nearby",
         params={"lat": 0.0, "lng": 0.0, "radiusMeters": 100},
     )
-    assert response.json() == []
+    assert _items(response) == []
+
+
+# ============================================================
+# GET /parkings/in-bounds
+# ============================================================
+
+def test_in_bounds_returns_only_places_inside_viewport(seeded_client):
+    response = seeded_client.get(
+        "/parkings/in-bounds",
+        params={
+            "minLat": 39.466,
+            "minLng": -6.400,
+            "maxLat": 39.467,
+            "maxLng": -6.398,
+        },
+    )
+    assert response.status_code == 200
+    ids = [p["id"] for p in _items(response)]
+    assert ids == ["aparcamientos_en_linea:5500"]
+
+
+def test_in_bounds_rejects_invalid_bbox(seeded_client):
+    response = seeded_client.get(
+        "/parkings/in-bounds",
+        params={
+            "minLat": 39.48,
+            "minLng": -6.40,
+            "maxLat": 39.47,
+            "maxLng": -6.39,
+        },
+    )
+    assert response.status_code == 400
 
 
 # ============================================================
@@ -271,11 +343,11 @@ def test_nearby_returns_empty_when_outside_any_radius(seeded_client):
 # ============================================================
 
 def test_get_parking_by_id_returns_full_contract(seeded_client):
-    response = seeded_client.get("/parkings/aparcamiento-5500")
+    response = seeded_client.get("/parkings/aparcamientos_en_linea:5500")
     assert response.status_code == 200
     place = response.json()
     _assert_place_shape(place)
-    assert place["id"] == "aparcamiento-5500"
+    assert place["id"] == "aparcamientos_en_linea:5500"
     assert place["name"] == "Calle Dalia"
     assert place["totalSpaces"] == 16
 
@@ -323,6 +395,23 @@ def test_categories_empty_catalog_returns_empty_list(api_client):
 
 
 # ============================================================
+# GET /parkings/facets
+# ============================================================
+
+def test_facets_returns_counts_by_dimension(seeded_client):
+    response = seeded_client.get("/parkings/facets")
+    assert response.status_code == 200
+    body = response.json()
+    assert body["total"] == 7
+    assert body["categories"]["parking"] == 1
+    assert body["categories"]["street_line"] == 2
+    assert body["vehicleTypes"]["car"] == 5
+    assert body["vehicleTypes"]["motorbike"] == 1
+    assert body["regulations"]["paid"] == 1
+    assert body["datasets"]["parking_bicis"] == 1
+
+
+# ============================================================
 # OpenAPI: examples deben quedar registrados en /openapi.json
 # ============================================================
 
@@ -338,7 +427,7 @@ def test_openapi_contains_examples_for_each_endpoint(seeded_client):
     nearby_response = paths["/parkings/nearby"]["get"]["responses"]["200"]
     assert "example" in nearby_response["content"]["application/json"]
     assert "distanceMeters" in (
-        nearby_response["content"]["application/json"]["example"][0]
+        nearby_response["content"]["application/json"]["example"]["items"][0]
     )
 
     # GET /parkings/categories

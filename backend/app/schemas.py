@@ -156,6 +156,38 @@ class ParkingPlaceNearbyOut(ParkingPlaceOut):
     distanceMeters: float = Field(..., description="Distancia en metros desde el punto consultado")
 
 
+class ParkingFacetsOut(BaseModel):
+    """Conteos agregados del catálogo para alimentar filtros y badges."""
+
+    total: int = 0
+    categories: dict[str, int] = Field(default_factory=dict)
+    vehicleTypes: dict[str, int] = Field(default_factory=dict)
+    regulations: dict[str, int] = Field(default_factory=dict)
+    datasets: dict[str, int] = Field(default_factory=dict)
+
+
+class ParkingPlacesEnvelopeOut(BaseModel):
+    """Respuesta paginada de endpoints de listado."""
+
+    items: list[ParkingPlaceOut] = Field(default_factory=list)
+    total: int = 0
+    limit: int = 100
+    offset: int = 0
+    truncated: bool = False
+    facets: Optional[ParkingFacetsOut] = None
+
+
+class ParkingPlacesNearbyEnvelopeOut(BaseModel):
+    """Respuesta paginada de `/parkings/nearby`."""
+
+    items: list[ParkingPlaceNearbyOut] = Field(default_factory=list)
+    total: int = 0
+    limit: int = 100
+    offset: int = 0
+    truncated: bool = False
+    facets: Optional[ParkingFacetsOut] = None
+
+
 # ============================================================
 # Favoritos por usuario — respuestas de PUT / DELETE.
 # El GET de favoritos reutiliza `ParkingPlaceOut` para devolver directamente
