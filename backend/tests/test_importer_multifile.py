@@ -21,7 +21,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from app.config import GEO_KEY, PARKING_KEY_PREFIX
+from app.config import PARKING_KEY_PREFIX
 from app.enums import (
     ParkingCategory,
     ParkingGeometryType,
@@ -412,9 +412,8 @@ def test_run_import_sources_imports_per_profile_defaults(fake_redis):
     assert by_dataset["aparcamientos_en_linea"]["imported"] == 2
     assert by_dataset["parking_bicis"]["imported"] == 1
 
-    # En Redis: 3 hashes y 3 miembros geo.
+    # En Redis: 3 hashes canónicos `parking:{id}`.
     assert sum(1 for k in fake_redis.hashes if k.startswith(PARKING_KEY_PREFIX)) == 3
-    assert len(fake_redis.geo[GEO_KEY]) == 3
 
 
 def test_run_import_dir_processes_all_files_in_directory(tmp_path: Path, fake_redis):

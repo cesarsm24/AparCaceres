@@ -16,7 +16,6 @@ import redis
 from redis.exceptions import ResponseError
 
 from .config import (
-    MAX_SEARCH_WINDOW,
     PARKING_KEY_PREFIX,
     SEARCH_INDEX_NAME,
 )
@@ -26,7 +25,7 @@ from .enums import (
     ParkingRegulation,
     ParkingVehicleType,
 )
-from .filters import apply_filters, normalize_for_search, place_matches_query
+from .filters import apply_filters, normalize_for_search
 from .schemas import ParkingFacetsOut, ParkingPlaceNearbyOut, ParkingPlaceOut
 
 _EARTH_RADIUS_M = 6_371_000.0
@@ -184,23 +183,27 @@ def search_nearby(
         min_spaces=min_spaces,
         geo=(lng, lat, radius_meters),
     )
-    window = max(limit + offset, limit)
-    window = min(max(window, 1), MAX_SEARCH_WINDOW)
-    total, parking_ids = _ft_search_ids(rdb, query, offset=0, limit=window)
-    places = _load_places(rdb, parking_ids)
-
-    nearby = [
-        ParkingPlaceNearbyOut(
-            **place.model_dump(),
-            distanceMeters=_haversine_m(lat, lng, place.latitude, place.longitude),
-        )
-        for place in places
-    ]
-    nearby.sort(key=lambda p: p.distanceMeters)
-    return ParkingNearbySearchResult(
-        items=nearby[offset : offset + limit],
-        total=total,
+    total, rows = _ft_nearby_rows(
+        rdb,
+        query=query,
+        lng=lng,
+        lat=lat,
+        offset=offset,
+        limit=limit,
     )
+    places_by_id = {place.id: place for place in _load_places(rdb, [row[0] for row in rows])}
+    nearby: list[ParkingPlaceNearbyOut] = []
+    for parking_id, distance in rows:
+        place = places_by_id.get(parking_id)
+        if place is None:
+            continue
+        nearby.append(
+            ParkingPlaceNearbyOut(
+                **place.model_dump(),
+                distanceMeters=distance,
+            )
+        )
+    return ParkingNearbySearchResult(items=nearby, total=total)
 
 
 def search_in_bounds(
@@ -290,21 +293,6 @@ def _create_search_index(rdb: redis.Redis) -> None:
             "NUMERIC",
             "totalSpaces",
             "NUMERIC",
-            "name",
-            "TEXT",
-            "NOSTEM",
-            "streetName",
-            "TEXT",
-            "NOSTEM",
-            "streetType",
-            "TEXT",
-            "NOSTEM",
-            "district",
-            "TEXT",
-            "NOSTEM",
-            "neighborhood",
-            "TEXT",
-            "NOSTEM",
             "searchText",
             "TEXT",
             "NOSTEM",
@@ -356,6 +344,68 @@ def _ft_search_ids(
         return 0, []
     total = int(resp[0])
     return total, [_key_to_id(k) for k in resp[1:]]
+
+
+def _ft_nearby_rows(
+    rdb: redis.Redis,
+    *,
+    query: str,
+    lng: float,
+    lat: float,
+    offset: int,
+    limit: int,
+) -> tuple[int, list[tuple[str, float]]]:
+    """Nearby ordenado en Redis con `geodistance(...)`.
+
+    RediSearch permite cargar el campo GEO, aplicar `geodistance` y ordenar por
+    esa propiedad calculada en el pipeline de `FT.AGGREGATE`. Así no traemos
+    una ventana arbitraria a Python ni corremos el riesgo de perder los puntos
+    realmente más cercanos cuando el índice crezca.
+    """
+    ensure_search_index(rdb)
+    sort_window = max(offset + limit, limit)
+    try:
+        resp = rdb.execute_command(
+            "FT.AGGREGATE",
+            SEARCH_INDEX_NAME,
+            query,
+            "LOAD",
+            "2",
+            "@id",
+            "@location",
+            "APPLY",
+            f"geodistance(@location,{float(lng)},{float(lat)})",
+            "AS",
+            "distance",
+            "SORTBY",
+            "2",
+            "@distance",
+            "ASC",
+            "MAX",
+            sort_window,
+            "LIMIT",
+            offset,
+            limit,
+            "DIALECT",
+            "2",
+        )
+    except ResponseError as exc:
+        _raise_stack_error(exc)
+
+    if not resp:
+        return 0, []
+    rows: list[tuple[str, float]] = []
+    for row in resp[1:]:
+        values = _row_to_dict(row)
+        parking_id = values.get("id")
+        if not parking_id:
+            continue
+        try:
+            distance = float(values.get("distance", 0))
+        except (TypeError, ValueError):
+            distance = 0.0
+        rows.append((parking_id, distance))
+    return int(resp[0]), rows
 
 
 def _aggregate_tag_counts(rdb: redis.Redis, field: str) -> dict[str, int]:
@@ -594,8 +644,6 @@ def _filter_places(
     out: list[ParkingPlaceOut] = []
     for place in filtered:
         if dataset_set and place.sourceDataset not in dataset_set:
-            continue
-        if normalized_q and not place_matches_query(place, normalized_q):
             continue
         if bounds is not None:
             min_lat, min_lng, max_lat, max_lng = bounds

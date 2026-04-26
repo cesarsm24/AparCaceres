@@ -21,20 +21,18 @@ DATA_DIR = BACKEND_DIR / "data"
 DATA_FILE = DATA_DIR / "aparcamientos.geojson"
 
 # Claves de Redis que usa la app:
-#   geo:parkings                       -> sorted set geoespacial (GEOADD / GEOSEARCH)
 #   parking:{id}                       -> hash con metadatos del aparcamiento (HSET / HGETALL)
 #   idx:parkings_search                -> índice RediSearch sobre hashes parking:*
 #   cache:nearby:{lat}:{lng}:{radius}  -> JSON cacheado del resultado de /parkings/nearby (SETEX)
 #   user:{user_id}:favorites           -> sorted set con ids favoritados, score = epoch ms (ZREVRANGE para newest-first)
-GEO_KEY = "geo:parkings"
 PARKING_KEY_PREFIX = "parking:"
 SEARCH_INDEX_NAME = "idx:parkings_search"
 CACHE_NEARBY_PREFIX = "cache:nearby:"
 USER_FAVORITES_KEY_PREFIX = "user:"
 USER_FAVORITES_KEY_SUFFIX = ":favorites"
-# Prefijo legacy: se limpia al reimportar para migrar bases con índices Redis
-# SET antiguos, pero las consultas nuevas usan RediSearch.
-INDEX_KEY_PREFIX = "idx:"
+# Limpieza de claves legacy de versiones previas. No se escriben ya.
+LEGACY_GEO_KEY = "geo:parkings"
+LEGACY_SET_INDEX_PREFIX = "idx:"
 
 # Filenames que el importador NUNCA procesa, aunque estén físicamente en
 # `backend/data/`. `parkings_en_superficie.geojson` queda fuera porque sus
@@ -60,6 +58,3 @@ IMPORT_TOKEN = os.getenv("IMPORT_TOKEN", "").strip()
 # El cliente puede subirlo hasta MAX_PARKING_LIMIT con el query param `limit`.
 DEFAULT_PARKING_LIMIT = int(os.getenv("DEFAULT_PARKING_LIMIT", "100"))
 MAX_PARKING_LIMIT = int(os.getenv("MAX_PARKING_LIMIT", "500"))
-# Ventana máxima de documentos que el backend traerá de RediSearch para ordenar
-# por distancia cuando Redis no proporciona sort nativo por distancia.
-MAX_SEARCH_WINDOW = int(os.getenv("MAX_SEARCH_WINDOW", "5000"))

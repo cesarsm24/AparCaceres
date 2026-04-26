@@ -6,7 +6,7 @@ Pipeline:
                                                                      |
                                                             place_to_redis_mapping
                                                                      |
-                                            HSET parking:{id} + GEOADD geo:parkings
+                                                     HSET parking:{id}
 
 El paso intermedio normaliza features muy heterogéneos (Open Data Cáceres
 publica cada capa con su propio shape de propiedades, y algunos ficheros
@@ -34,8 +34,8 @@ import redis
 from .config import (
     CACHE_NEARBY_PREFIX,
     EXCLUDED_DATASET_FILENAMES,
-    GEO_KEY,
-    INDEX_KEY_PREFIX,
+    LEGACY_GEO_KEY,
+    LEGACY_SET_INDEX_PREFIX,
     PARKING_KEY_PREFIX,
     SEARCH_INDEX_NAME,
 )
@@ -479,7 +479,7 @@ def representative_point(
     geometry_type: ParkingGeometryType,
     raw_coords: object,
 ) -> Optional[tuple[float, float]]:
-    """Devuelve un `(lon, lat)` representativo para indexar en `geo:parkings`.
+    """Devuelve un `(lon, lat)` representativo para indexar como `location`.
 
     - POINT: la propia coordenada.
     - POLYGON: centroide simple del primer anillo (excluyendo el cierre duplicado).
@@ -742,9 +742,9 @@ def _run_import_paired(
     """Orquestador real: limpia, indexa y resume.
 
     1. Borra todos los hashes `parking:*` del import previo (SCAN_ITER + DEL).
-    2. Borra el sorted set `geo:parkings`.
-    3. Por cada feature válido: GEOADD al índice geo + HSET con el contrato
-       completo. Todo en un único pipeline para minimizar round-trips.
+    2. Borra claves legacy (`geo:parkings`, `idx:*`) si quedaron de versiones previas.
+    3. Recrea el índice RediSearch y escribe cada `parking:{id}` con campos
+       indexables (`location`, `searchText`, TAGs y NUMERICs).
     4. Invalida la caché `cache:nearby:*` (best-effort: si Redis falla aquí,
        el TTL acabará limpiándola).
     5. Devuelve un resumen con totales + desglose por `sourceDataset`.
@@ -798,21 +798,20 @@ def _run_import_paired(
         raise ValueError("ids duplicados tras desambiguar la importación")
 
     old_keys = list(rdb.scan_iter(match=f"{PARKING_KEY_PREFIX}*"))
-    old_index_keys = list(rdb.scan_iter(match=f"{INDEX_KEY_PREFIX}*"))
+    old_index_keys = list(rdb.scan_iter(match=f"{LEGACY_SET_INDEX_PREFIX}*"))
 
     cleanup = rdb.pipeline()
     if old_keys:
         cleanup.delete(*old_keys)
     if old_index_keys:
         cleanup.delete(*old_index_keys)
-    cleanup.delete(GEO_KEY)
+    cleanup.delete(LEGACY_GEO_KEY)
     cleanup.execute()
 
     recreate_search_index(rdb)
 
     pipe = rdb.pipeline()
     for place in valid_places:
-        pipe.geoadd(GEO_KEY, (place.longitude, place.latitude, place.id))
         pipe.hset(
             f"{PARKING_KEY_PREFIX}{place.id}",
             mapping=place_to_redis_mapping(place),
@@ -833,7 +832,6 @@ def _run_import_paired(
         "status": "ok",
         "imported": imported,
         "skipped": skipped,
-        "geo_key": GEO_KEY,
         "search_index": SEARCH_INDEX_NAME,
         "ids_disambiguated": disambiguated,
         "cache_invalidated": len(cache_keys),

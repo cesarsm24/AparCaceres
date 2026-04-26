@@ -2,8 +2,8 @@
 
 `fake_redis` es una implementación minimalista en memoria del subset de la
 API de `redis-py` que usan el importador y los routers (`scan_iter`, `delete`,
-`exists`, `geoadd`, `geosearch`, `hset`, `pipeline`, `hgetall`, `setex`, `get`,
-`zadd`, `zrem`, `zrevrange`, `zscore`).
+`exists`, `hset`, `pipeline`, `hgetall`, `setex`, `get`, `zadd`, `zrem`,
+`zrevrange`, `zscore`).
 
 Mantenerla aquí (en lugar de añadir `fakeredis` como dependencia) tiene dos
 ventajas:
@@ -17,29 +17,11 @@ requests contra los endpoints reales.
 
 from __future__ import annotations
 
-import math
 from typing import Iterator
 
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
-
-
-# Radio de la Tierra en metros — usado por la implementación haversine de
-# `geosearch`. No buscamos exactitud al milímetro: nos basta con que ordene
-# correctamente y respete el radio en los tests.
-_EARTH_RADIUS_M = 6_371_000.0
-
-
-def _haversine_m(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
-    phi1, phi2 = math.radians(lat1), math.radians(lat2)
-    dphi = math.radians(lat2 - lat1)
-    dlamb = math.radians(lon2 - lon1)
-    a = (
-        math.sin(dphi / 2) ** 2
-        + math.cos(phi1) * math.cos(phi2) * math.sin(dlamb / 2) ** 2
-    )
-    return _EARTH_RADIUS_M * 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
 
 
 class FakeRedis:
@@ -48,21 +30,14 @@ class FakeRedis:
     Modela cinco tipos de claves:
     - `strings`: para `SET`/`SETEX`/`GET` (caché `cache:nearby:*`).
     - `hashes`: para `HSET`/`HGETALL` (`parking:{id}`).
-    - `geo`: para `GEOADD`/`GEOSEARCH` (índice `geo:parkings`). Se guarda
-      `{member: (lon, lat)}`; suficiente para verificar que el feature se
-      indexó en la posición correcta.
     - `zsets`: sorted sets para `ZADD`/`ZREM`/`ZREVRANGE`/`ZSCORE` (favoritos
       por usuario `user:{id}:favorites`). `{member: score}`.
-    - `sets`: sets simples para `SADD`/`SMEMBERS`/`SCARD`/`SREM` (índices
-      secundarios `idx:*`). `{member}`.
     """
 
     def __init__(self) -> None:
         self.strings: dict[str, str] = {}
         self.hashes: dict[str, dict[str, str]] = {}
-        self.geo: dict[str, dict[str, tuple[float, float]]] = {}
         self.zsets: dict[str, dict[str, float]] = {}
-        self.sets: dict[str, set[str]] = {}
 
     # ---------- API directa (no pipeline) ----------
 
@@ -81,32 +56,10 @@ class FakeRedis:
             bucket[sk] = str(v)
         return added
 
-    def geoadd(self, key: str, values) -> int:
-        """Acepta `(lon, lat, member)` o lista plana `[lon, lat, member, ...]`."""
-        bucket = self.geo.setdefault(key, {})
-        added = 0
-        if (
-            isinstance(values, (list, tuple))
-            and len(values) == 3
-            and not isinstance(values[0], (list, tuple))
-        ):
-            lon, lat, member = values
-            if member not in bucket:
-                added += 1
-            bucket[str(member)] = (float(lon), float(lat))
-            return added
-        # Lista plana
-        for i in range(0, len(values), 3):
-            lon, lat, member = values[i], values[i + 1], values[i + 2]
-            if member not in bucket:
-                added += 1
-            bucket[str(member)] = (float(lon), float(lat))
-        return added
-
     def delete(self, *keys: str) -> int:
         n = 0
         for k in keys:
-            for store in (self.hashes, self.strings, self.geo, self.zsets, self.sets):
+            for store in (self.hashes, self.strings, self.zsets):
                 if k in store:
                     del store[k]
                     n += 1
@@ -117,7 +70,7 @@ class FakeRedis:
         # cualquier tipo). Suficiente para los chequeos de "parking:{id}".
         n = 0
         for k in keys:
-            for store in (self.hashes, self.strings, self.geo, self.zsets, self.sets):
+            for store in (self.hashes, self.strings, self.zsets):
                 if k in store:
                     n += 1
                     break
@@ -127,9 +80,7 @@ class FakeRedis:
         all_keys = (
             list(self.hashes.keys())
             + list(self.strings.keys())
-            + list(self.geo.keys())
             + list(self.zsets.keys())
-            + list(self.sets.keys())
         )
         if match is None:
             yield from all_keys
@@ -154,14 +105,9 @@ class FakeRedis:
         return self.strings.get(key)
 
     def zscore(self, key: str, member: str) -> float | None:
-        # Prioriza sorted sets genéricos (ZSCORE real para favoritos).
         zset = self.zsets.get(key)
         if zset is not None:
             return zset.get(member)
-        # Fallback histórico: devolver algo no-None si el miembro está en el
-        # índice geoespacial (los tests del importador comprueban presencia).
-        if member in self.geo.get(key, {}):
-            return 1.0
         return None
 
     # ---------- Sorted sets genéricos (favoritos) ----------
@@ -210,76 +156,6 @@ class FakeRedis:
     def zcard(self, key: str) -> int:
         return len(self.zsets.get(key, {}))
 
-    # ---------- Sets simples (índices secundarios `idx:*`) ----------
-
-    def sadd(self, key: str, *members: str) -> int:
-        bucket = self.sets.setdefault(key, set())
-        added = 0
-        for m in members:
-            sm = str(m)
-            if sm not in bucket:
-                bucket.add(sm)
-                added += 1
-        return added
-
-    def srem(self, key: str, *members: str) -> int:
-        bucket = self.sets.get(key)
-        if not bucket:
-            return 0
-        n = 0
-        for m in members:
-            if m in bucket:
-                bucket.discard(m)
-                n += 1
-        if not bucket:
-            del self.sets[key]
-        return n
-
-    def smembers(self, key: str) -> set[str]:
-        return set(self.sets.get(key, set()))
-
-    def scard(self, key: str) -> int:
-        return len(self.sets.get(key, set()))
-
-    def sismember(self, key: str, member: str) -> bool:
-        return member in self.sets.get(key, set())
-
-    def geosearch(
-        self,
-        key: str,
-        *,
-        longitude: float,
-        latitude: float,
-        radius: float,
-        unit: str = "m",
-        withdist: bool = False,
-        sort: str | None = None,
-    ):
-        """Subset de `GEOSEARCH FROMLONLAT BYRADIUS`.
-
-        Solo soporta `unit='m'`, suficiente para los tests del backend (los
-        endpoints siempre piden metros). `withdist=True` devuelve `[member, dist]`
-        en cada fila; `sort='ASC'` ordena por distancia ascendente.
-        """
-        if unit != "m":
-            raise NotImplementedError("FakeRedis.geosearch solo soporta unit='m'")
-
-        bucket = self.geo.get(key, {})
-        rows: list[tuple[str, float]] = []
-        for member, (mlon, mlat) in bucket.items():
-            dist = _haversine_m(latitude, longitude, mlat, mlon)
-            if dist <= radius:
-                rows.append((member, dist))
-
-        if sort == "ASC":
-            rows.sort(key=lambda r: r[1])
-        elif sort == "DESC":
-            rows.sort(key=lambda r: r[1], reverse=True)
-
-        if withdist:
-            return [[member, dist] for member, dist in rows]
-        return [member for member, _ in rows]
-
     # ---------- Pipeline ----------
 
     def pipeline(self) -> "FakePipeline":
@@ -302,10 +178,6 @@ class FakePipeline:
         self._cmds.append(("delete", keys))
         return self
 
-    def geoadd(self, key: str, values) -> "FakePipeline":
-        self._cmds.append(("geoadd", key, values))
-        return self
-
     def hset(self, key: str, mapping: dict | None = None) -> "FakePipeline":
         self._cmds.append(("hset", key, mapping))
         return self
@@ -314,23 +186,15 @@ class FakePipeline:
         self._cmds.append(("hgetall", key))
         return self
 
-    def sadd(self, key: str, *members: str) -> "FakePipeline":
-        self._cmds.append(("sadd", key, members))
-        return self
-
     def execute(self) -> list:
         results = []
         for cmd in self._cmds:
             if cmd[0] == "delete":
                 results.append(self.parent.delete(*cmd[1]))
-            elif cmd[0] == "geoadd":
-                results.append(self.parent.geoadd(cmd[1], cmd[2]))
             elif cmd[0] == "hset":
                 results.append(self.parent.hset(cmd[1], mapping=cmd[2]))
             elif cmd[0] == "hgetall":
                 results.append(self.parent.hgetall(cmd[1]))
-            elif cmd[0] == "sadd":
-                results.append(self.parent.sadd(cmd[1], *cmd[2]))
         self._cmds.clear()
         return results
 

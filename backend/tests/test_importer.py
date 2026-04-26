@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import json
 
-from app.config import CACHE_NEARBY_PREFIX, GEO_KEY, PARKING_KEY_PREFIX
+from app.config import CACHE_NEARBY_PREFIX, PARKING_KEY_PREFIX
 from app.enums import (
     ParkingCategory,
     ParkingGeometryType,
@@ -388,14 +388,6 @@ def test_run_import_persists_full_contract_for_each_geometry(fake_redis):
     assert summary["status"] == "ok"
     assert summary["imported"] == 3
     assert summary["skipped"] == 0
-    assert summary["geo_key"] == GEO_KEY
-
-    # Los 3 features deben quedar indexados en el sorted set geoespacial.
-    assert set(fake_redis.geo[GEO_KEY].keys()) == {
-        "aparcamientos:1903",
-        "aparcamientos_en_linea:5500",
-        "aparcamientos_en_linea:7700",
-    }
 
     # Cada hash contiene los campos clave del contrato y se puede reconstruir.
     expected_ids = (
@@ -408,7 +400,7 @@ def test_run_import_persists_full_contract_for_each_geometry(fake_redis):
         assert hash_data["id"] == parking_id
         # Campos obligatorios del contrato presentes y serializados como string.
         for required in ("name", "category", "vehicleType", "regulation",
-                         "geometryType", "latitude", "longitude"):
+                         "geometryType", "latitude", "longitude", "location", "searchText"):
             assert required in hash_data, f"{parking_id} sin {required}"
         # Reconstrucción coherente con el feature original.
         place_from_redis_hash(hash_data)
@@ -462,8 +454,6 @@ def test_run_import_is_idempotent_and_clears_stale_entries(fake_redis):
 
     surviving = [k for k in fake_redis.hashes if k.startswith(PARKING_KEY_PREFIX)]
     assert surviving == [f"{PARKING_KEY_PREFIX}aparcamientos_en_linea:7700"]
-    # El índice geo solo conserva el nuevo miembro.
-    assert list(fake_redis.geo[GEO_KEY].keys()) == ["aparcamientos_en_linea:7700"]
 
 
 def test_run_import_invalidates_nearby_cache(fake_redis):
@@ -522,22 +512,24 @@ def test_run_import_skips_invalid_features_without_failing(fake_redis):
     )
     assert summary["imported"] == 1
     assert summary["skipped"] == 2
-    assert list(fake_redis.geo[GEO_KEY].keys()) == ["aparcamientos:1903"]
+    assert list(fake_redis.hashes.keys()) == [f"{PARKING_KEY_PREFIX}aparcamientos:1903"]
 
 
-def test_run_import_indexes_each_place_at_its_representative_point(fake_redis):
+def test_run_import_stores_representative_location_for_search(fake_redis):
     run_import_sources(_all_geometries_sources(), fake_redis)
-    geo = fake_redis.geo[GEO_KEY]
 
     # POINT: lat/lon = la coordenada original.
-    lon, lat = geo["aparcamientos:1903"]
+    point_hash = fake_redis.hgetall(f"{PARKING_KEY_PREFIX}aparcamientos:1903")
+    lon, lat = (float(v) for v in point_hash["location"].split(",", 1))
     assert (lon, lat) == (-6.34204232, 39.47848638)
 
     # POLYGON: dentro del bounding box del primer anillo.
-    lon, lat = geo["aparcamientos_en_linea:5500"]
+    polygon_hash = fake_redis.hgetall(f"{PARKING_KEY_PREFIX}aparcamientos_en_linea:5500")
+    lon, lat = (float(v) for v in polygon_hash["location"].split(",", 1))
     assert -6.40 < lon < -6.39
     assert 39.46 < lat < 39.47
 
     # LINE_STRING: el punto medio por índice.
-    lon, lat = geo["aparcamientos_en_linea:7700"]
+    line_hash = fake_redis.hgetall(f"{PARKING_KEY_PREFIX}aparcamientos_en_linea:7700")
+    lon, lat = (float(v) for v in line_hash["location"].split(",", 1))
     assert (lon, lat) == (-6.4022522, 39.4775983)

@@ -86,7 +86,6 @@ Se utiliza para:
 - cachear búsquedas cercanas repetidas con TTL
 
 Ejemplo de claves:
-- `geo:parkings`
 - `parking:{id}`
 - `idx:parkings_search`
 - `cache:nearby:{...}`

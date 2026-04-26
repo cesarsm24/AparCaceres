@@ -30,7 +30,6 @@ _IMPORT_RESPONSE_EXAMPLE = {
     "status": "ok",
     "imported": 7314,
     "skipped": 0,
-    "geo_key": "geo:parkings",
     "search_index": "idx:parkings_search",
     "ids_disambiguated": 11,
     "cache_invalidated": 3,
@@ -89,8 +88,8 @@ def _check_import_token(provided: Optional[str]) -> None:
         "namespaced por dataset (`{sourceDataset}:{key}`) y recrea el índice "
         "Redis Stack / RediSearch `idx:parkings_search` sobre los hashes "
         "`parking:{id}`.\n\n"
-        "Idempotente: limpia `parking:*`, `geo:parkings` y restos legacy "
-        "`idx:*` antes de reescribir, e invalida la caché `cache:nearby:*`. "
+        "Idempotente: limpia `parking:*` y restos legacy (`geo:parkings`, "
+        "`idx:*`) antes de reescribir, e invalida la caché `cache:nearby:*`. "
         "La respuesta incluye totales y desglose por `sourceDataset`.\n\n"
         "Si `IMPORT_TOKEN` está configurado en el entorno, la petición debe "
         "incluir la cabecera `X-Import-Token` con ese valor (401 si no)."
