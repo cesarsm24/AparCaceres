@@ -52,37 +52,40 @@ jobs:
         working-directory: backend
 
     steps:
-      - uses: actions/checkout@v4
+          - uses: actions/checkout@v4
 
-      - name: Configurar Python 3.11
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-          cache: pip
-          cache-dependency-path: backend/requirements-dev.txt
+          - name: Configurar Python 3.11
+            uses: actions/setup-python@v5
+            with:
+              python-version: "3.11"
+              cache: pip
+              cache-dependency-path: backend/requirements-dev.txt
 
-      - name: Instalar dependencias
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements-dev.txt
+          - name: Instalar dependencias
+            run: |
+              python -m pip install --upgrade pip
+              pip install -r requirements-dev.txt
 
-      - name: Lint (ruff)
-        run: ruff check app tests main.py
+          - name: Lint (ruff)
+            run: ruff check app tests main.py
 
-      - name: Esperar a Redis Stack
-        run: |
-          for i in $(seq 1 30); do
-            if redis-cli -h "$REDIS_HOST" -p "$REDIS_PORT" PING | grep -q PONG; then
-              echo "Redis OK"; exit 0
-            fi
-            sleep 1
-          done
-          echo "Redis no respondió a tiempo"; exit 1
+          - name: Instalar herramientas de Redis
+            run: sudo apt-get update && sudo apt-get install -y redis-tools
 
-      - name: Verificar RediSearch disponible
-        run: |
-          redis-cli -h "$REDIS_HOST" -p "$REDIS_PORT" FT._LIST || true
-          redis-cli -h "$REDIS_HOST" -p "$REDIS_PORT" MODULE LIST | grep -i search
+          - name: Esperar a Redis Stack
+            run: |
+              for i in $(seq 1 30); do
+                if redis-cli -h "$REDIS_HOST" -p "$REDIS_PORT" PING | grep -q PONG; then
+                  echo "Redis OK"; exit 0
+                fi
+                sleep 1
+              done
+              echo "Redis no respondió a tiempo"; exit 1
 
-      - name: Ejecutar pytest
-        run: pytest -q
+          - name: Verificar RediSearch disponible
+            run: |
+              redis-cli -h "$REDIS_HOST" -p "$REDIS_PORT" FT._LIST || true
+              redis-cli -h "$REDIS_HOST" -p "$REDIS_PORT" MODULE LIST | grep -i search
+
+          - name: Ejecutar pytest
+            run: pytest -q
