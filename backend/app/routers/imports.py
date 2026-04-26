@@ -32,7 +32,7 @@ _IMPORT_RESPONSE_EXAMPLE = {
     "skipped": 0,
     "search_index": "idx:parkings_search",
     "ids_disambiguated": 11,
-    "cache_invalidated": 3,
+    "cache_version": 7,
     "files_processed": 10,
     "files_skipped": [],
     "excluded_datasets": ["parkings_en_superficie.geojson"],

@@ -1,4 +1,14 @@
+# Lockfile generado a partir de requirements.in (NO editar a mano).
+# Para regenerar:
+#   pip install pip-tools
+#   pip-compile requirements.in --output-file requirements.txt
+#
 # Runtime: Python >=3.11. Producción requiere Redis Stack / RediSearch.
+#
+# Nota sobre dependencias transitivas reseñables:
+#   - annotated-doc: dependencia legítima de fastapi >=0.136 (autor: tiangolo).
+#   - annotated-types: dependencia legítima de pydantic >=2.x.
+
 annotated-doc==0.0.4
 annotated-types==0.7.0
 anyio==4.13.0

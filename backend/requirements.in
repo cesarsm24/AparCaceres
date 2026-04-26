@@ -1,0 +1,17 @@
+# Dependencias directas del backend AparCáceres.
+#
+# Este fichero es la fuente de verdad de las dependencias declaradas a mano.
+# `requirements.txt` es el lockfile congelado (pip-compile / pip freeze) que
+# incluye también las dependencias transitivas con sus versiones exactas.
+#
+# Para regenerar el lockfile tras modificar este fichero:
+#   pip install pip-tools
+#   pip-compile requirements.in --output-file requirements.txt
+#
+# Runtime esperado: Python >=3.11. Producción requiere Redis Stack / RediSearch.
+
+fastapi==0.136.1
+uvicorn==0.46.0
+pydantic==2.13.3
+redis==7.4.0
+python-dotenv==1.2.2

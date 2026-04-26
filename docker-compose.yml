@@ -1,0 +1,82 @@
+# ============================================================
+# Stack de desarrollo / staging para AparCáceres.
+# Levanta Redis Stack (Redis + RediSearch) con persistencia AOF y la API
+# FastAPI conectada a él. Reproducible en cualquier máquina con Docker.
+# ============================================================
+#
+# Comandos habituales:
+#   docker compose up -d              # arranca los dos servicios
+#   docker compose logs -f api        # tail del backend
+#   docker compose exec api curl -s http://localhost:8000/healthz | jq
+#   docker compose down               # parar (mantiene el volumen)
+#   docker compose down -v            # parar y BORRAR los datos persistentes
+#
+# Tras la primera arrancada hay que poblar el catálogo:
+#   curl -X POST http://localhost:8000/import-parkings
+# ============================================================
+
+services:
+  redis:
+    image: redis/redis-stack-server:7.4.0-v0
+    container_name: aparcaceres-redis
+    restart: unless-stopped
+    # AOF (append-only file) garantiza durabilidad por escritura: no perdemos
+    # favoritos ante un reinicio. `everysec` equilibra throughput y safety.
+    command:
+      - "redis-stack-server"
+      - "--appendonly"
+      - "yes"
+      - "--appendfsync"
+      - "everysec"
+      - "--save"
+      - "900 1"
+      - "--save"
+      - "300 10"
+    ports:
+      # Solo expuesto en localhost del host: evita exponer Redis sin auth a
+      # la red local. En staging/prod conviene quitar esta sección.
+      - "127.0.0.1:6379:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "PING"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
+
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    image: aparcaceres-api:0.1.0
+    container_name: aparcaceres-api
+    restart: unless-stopped
+    depends_on:
+      redis:
+        condition: service_healthy
+    environment:
+      APP_ENV: development
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      REDIS_DB: "0"
+      LOG_LEVEL: INFO
+      CACHE_NEARBY_TTL: "60"
+      DEFAULT_PARKING_LIMIT: "100"
+      MAX_PARKING_LIMIT: "500"
+      # CORS abierto a los puertos típicos del runner de Flutter web. En
+      # producción sustituir por los dominios reales del cliente.
+      CORS_ORIGINS: >-
+        http://localhost:3000,http://127.0.0.1:3000,
+        http://localhost:5000,http://127.0.0.1:5000,
+        http://localhost:8080,http://127.0.0.1:8080
+      # En desarrollo dejamos el endpoint de import abierto. En producción
+      # fijar un valor y enviarlo como X-Import-Token.
+      IMPORT_TOKEN: ""
+    ports:
+      - "127.0.0.1:8000:8000"
+
+volumes:
+  redis-data:
+    # Volumen nombrado: persiste favoritos y catálogo entre reinicios.
+    # `docker compose down` lo conserva; `docker compose down -v` lo borra.

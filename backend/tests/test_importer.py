@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import json
 
-from app.config import CACHE_NEARBY_PREFIX, PARKING_KEY_PREFIX
+from app.config import CACHE_VERSION_KEY, PARKING_KEY_PREFIX
 from app.enums import (
     ParkingCategory,
     ParkingGeometryType,
@@ -30,10 +30,8 @@ from app.importer import (
     place_from_redis_hash,
     place_to_redis_mapping,
     representative_point,
-    run_import,
     run_import_sources,
 )
-
 
 _PROFILE_APARCAMIENTOS = SOURCE_REGISTRY["aparcamientos.geojson"]
 _PROFILE_LINEA = SOURCE_REGISTRY["aparcamientos_en_linea.geojson"]
@@ -456,20 +454,20 @@ def test_run_import_is_idempotent_and_clears_stale_entries(fake_redis):
     assert surviving == [f"{PARKING_KEY_PREFIX}aparcamientos_en_linea:7700"]
 
 
-def test_run_import_invalidates_nearby_cache(fake_redis):
-    # Sembramos varias entradas de caché previas a la importación.
-    fake_redis.setex(f"{CACHE_NEARBY_PREFIX}39.4700:-6.3700:500", 60, "[]")
-    fake_redis.setex(f"{CACHE_NEARBY_PREFIX}39.4800:-6.3800:1000", 60, "[]")
-    # Y una clave ajena que NO debe tocarse.
-    fake_redis.setex("other:key", 60, "stay")
+def test_run_import_bumps_cache_version(fake_redis):
+    """El reimport invalida la caché incrementando `cache:version` (O(1))."""
+    # Versión inicial: no existe la clave -> tratada como 0.
+    assert fake_redis.get(CACHE_VERSION_KEY) is None
 
     summary = run_import_sources(_all_geometries_sources(), fake_redis)
 
-    assert summary["cache_invalidated"] == 2
-    assert not any(
-        k.startswith(CACHE_NEARBY_PREFIX) for k in fake_redis.strings
-    )
-    assert fake_redis.get("other:key") == "stay"
+    assert summary["cache_version"] == 1
+    assert fake_redis.get(CACHE_VERSION_KEY) == "1"
+
+    # Reimport: la versión vuelve a subir, invalidando la caché de nuevo.
+    summary2 = run_import_sources(_all_geometries_sources(), fake_redis)
+    assert summary2["cache_version"] == 2
+    assert fake_redis.get(CACHE_VERSION_KEY) == "2"
 
 
 def test_run_import_disambiguates_duplicate_municipal_ids(fake_redis):

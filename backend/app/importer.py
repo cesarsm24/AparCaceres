@@ -32,7 +32,7 @@ from typing import Any, Iterable, Iterator, Optional
 import redis
 
 from .config import (
-    CACHE_NEARBY_PREFIX,
+    CACHE_VERSION_KEY,
     EXCLUDED_DATASET_FILENAMES,
     LEGACY_GEO_KEY,
     LEGACY_SET_INDEX_PREFIX,
@@ -46,8 +46,8 @@ from .enums import (
     ParkingVehicleType,
 )
 from .normalization import coerce_line_string, coerce_polygon
-from .search import build_location, build_search_text, recreate_search_index
 from .schemas import ParkingPlaceOut
+from .search import build_location, build_search_text, recreate_search_index
 
 logger = logging.getLogger(__name__)
 
@@ -798,14 +798,24 @@ def _run_import_paired(
         raise ValueError("ids duplicados tras desambiguar la importación")
 
     old_keys = list(rdb.scan_iter(match=f"{PARKING_KEY_PREFIX}*"))
-    old_index_keys = list(rdb.scan_iter(match=f"{LEGACY_SET_INDEX_PREFIX}*"))
+    # Legacy: índices set basados en `idx:*` de versiones previas. El índice
+    # actual de RediSearch (`idx:parkings_search`) también encaja en el patrón,
+    # pero se borra explícitamente con `FT.DROPINDEX` desde `recreate_search_index`,
+    # por lo que se excluye aquí para no desindexar antes de tiempo.
+    old_index_keys = [
+        key
+        for key in rdb.scan_iter(match=f"{LEGACY_SET_INDEX_PREFIX}*")
+        if key != SEARCH_INDEX_NAME
+    ]
 
+    # Preferimos UNLINK sobre DEL: libera la memoria de forma asíncrona y no
+    # bloquea el event loop de Redis cuando hay decenas de miles de claves.
     cleanup = rdb.pipeline()
     if old_keys:
-        cleanup.delete(*old_keys)
+        _unlink_or_delete(cleanup, *old_keys)
     if old_index_keys:
-        cleanup.delete(*old_index_keys)
-    cleanup.delete(LEGACY_GEO_KEY)
+        _unlink_or_delete(cleanup, *old_index_keys)
+    _unlink_or_delete(cleanup, LEGACY_GEO_KEY)
     cleanup.execute()
 
     recreate_search_index(rdb)
@@ -819,14 +829,15 @@ def _run_import_paired(
 
     pipe.execute()
 
-    # Invalidación de caché: best-effort. Si falla, el TTL hará el trabajo.
+    # Invalidación de caché por versionado: O(1). En lugar de recorrer
+    # `cache:nearby:*` con SCAN_ITER y borrar miles de claves, incrementamos
+    # un contador global. Las claves nuevas usan el sufijo `v{n}` y las
+    # antiguas quedan huérfanas hasta que su TTL las recoja.
     try:
-        cache_keys = list(rdb.scan_iter(match=f"{CACHE_NEARBY_PREFIX}*"))
-        if cache_keys:
-            rdb.delete(*cache_keys)
+        new_version = int(rdb.incr(CACHE_VERSION_KEY))
     except redis.ConnectionError:
-        logger.warning("No se pudo invalidar cache:nearby:* al reimportar")
-        cache_keys = []
+        logger.warning("No se pudo incrementar %s al reimportar", CACHE_VERSION_KEY)
+        new_version = 0
 
     return {
         "status": "ok",
@@ -834,7 +845,7 @@ def _run_import_paired(
         "skipped": skipped,
         "search_index": SEARCH_INDEX_NAME,
         "ids_disambiguated": disambiguated,
-        "cache_invalidated": len(cache_keys),
+        "cache_version": new_version,
         "sources": [
             {
                 "sourceDataset": name or None,
@@ -844,6 +855,20 @@ def _run_import_paired(
             for name, stats in sorted(per_source.items())
         ],
     }
+
+
+def _unlink_or_delete(pipe, *keys: str) -> None:
+    """Encola UNLINK en el pipeline; cae a DELETE si el cliente no lo expone.
+
+    `redis-py` soporta `unlink` desde hace muchas versiones, pero el FakeRedis
+    de los tests solo implementa `delete`. La degradación es transparente.
+    """
+    if not keys:
+        return
+    if hasattr(pipe, "unlink"):
+        pipe.unlink(*keys)
+    else:
+        pipe.delete(*keys)
 
 
 # ============================================================

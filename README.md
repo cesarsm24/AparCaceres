@@ -62,16 +62,78 @@ Requisitos:
 - Python `>=3.11`
 - Redis Stack con RediSearch habilitado
 
-Comandos habituales:
+### Ejecución local sin Docker
 
 ```bash
 cd backend
 python3.11 -m venv .venv311
 . .venv311/bin/activate
 pip install -r requirements-dev.txt
+cp .env.example .env   # ajustar APP_ENV, CORS_ORIGINS, etc.
 pytest
 uvicorn main:app --reload
 ```
+
+Tras la primera arrancada hay que poblar el catálogo:
+
+```bash
+curl -X POST http://localhost:8000/import-parkings
+```
+
+### Ejecución con Docker (recomendada para staging)
+
+`docker-compose.yml` levanta Redis Stack con AOF persistente y la API conectada
+a él. Reproducible en cualquier máquina con Docker:
+
+```bash
+docker compose up -d --build
+docker compose exec api curl -s http://localhost:8000/healthz | jq
+curl -X POST http://localhost:8000/import-parkings
+docker compose down       # parar; conserva el volumen redis-data
+docker compose down -v    # parar y BORRAR los datos persistentes
+```
+
+### CORS
+
+El cliente nativo Android/iOS no envía cabecera `Origin`, por lo que CORS no
+le afecta. Solo hace falta declarar orígenes para Flutter web
+(`flutter run -d chrome`) o paneles web futuros.
+
+| Entorno      | `CORS_ORIGINS` recomendado                                    |
+|--------------|---------------------------------------------------------------|
+| Desarrollo   | `http://localhost:3000,http://localhost:5000,http://localhost:8080` (también sirve dejar la variable vacía con `APP_ENV=development`, que aplica esa lista) |
+| Staging      | URL pública del Flutter web de staging                        |
+| Producción   | Lista explícita de dominios reales. Nunca `*`                 |
+
+### Healthcheck
+
+`GET /healthz` comprueba `PING` a Redis y `FT.INFO` sobre el índice
+`idx:parkings_search`. Devuelve 200 cuando todo está sano y 503 con desglose
+por componente cuando algo falla. Recomendado como liveness/readiness probe en
+Kubernetes y como `HEALTHCHECK` del contenedor Docker (ya configurado).
+
+### Logging
+
+Los logs salen como JSON por línea (sin dependencias externas). Cada entrada
+incluye `timestamp`, `level`, `logger`, `message` y `request_id`. El nivel se
+controla con la variable `LOG_LEVEL` (`DEBUG`, `INFO`, `WARNING`, ...).
+
+El middleware `RequestIdMiddleware` propaga la cabecera `X-Request-ID` de
+extremo a extremo: si el cliente la envía se respeta, si no se genera un UUID4
+y se devuelve en la respuesta para correlación.
+
+### Reimportar el catálogo en producción
+
+`POST /import-parkings` exige cabecera `X-Import-Token` cuando la variable de
+entorno `IMPORT_TOKEN` está configurada (la comparación es constant-time):
+
+```bash
+curl -X POST https://api.aparcaceres.app/import-parkings \
+  -H "X-Import-Token: $IMPORT_TOKEN"
+```
+
+La invalidación de caché es `O(1)`: incrementa `cache:version` y las claves
+antiguas quedan inalcanzables (caducan por TTL).
 
 ## Redis Stack en el proyecto
 

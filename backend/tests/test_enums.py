@@ -21,7 +21,6 @@ from app.normalization import (
     coerce_vehicle_type,
 )
 
-
 # ---------- Wire values (deben coincidir con los `case '...' =>` de Flutter) ----------
 
 def test_category_wire_values():

@@ -12,7 +12,6 @@ from app.normalization import (
     coerce_polygon,
 )
 
-
 # ---------- coerce_enum genérico ----------
 
 def test_coerce_enum_returns_default_on_unknown():

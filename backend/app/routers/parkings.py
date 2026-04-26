@@ -15,6 +15,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from ..config import (
     CACHE_NEARBY_PREFIX,
     CACHE_NEARBY_TTL,
+    CACHE_VERSION_KEY,
     DEFAULT_PARKING_LIMIT,
     MAX_PARKING_LIMIT,
     PARKING_KEY_PREFIX,
@@ -320,9 +321,20 @@ def get_parkings_nearby(
         or effective_offset > 0
     )
     cache_enabled = CACHE_NEARBY_TTL > 0 and not has_filters
-    cache_key = f"{CACHE_NEARBY_PREFIX}{lat:.4f}:{lng:.4f}:{int(effective_radius)}"
+    cache_key: Optional[str] = None
 
     if cache_enabled:
+        # Versión global namespaceada en la clave: al reimportar incrementamos
+        # `cache:version` y todas las claves antiguas quedan inalcanzables sin
+        # tener que hacer SCAN+DEL. Las huérfanas las recoge el TTL.
+        try:
+            version = rdb.get(CACHE_VERSION_KEY) or "0"
+        except redis.ConnectionError:
+            version = "0"
+        cache_key = (
+            f"{CACHE_NEARBY_PREFIX}v{version}:"
+            f"{lat:.4f}:{lng:.4f}:{int(effective_radius)}"
+        )
         try:
             cached = rdb.get(cache_key)
         except redis.ConnectionError:
@@ -361,7 +373,7 @@ def get_parkings_nearby(
         limit=effective_limit,
         offset=effective_offset,
     )
-    if cache_enabled:
+    if cache_enabled and cache_key is not None:
         try:
             rdb.setex(cache_key, CACHE_NEARBY_TTL, envelope.model_dump_json())
         except redis.ConnectionError:

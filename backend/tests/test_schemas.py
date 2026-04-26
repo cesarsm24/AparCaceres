@@ -18,7 +18,6 @@ from app.enums import (
 )
 from app.schemas import ParkingPlaceNearbyOut, ParkingPlaceOut, ParkingQueryFilters
 
-
 # ---------- Defaults / inicialización mínima ----------
 
 def test_minimal_valid_input_applies_defaults():

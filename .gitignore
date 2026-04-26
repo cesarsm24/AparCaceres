@@ -27,8 +27,8 @@ build/
 .idea/
 *.iml
 
-# Claude Code
 CLAUDE.md
+informe.md
 .claude/
 
 # Data files opcionales

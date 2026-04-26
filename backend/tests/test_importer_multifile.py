@@ -30,7 +30,6 @@ from app.enums import (
 )
 from app.importer import (
     SOURCE_REGISTRY,
-    SourceProfile,
     derive_stable_id,
     discover_geojson_files,
     feature_to_place,
@@ -39,7 +38,6 @@ from app.importer import (
     run_import_dir,
     run_import_sources,
 )
-
 
 # ============================================================
 # Helpers de construcción de GeoJSON sintético

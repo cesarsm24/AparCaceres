@@ -33,7 +33,6 @@ from .normalization import (
     coerce_vehicle_type,
 )
 
-
 # ============================================================
 # Contrato móvil — lo que consume Flutter
 # ============================================================
