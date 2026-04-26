@@ -10,10 +10,8 @@ from __future__ import annotations
 from datetime import datetime, timedelta, timezone
 
 import jwt
-import pytest
 
 from app import auth as auth_module
-
 
 # ============================================================
 # POST /auth/session

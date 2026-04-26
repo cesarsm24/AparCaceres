@@ -106,6 +106,50 @@ def _search_error(exc: SearchIndexError) -> HTTPException:
     return HTTPException(status_code=503, detail=str(exc))
 
 
+def _build_nearby_cache_key(
+    *,
+    version: str,
+    lat: float,
+    lng: float,
+    radius: float,
+    vehicle_types: Optional[list[ParkingVehicleType]] = None,
+    categories: Optional[list[ParkingCategory]] = None,
+    regulations: Optional[list[ParkingRegulation]] = None,
+    datasets: Optional[list[str]] = None,
+    min_spaces: int = 0,
+) -> str:
+    """Clave canónica de caché para `/parkings/nearby`.
+
+    Reglas:
+    - `lat`/`lng` se truncan a 4 decimales (~10 m) para que peticiones
+      casi-iguales reutilicen la misma entrada.
+    - Cada lista de filtros se ordena alfabéticamente y se serializa con
+      separadores claros, de modo que `?category=a&category=b` y
+      `?category=b&category=a` produzcan la misma clave.
+    - Los filtros vacíos no aparecen, manteniendo cortas las claves del caso
+      sin filtros (que es el más frecuente).
+    - El prefijo `cache:nearby:v{n}:` permite invalidar todo con un único
+      `INCR cache:version` (ver `app/importer.py`).
+    """
+    parts = [f"{lat:.4f}", f"{lng:.4f}", str(int(radius))]
+    if vehicle_types:
+        joined = ",".join(sorted(v.value for v in vehicle_types))
+        parts.append(f"veh={joined}")
+    if categories:
+        joined = ",".join(sorted(c.value for c in categories))
+        parts.append(f"cat={joined}")
+    if regulations:
+        joined = ",".join(sorted(r.value for r in regulations))
+        parts.append(f"reg={joined}")
+    if datasets:
+        joined = ",".join(sorted(d for d in datasets if d))
+        if joined:
+            parts.append(f"ds={joined}")
+    if min_spaces and min_spaces > 0:
+        parts.append(f"min={int(min_spaces)}")
+    return f"{CACHE_NEARBY_PREFIX}v{version}:" + ":".join(parts)
+
+
 _PLACE_POINT_EXAMPLE = {
     "id": "aparcamientos:1903",
     "name": "Escuela Politecnica",
@@ -312,18 +356,20 @@ def get_parkings_nearby(
     effective_limit = _resolve_limit(limit)
     effective_offset = _resolve_offset(offset)
 
-    has_filters = bool(
+    # Filtros que inflan la cardinalidad de la clave hasta hacer la caché
+    # contraproducente (texto libre, lista de ids, paginación o limit custom).
+    # En su presencia volvemos al BYPASS de siempre.
+    cache_busting_filters = bool(
         ids
         or q
-        or vehicleType
-        or category
-        or regulation
-        or dataset
-        or minSpaces > 0
         or limit is not None
         or effective_offset > 0
     )
-    cache_enabled = CACHE_NEARBY_TTL > 0 and not has_filters
+    # Filtros enum / dataset / minSpaces tienen cardinalidad pequeña y conocida
+    # (≈ 9 categorías × 5 regulaciones × 3 vehículos × 10 datasets × buckets de
+    # plazas), así que sí entran a la clave canónica. La caché cubre así los
+    # patrones reales del cliente (mapa con uno o dos chips de filtro).
+    cache_enabled = CACHE_NEARBY_TTL > 0 and not cache_busting_filters
     cache_key: Optional[str] = None
 
     if cache_enabled:
@@ -334,9 +380,16 @@ def get_parkings_nearby(
             version = rdb.get(CACHE_VERSION_KEY) or "0"
         except redis.ConnectionError:
             version = "0"
-        cache_key = (
-            f"{CACHE_NEARBY_PREFIX}v{version}:"
-            f"{lat:.4f}:{lng:.4f}:{int(effective_radius)}"
+        cache_key = _build_nearby_cache_key(
+            version=str(version),
+            lat=lat,
+            lng=lng,
+            radius=effective_radius,
+            vehicle_types=vehicleType,
+            categories=category,
+            regulations=regulation,
+            datasets=dataset,
+            min_spaces=minSpaces,
         )
         try:
             cached = rdb.get(cache_key)

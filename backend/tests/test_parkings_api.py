@@ -290,10 +290,47 @@ def test_nearby_caches_when_no_filters_applied(seeded_client):
     assert second.json() == first.json()
 
 
-def test_nearby_bypasses_cache_when_filters_applied(seeded_client):
+def test_nearby_caches_low_cardinality_filters(seeded_client):
+    """Filtros enum / dataset / minSpaces son de baja cardinalidad: cachean.
+
+    Antes hacían BYPASS por defensividad; ahora la clave canónica los
+    incorpora ordenados, así que la combinación (centro+radio+chip de filtro)
+    típica del cliente reutiliza la misma entrada.
+    """
+    base = {
+        "lat": 39.4753,
+        "lng": -6.3724,
+        "radiusMeters": 800,
+        "category": "parking",
+    }
+    first = seeded_client.get("/parkings/nearby", params=base)
+    assert first.headers.get("X-Cache") == "MISS"
+
+    second = seeded_client.get("/parkings/nearby", params=base)
+    assert second.headers.get("X-Cache") == "HIT"
+    assert second.json() == first.json()
+
+
+def test_nearby_cache_key_is_filter_aware(seeded_client):
+    """Combinaciones distintas de filtros tienen claves distintas (no se mezclan)."""
+    base = {"lat": 39.4753, "lng": -6.3724, "radiusMeters": 800}
+
+    no_filter = seeded_client.get("/parkings/nearby", params=base)
+    with_filter = seeded_client.get(
+        "/parkings/nearby",
+        params={**base, "category": "blue_zone"},
+    )
+    # Ambos son MISS la primera vez (clave distinta).
+    assert no_filter.headers.get("X-Cache") == "MISS"
+    assert with_filter.headers.get("X-Cache") == "MISS"
+
+
+def test_nearby_bypasses_cache_for_text_search(seeded_client):
+    """`q`, `ids`, `limit` o `offset` siguen forzando BYPASS porque inflan
+    la cardinalidad de la clave."""
     response = seeded_client.get(
         "/parkings/nearby",
-        params={"lat": 39.4753, "lng": -6.3724, "radiusMeters": 800, "category": "parking"},
+        params={"lat": 39.4753, "lng": -6.3724, "radiusMeters": 800, "q": "dalia"},
     )
     assert response.headers.get("X-Cache") == "BYPASS"
 

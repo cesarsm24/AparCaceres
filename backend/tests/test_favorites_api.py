@@ -320,3 +320,59 @@ def test_openapi_contains_favorites_examples(seeded_client):
     delete_resp = paths["/users/me/favorites/{parking_id}"]["delete"]["responses"]["200"]
     assert "example" in delete_resp["content"]["application/json"]
     assert delete_resp["content"]["application/json"]["example"]["removed"] is True
+
+
+# ============================================================
+# Cap y TTL del sorted set por usuario
+# ============================================================
+
+def test_favorites_cap_drops_oldest_when_max_reached(
+    seeded_client, fake_redis, auth_headers, monkeypatch, freeze_time
+):
+    """Al añadir un nuevo favorito por encima del tope, el más antiguo se elimina.
+
+    Bajamos el cap a 2 vía monkeypatch para no tener que crear cientos de
+    entradas en el test. La semántica que validamos es: el sorted set nunca
+    excede `FAVORITES_MAX_PER_USER`, y los descartados son los más antiguos
+    por score (ZREMRANGEBYRANK 0 -3 con cap=2).
+    """
+    monkeypatch.setattr("app.routers.favorites.FAVORITES_MAX_PER_USER", 2)
+
+    headers = auth_headers("capped-user")
+    ids = [
+        "aparcamientos:1903",
+        "aparcamientos_en_linea:5500",
+        "parkings:2001",
+    ]
+    for parking_id in ids:
+        seeded_client.put(f"/users/me/favorites/{parking_id}", headers=headers)
+        freeze_time(1000)  # avanza el reloj entre puts para fijar el orden
+
+    # El sorted set debe contener exactamente 2 miembros (los dos últimos).
+    bucket = fake_redis.zsets.get("user:capped-user:favorites", {})
+    assert set(bucket.keys()) == {
+        "aparcamientos_en_linea:5500",
+        "parkings:2001",
+    }
+    # El más antiguo (`aparcamientos:1903`) ha sido evictado por el cap.
+    listing = seeded_client.get("/users/me/favorites", headers=headers).json()
+    assert "aparcamientos:1903" not in {p["id"] for p in listing}
+
+
+def test_favorites_cap_disabled_when_zero(
+    seeded_client, fake_redis, auth_headers, monkeypatch, freeze_time
+):
+    """`FAVORITES_MAX_PER_USER=0` desactiva el recorte (modo legacy)."""
+    monkeypatch.setattr("app.routers.favorites.FAVORITES_MAX_PER_USER", 0)
+
+    headers = auth_headers("uncapped-user")
+    for parking_id in (
+        "aparcamientos:1903",
+        "aparcamientos_en_linea:5500",
+        "parkings:2001",
+    ):
+        seeded_client.put(f"/users/me/favorites/{parking_id}", headers=headers)
+        freeze_time(1000)
+
+    bucket = fake_redis.zsets.get("user:uncapped-user:favorites", {})
+    assert len(bucket) == 3

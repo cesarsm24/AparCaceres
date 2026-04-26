@@ -35,6 +35,8 @@ from fastapi import APIRouter, Depends, HTTPException
 
 from ..auth import require_user
 from ..config import (
+    FAVORITES_MAX_PER_USER,
+    FAVORITES_TTL_SECONDS,
     PARKING_KEY_PREFIX,
     USER_FAVORITES_KEY_PREFIX,
     USER_FAVORITES_KEY_SUFFIX,
@@ -262,6 +264,33 @@ def add_favorite(
         except redis.ConnectionError as exc:
             raise raise_redis_503(exc) from exc
         created = True
+        # Cap: si el usuario excede el tope, recortamos los más antiguos.
+        # `ZREMRANGEBYRANK key 0 -(MAX+1)` borra todos los miembros con rango
+        # inferior al "MAX-último" tras un orden ascendente (= los más antiguos).
+        if FAVORITES_MAX_PER_USER > 0:
+            try:
+                excess_until = -(FAVORITES_MAX_PER_USER + 1)
+                rdb.zremrangebyrank(key, 0, excess_until)
+            except redis.ConnectionError:
+                # Best-effort: si el cap no se aplica este request lo aplicará
+                # el siguiente. No queremos abortar el alta del favorito por
+                # esto.
+                logger.warning(
+                    "No se pudo aplicar cap de favoritos para usuario %s",
+                    user_id,
+                )
+
+    # Renovamos el TTL del sorted set para que las cuentas activas no expiren.
+    # Lo hacemos también cuando ya estaba (re-PUT) porque sirve como heartbeat
+    # de actividad del usuario.
+    if FAVORITES_TTL_SECONDS > 0:
+        try:
+            rdb.expire(key, FAVORITES_TTL_SECONDS)
+        except redis.ConnectionError:
+            logger.warning(
+                "No se pudo renovar TTL de favoritos para usuario %s",
+                user_id,
+            )
 
     return FavoriteAdded(
         id=parking_id,
