@@ -61,6 +61,58 @@ hash-tags (prematuro sin métricas).
 - `_load_places` eliminado de `app/search.py` al quedar sin callers tras
   la migración a `FT.SEARCH` con payload.
 
+### Added (mobile · integración con backend)
+- **`ApiClient` HTTP** sobre `package:http`: timeouts uniformes (10 s),
+  cancelación cooperativa (`CancelToken`), inyección opcional de
+  `Authorization: Bearer`, mapeo de fallos a `ApiException`/
+  `ApiUnavailableException`/`ApiTimeoutException`/`ApiCancelledException`,
+  y logging de cabeceras útiles (`X-Cache`, `X-Total-Count`,
+  `X-RateLimit-Remaining`, `X-Request-ID`) en modo debug.
+- **`ApiParkingRepository`** consume los endpoints reales:
+  `GET /parkings`, `GET /parkings/nearby` (con `lat`/`lng`/`radiusMeters`),
+  `GET /parkings/categories`, `GET /parkings/{id}` (404 → `null`) y
+  `GET /users/me/favorites` con bearer.
+- **`AuthSession`**: genera un `sub` aleatorio (24 hex) en el primer
+  arranque, lo persiste en `SharedPreferences` y lo intercambia por un
+  JWT vía `POST /auth/session`. Cachea token + `expiresAt`, refresca
+  cuando faltan ≤ 1 día y dedupe peticiones concurrentes con una future
+  en vuelo compartida.
+- **`ServerFavoritesStore`**: cache en memoria con `contains` síncrono
+  para el corazón; `add`/`remove`/`toggle` optimistas que disparan
+  `PUT`/`DELETE /users/me/favorites/{id}` y revierten en error.
+  `reload()` consume `GET /users/me/favorites` y solo notifica si hay
+  diff (sin bucles con `ListenableBuilder`).
+- **`ApiErrorState`** reutilizable en cada `FutureBuilder`: copia
+  diferenciada para timeout, servicio no disponible, `detail` 4xx del
+  backend o fallo genérico, con botón "Reintentar".
+- **Banner "Estás fuera de Cáceres"** en `MapScreen` cuando un fix real
+  cae fuera del bbox (`LocationService.isOutsideCaceres`), con CTA al
+  picker (que sigue acotado a Cáceres por viewbox de Nominatim).
+- **README de `mobile/`** con `--dart-define`s, comandos de tests,
+  arquitectura abreviada y checklist de smoke test.
+- Tests nuevos: `api_client_test`, `api_parking_repository_test`,
+  `auth_session_test`, `server_favorites_store_test`,
+  `api_error_state_test` (42 tests en total).
+
+### Changed (mobile · integración con backend)
+- **Cámara inicial del mapa** alineada con el botón de localización:
+  cuando no hay centro explícito, la vista arranca centrada en el último
+  fix con `_focusedZoom` (16) en lugar de `_initialZoom` (15) sobre la
+  plaza. Misma vista la pulse el usuario o no el icono de "ubicación
+  actual".
+- **Cancelación de re-búsquedas** en `MapScreen`: cualquier cambio de
+  filtros, picker o recentrado cancela la request anterior antes de
+  emitir la siguiente; `dispose()` cancela la última pendiente.
+- **`HomeScreen` y `FavoritesScreen` pasan a `StatefulWidget`** para que
+  la `Future` se construya una sola vez y no se rehagan llamadas a la
+  API en cada rebuild.
+- **`FavoritesStore` ahora es abstracto**, con `LocalFavoritesStore`
+  (modo demo) y `ServerFavoritesStore` (producción). El global
+  `favoritesStore` se selecciona por `--dart-define=USE_LOCAL_DATA`.
+- **`getFavorites()` simplificado**: deja de pasar por `/parkings?ids=`
+  y consume `/users/me/favorites` directamente, que ya devuelve los
+  `ParkingPlaceOut` ordenados por fecha de adición.
+
 ### Added (Fase 2)
 - Auth firmada para favoritos: nuevo módulo `app/auth.py` con JWT HS256
   (`Authorization: Bearer <token>` o `X-Session-Token`) y endpoint
