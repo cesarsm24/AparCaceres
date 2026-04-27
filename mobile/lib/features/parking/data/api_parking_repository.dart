@@ -21,7 +21,10 @@ class ApiParkingRepository implements ParkingRepository {
   /// con centro usa `/parkings/nearby` para que el backend ordene por
   /// distancia con RediSearch geo.
   @override
-  Future<List<ParkingPlace>> getNearby(ParkingQuery query) async {
+  Future<List<ParkingPlace>> getNearby(
+    ParkingQuery query, {
+    CancelToken? cancelToken,
+  }) async {
     final filters = _filterParams(query);
     final Map<String, dynamic> params;
     final String path;
@@ -37,7 +40,11 @@ class ApiParkingRepository implements ParkingRepository {
         ...filters,
       };
     }
-    final json = await _client.getJson(path, query: params);
+    final json = await _client.getJson(
+      path,
+      query: params,
+      cancelToken: cancelToken,
+    );
     return parseListResponse<ParkingPlace>(json, ParkingPlace.fromJson);
   }
 

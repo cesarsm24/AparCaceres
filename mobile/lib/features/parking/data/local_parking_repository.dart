@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/services.dart';
 import 'package:latlong2/latlong.dart';
 
+import '../../../core/network/api_client.dart';
 import '../domain/parking_place.dart';
 import '../domain/parking_query.dart';
 import '../domain/parking_repository.dart';
@@ -20,7 +21,10 @@ class LocalParkingRepository implements ParkingRepository {
   List<ParkingPlace>? _cache;
 
   @override
-  Future<List<ParkingPlace>> getNearby(ParkingQuery query) async {
+  Future<List<ParkingPlace>> getNearby(
+    ParkingQuery query, {
+    CancelToken? cancelToken,
+  }) async {
     final places = await _loadPlaces();
     final distance = const Distance();
     final filtered = places.where((place) {
