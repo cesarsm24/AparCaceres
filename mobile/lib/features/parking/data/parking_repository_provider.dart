@@ -1,4 +1,4 @@
-import '../../../core/network/api_client.dart';
+import '../../../core/providers.dart';
 import '../domain/parking_repository.dart';
 import 'api_parking_repository.dart';
 import 'local_parking_repository.dart';
@@ -11,11 +11,6 @@ const bool _useLocalData = bool.fromEnvironment(
   defaultValue: false,
 );
 
-/// `ApiClient` se reusa en todas las pantallas para que el `http.Client`
-/// subyacente mantenga su connection pool y los logs de debug salgan por un
-/// único punto.
-final ApiClient _sharedApiClient = ApiClient();
-
 final ParkingRepository parkingRepository = _useLocalData
     ? LocalParkingRepository()
-    : ApiParkingRepository(client: _sharedApiClient);
+    : ApiParkingRepository(client: sharedApiClient);

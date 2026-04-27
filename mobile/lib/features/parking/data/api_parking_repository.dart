@@ -4,18 +4,14 @@ import '../../../core/network/api_exceptions.dart';
 import '../domain/parking_place.dart';
 import '../domain/parking_query.dart';
 import '../domain/parking_repository.dart';
-import 'favorites_store.dart';
 
 /// Adapta la API HTTP de FastAPI al contrato `ParkingRepository` que consume
 /// la UI. La traducción wire ↔ dominio vive en `parking_place.dart`; aquí
 /// solo se construyen las URLs y se manejan los códigos de respuesta.
 class ApiParkingRepository implements ParkingRepository {
-  ApiParkingRepository({required ApiClient client, FavoritesStore? favorites})
-    : _client = client,
-      _favorites = favorites ?? favoritesStore;
+  ApiParkingRepository({required ApiClient client}) : _client = client;
 
   final ApiClient _client;
-  final FavoritesStore _favorites;
 
   /// Si `query.center` es nulo cae a `/parkings` (listado global con filtros);
   /// con centro usa `/parkings/nearby` para que el backend ordene por
@@ -77,18 +73,23 @@ class ApiParkingRepository implements ParkingRepository {
       ..sort((a, b) => a.index.compareTo(b.index));
   }
 
-  /// Hasta Fase D los favoritos viven en `FavoritesStore` local. Aquí solo
-  /// resolvemos los ids contra `/parkings?ids=` para devolver el detalle
-  /// fresco del backend en lugar del fixture mock.
+  /// `GET /users/me/favorites` devuelve directamente la lista de
+  /// `ParkingPlaceOut` ordenada por fecha de adición descendente. La sesión
+  /// JWT la inyecta `ApiClient.tokenProvider` (ver `core/providers.dart`),
+  /// por eso `requiresAuth: true`.
   @override
   Future<List<ParkingPlace>> getFavorites() async {
-    final ids = _favorites.ids.toList();
-    if (ids.isEmpty) return const <ParkingPlace>[];
     final json = await _client.getJson(
-      '/parkings',
-      query: {'ids': ids},
+      '/users/me/favorites',
+      requiresAuth: true,
     );
-    return parseListResponse<ParkingPlace>(json, ParkingPlace.fromJson);
+    if (json is! List) {
+      throw ApiException('Unexpected favorites shape: ${json.runtimeType}');
+    }
+    return [
+      for (final item in json)
+        if (item is Map<String, dynamic>) ParkingPlace.fromJson(item),
+    ];
   }
 
   Map<String, dynamic> _filterParams(ParkingQuery query) {

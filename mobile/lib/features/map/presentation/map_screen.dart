@@ -12,7 +12,6 @@ import '../../../theme/app_spacing.dart';
 import '../../location/data/location_service.dart';
 import '../../location_picker/domain/place_suggestion.dart';
 import '../../location_picker/presentation/location_picker_screen.dart';
-import '../../parking/data/parking_constants.dart';
 import '../../parking/data/parking_repository_provider.dart';
 import '../../parking/domain/parking_place.dart';
 import '../../parking/presentation/parking_ui.dart';
@@ -279,8 +278,14 @@ class _MapScreenState extends State<MapScreen> {
                     FlutterMap(
                       mapController: _mapController,
                       options: MapOptions(
-                        initialCenter: _filters.center ?? kCaceresCenter,
-                        initialZoom: widget.initialFocused
+                        // Sin centro explícito tratamos la pantalla como
+                        // "seguir al usuario": misma vista que el botón de
+                        // localización (centrada en el último fix con zoom
+                        // focused), aunque `widget.initialFocused` sea false.
+                        initialCenter:
+                            _filters.center ?? locationService.position.value,
+                        initialZoom: (widget.initialFocused ||
+                                _filters.center == null)
                             ? _focusedZoom
                             : _initialZoom,
                         minZoom: _minZoom,
@@ -337,6 +342,19 @@ class _MapScreenState extends State<MapScreen> {
                         onZoomOut: _zoomOut,
                       ),
                     ),
+                    // El banner solo tiene sentido cuando intentamos seguir
+                    // al usuario y resulta que está fuera del bbox: con un
+                    // centro elegido a mano la posición real da igual.
+                    if (_filters.center == null &&
+                        locationService.isOutsideCaceres)
+                      Positioned(
+                        left: AppSpacing.md,
+                        right: AppSpacing.md,
+                        top: 72,
+                        child: _OutsideCaceresBanner(
+                          onPickLocation: _pickLocation,
+                        ),
+                      ),
                     if (_loadingRoute && selected != null)
                       Positioned(
                         top: AppSpacing.md,
@@ -677,6 +695,71 @@ class _OsmAttribution extends StatelessWidget {
       child: const Text(
         '© OpenStreetMap',
         style: TextStyle(fontSize: 10, color: AppColors.textSecondary),
+      ),
+    );
+  }
+}
+
+/// Banner que aparece cuando el `LocationService` confirma que el dispositivo
+/// está fuera del bbox de Cáceres. La app no tiene datos para esa zona, así
+/// que ofrecemos abrir el picker (que sí permite buscar calles dentro de
+/// Cáceres aunque el usuario esté en otra ciudad).
+class _OutsideCaceresBanner extends StatelessWidget {
+  const _OutsideCaceresBanner({required this.onPickLocation});
+
+  final VoidCallback onPickLocation;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: AppColors.surface,
+      elevation: 2,
+      borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(
+          AppSpacing.md,
+          AppSpacing.sm,
+          AppSpacing.sm,
+          AppSpacing.sm,
+        ),
+        child: Row(
+          children: [
+            const Icon(
+              Icons.location_off_rounded,
+              color: AppColors.primary,
+              size: 22,
+            ),
+            const SizedBox(width: AppSpacing.sm),
+            const Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'Estás fuera de Cáceres',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                  Text(
+                    'AparCáceres solo cubre la ciudad. Busca un punto para'
+                    ' verlo en el mapa.',
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            TextButton(
+              onPressed: onPickLocation,
+              child: const Text('Buscar'),
+            ),
+          ],
+        ),
       ),
     );
   }

@@ -4,7 +4,6 @@ import 'dart:convert';
 import 'package:aparcaceres/core/network/api_client.dart';
 import 'package:aparcaceres/core/network/api_exceptions.dart';
 import 'package:aparcaceres/features/parking/data/api_parking_repository.dart';
-import 'package:aparcaceres/features/parking/data/favorites_store.dart';
 import 'package:aparcaceres/features/parking/domain/parking_place.dart';
 import 'package:aparcaceres/features/parking/domain/parking_query.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -26,10 +25,13 @@ Map<String, dynamic> _samplePlace(String id) => {
 
 ApiParkingRepository _repo(
   MockClientHandler handler, {
-  FavoritesStore? favorites,
+  TokenProvider? tokenProvider,
 }) {
-  final client = ApiClient(httpClient: MockClient(handler));
-  return ApiParkingRepository(client: client, favorites: favorites);
+  final client = ApiClient(
+    httpClient: MockClient(handler),
+    tokenProvider: tokenProvider,
+  );
+  return ApiParkingRepository(client: client);
 }
 
 void main() {
@@ -176,41 +178,35 @@ void main() {
   });
 
   group('ApiParkingRepository.getFavorites', () {
-    test('returns empty without hitting the network when no local ids',
-        () async {
-      var hit = false;
-      final favorites = FavoritesStore();
-      final repo = _repo(
-        (_) async {
-          hit = true;
-          return http.Response('[]', 200);
-        },
-        favorites: favorites,
-      );
-
-      expect(await repo.getFavorites(), isEmpty);
-      expect(hit, isFalse);
-    });
-
-    test('queries /parkings?ids= with all favorited ids', () async {
-      Uri? captured;
-      final favorites = FavoritesStore(seedIds: ['a', 'b']);
+    test('hits /users/me/favorites with bearer token', () async {
+      Uri? capturedUri;
+      Map<String, String>? capturedHeaders;
       final repo = _repo(
         (http.Request req) async {
-          captured = req.url;
+          capturedUri = req.url;
+          capturedHeaders = req.headers;
           return http.Response(
-            jsonEncode({'items': [_samplePlace('a'), _samplePlace('b')], 'total': 2}),
+            jsonEncode([_samplePlace('a'), _samplePlace('b')]),
             200,
           );
         },
-        favorites: favorites,
+        tokenProvider: () async => 'jwt-test',
       );
 
       final places = await repo.getFavorites();
 
       expect(places, hasLength(2));
-      expect(captured!.path, '/parkings');
-      expect(captured!.queryParametersAll['ids'], containsAll(['a', 'b']));
+      expect(capturedUri!.path, '/users/me/favorites');
+      expect(capturedHeaders!['Authorization'], 'Bearer jwt-test');
+    });
+
+    test('returns empty list when server replies with []', () async {
+      final repo = _repo(
+        (_) async => http.Response('[]', 200),
+        tokenProvider: () async => 'jwt-test',
+      );
+
+      expect(await repo.getFavorites(), isEmpty);
     });
   });
 }

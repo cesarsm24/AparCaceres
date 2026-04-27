@@ -12,10 +12,16 @@ class LocationService {
   );
   bool _granted = false;
   bool _serviceEnabled = false;
+  bool _outsideCaceres = false;
 
   bool get granted => _granted;
   bool get serviceEnabled => _serviceEnabled;
   bool get hasRealFix => _granted && _serviceEnabled;
+
+  /// `true` cuando la última `refresh()` consiguió un fix válido pero quedó
+  /// fuera del bbox de Cáceres. La UI lo usa para decirle al usuario que la
+  /// app solo cubre la ciudad y ofrecer un picker manual.
+  bool get isOutsideCaceres => _outsideCaceres;
 
   /// Requests permission (if needed) and tries to get a first fix.
   /// Returns true if a real position was stored, false on any failure
@@ -53,7 +59,13 @@ class LocationService {
         ),
       );
       final fix = LatLng(pos.latitude, pos.longitude);
-      if (!_isWithinCaceres(fix)) return false;
+      if (!_isWithinCaceres(fix)) {
+        // Mantenemos la posición previa (mock o último fix válido) y
+        // marcamos el flag para que la UI ofrezca el picker manual.
+        _outsideCaceres = true;
+        return false;
+      }
+      _outsideCaceres = false;
       position.value = fix;
       return true;
     } catch (_) {
