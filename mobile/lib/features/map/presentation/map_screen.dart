@@ -3,6 +3,9 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../../core/network/api_client.dart';
+import '../../../core/network/api_exceptions.dart';
+import '../../../shared/widgets/api_error_state.dart';
 import '../../../shared/widgets/app_top_bar.dart';
 import '../../../theme/app_colors.dart';
 import '../../../theme/app_spacing.dart';
@@ -50,6 +53,7 @@ class _MapScreenState extends State<MapScreen> {
 
   late MapFilters _filters;
   late Future<List<ParkingPlace>> _placesFuture;
+  CancelToken? _placesCancelToken;
   ParkingPlace? _selectedPlace;
   RoutePath? _route;
   LatLng? _routeOrigin;
@@ -62,7 +66,7 @@ class _MapScreenState extends State<MapScreen> {
   void initState() {
     super.initState();
     _filters = widget.initialFilters ?? MapFilters();
-    _placesFuture = parkingRepository.getNearby(_filters.toQuery());
+    _placesFuture = _fetchPlaces();
     routeRequest.addListener(_onRouteRequested);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (routeRequest.request != null && mounted) _onRouteRequested();
@@ -71,10 +75,24 @@ class _MapScreenState extends State<MapScreen> {
 
   @override
   void dispose() {
+    _placesCancelToken?.cancel();
     routeRequest.removeListener(_onRouteRequested);
     _mapController.dispose();
     _osrm.close();
     super.dispose();
+  }
+
+  /// Punto único donde se construye la `Future` del listado: cancela cualquier
+  /// request anterior pendiente para no propagar resultados obsoletos cuando
+  /// el usuario cambia filtros, recentra o pica una ubicación nueva.
+  Future<List<ParkingPlace>> _fetchPlaces() {
+    _placesCancelToken?.cancel();
+    final token = CancelToken();
+    _placesCancelToken = token;
+    return parkingRepository.getNearby(
+      _filters.toQuery(),
+      cancelToken: token,
+    );
   }
 
   void _onRouteRequested() {
@@ -148,7 +166,7 @@ class _MapScreenState extends State<MapScreen> {
       _selectedPlace = null;
       _route = null;
       _routeOrigin = null;
-      _placesFuture = parkingRepository.getNearby(_filters.toQuery());
+      _placesFuture = _fetchPlaces();
     });
   }
 
@@ -165,7 +183,7 @@ class _MapScreenState extends State<MapScreen> {
       _selectedPlace = null;
       _route = null;
       _routeOrigin = null;
-      _placesFuture = parkingRepository.getNearby(_filters.toQuery());
+      _placesFuture = _fetchPlaces();
     });
     _mapController.move(suggestion.position, _focusedZoom);
   }
@@ -178,7 +196,7 @@ class _MapScreenState extends State<MapScreen> {
       _selectedPlace = null;
       _route = null;
       _routeOrigin = null;
-      _placesFuture = parkingRepository.getNearby(_filters.toQuery());
+      _placesFuture = _fetchPlaces();
     });
     _mapController.move(locationService.position.value, _focusedZoom);
   }
@@ -251,6 +269,11 @@ class _MapScreenState extends State<MapScreen> {
                 final places = snapshot.data ?? const <ParkingPlace>[];
                 final selected = _selectedPlace;
                 final activeCenter = _activeCenter;
+                // ApiCancelledException la disparamos al recargar: es ruido,
+                // no un fallo que mostrar al usuario.
+                final hasError =
+                    snapshot.hasError &&
+                    snapshot.error is! ApiCancelledException;
                 return Stack(
                   children: [
                     FlutterMap(
@@ -329,6 +352,20 @@ class _MapScreenState extends State<MapScreen> {
                       ),
                     if (snapshot.connectionState == ConnectionState.waiting)
                       const Center(child: CircularProgressIndicator()),
+                    if (hasError && selected == null)
+                      Positioned.fill(
+                        child: ColoredBox(
+                          color: AppColors.pageBackground.withValues(
+                            alpha: 0.92,
+                          ),
+                          child: ApiErrorState(
+                            error: snapshot.error!,
+                            onRetry: () => setState(
+                              () => _placesFuture = _fetchPlaces(),
+                            ),
+                          ),
+                        ),
+                      ),
                     Positioned(
                       left: 0,
                       right: 0,
