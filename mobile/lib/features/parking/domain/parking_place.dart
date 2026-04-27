@@ -18,6 +18,57 @@ enum ParkingRegulation { free, paid, blueZone, loading, reserved }
 
 enum ParkingGeometryType { point, polygon, lineString }
 
+/// Serialización al vocabulario wire del backend. Se mantiene aquí para que
+/// quede al lado de los `_*FromWire` y cualquier cambio en el contrato se
+/// vea en un único archivo.
+extension ParkingCategoryWire on ParkingCategory {
+  String get wire => switch (this) {
+    ParkingCategory.parking => 'parking',
+    ParkingCategory.paidParking => 'paid_parking',
+    ParkingCategory.streetLine => 'street_line',
+    ParkingCategory.streetBattery => 'street_battery',
+    ParkingCategory.blueZone => 'blue_zone',
+    ParkingCategory.accessible => 'accessible',
+    ParkingCategory.motorbike => 'motorbike',
+    ParkingCategory.bicycle => 'bicycle',
+    ParkingCategory.loading => 'loading',
+  };
+}
+
+extension ParkingVehicleTypeWire on ParkingVehicleType {
+  String get wire => switch (this) {
+    ParkingVehicleType.car => 'car',
+    ParkingVehicleType.motorbike => 'motorbike',
+    ParkingVehicleType.bike => 'bike',
+  };
+}
+
+extension ParkingRegulationWire on ParkingRegulation {
+  String get wire => switch (this) {
+    ParkingRegulation.free => 'free',
+    ParkingRegulation.paid => 'paid',
+    ParkingRegulation.blueZone => 'blue_zone',
+    ParkingRegulation.loading => 'loading',
+    ParkingRegulation.reserved => 'reserved',
+  };
+}
+
+/// Decodifica un valor wire del backend en su `ParkingCategory`. Reutiliza el
+/// mismo switch que `ParkingPlace.fromJson` para que el contrato quede en un
+/// único sitio. Devuelve `ParkingCategory.parking` ante valores desconocidos
+/// para no romper la UI si el backend introduce categorías nuevas.
+ParkingCategory parkingCategoryFromWire(String? value) => switch (value) {
+  'paid_parking' => ParkingCategory.paidParking,
+  'street_line' => ParkingCategory.streetLine,
+  'street_battery' => ParkingCategory.streetBattery,
+  'blue_zone' => ParkingCategory.blueZone,
+  'accessible' => ParkingCategory.accessible,
+  'motorbike' => ParkingCategory.motorbike,
+  'bicycle' => ParkingCategory.bicycle,
+  'loading' => ParkingCategory.loading,
+  _ => ParkingCategory.parking,
+};
+
 class ParkingPlace {
   const ParkingPlace({
     required this.id,
