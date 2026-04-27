@@ -14,7 +14,7 @@ import logging
 from typing import Optional
 
 import redis
-from fastapi import APIRouter, Depends, Header, HTTPException, Request
+from fastapi import APIRouter, Depends, Header, HTTPException, Request, Response
 
 from ..config import DATA_DIR, IMPORT_TOKEN
 from ..importer import run_import_dir
@@ -109,6 +109,7 @@ def _check_import_token(provided: Optional[str]) -> None:
 @limiter.limit(RATE_LIMIT_IMPORT)
 async def import_parkings(
     request: Request,
+    response: Response,
     x_import_token: Optional[str] = Header(
         None,
         alias="X-Import-Token",
