@@ -5,10 +5,10 @@ concretas (`@limiter.limit("N/minute")`) y devuelve `429 Too Many Requests`
 cuando el cliente excede el cupo.
 
 Decisiones:
-- Backend in-memory por defecto. En despliegues multi-worker conviene mover
-  a Redis (`storage_uri="redis://..."`) para que el cupo se comparta entre
-  procesos. Se prefiere mantenerlo simple en esta fase: una sola réplica del
-  backend basta para staging.
+- Backend Redis compartido por defecto: el cupo se cuenta de forma global
+  entre todos los workers de uvicorn. Sin esto, dos workers duplicarían
+  silenciosamente el cupo efectivo. Si Redis no está disponible al arrancar,
+  slowapi cae a in-memory automáticamente (degradación grácil).
 - `key_func=get_remote_address` cuenta por IP. Cuando el servicio corre tras
   nginx/Traefik con `--proxy-headers`, Starlette lee `X-Forwarded-For` y la
   IP real llega correctamente. Sin proxy honesto, el limiter cae al peer
@@ -28,6 +28,8 @@ import os
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 
+from .config import REDIS_DB, REDIS_HOST, REDIS_PORT
+
 
 def _env_flag(name: str, default: bool) -> bool:
     raw = os.getenv(name)
@@ -38,13 +40,20 @@ def _env_flag(name: str, default: bool) -> bool:
 
 RATE_LIMIT_ENABLED = _env_flag("RATE_LIMIT_ENABLED", True)
 
+# `RATE_LIMIT_STORAGE_URI` permite forzar otro backend en tests/CI o usar un
+# Redis dedicado distinto del catálogo. Por defecto reusamos el mismo Redis
+# del servicio para no añadir infraestructura.
+RATE_LIMIT_STORAGE_URI = os.getenv(
+    "RATE_LIMIT_STORAGE_URI",
+    f"redis://{REDIS_HOST}:{REDIS_PORT}/{REDIS_DB}",
+)
 
-# Almacenamiento por defecto: in-memory. Para multi-worker, sustituir por
-# `storage_uri=f"redis://{REDIS_HOST}:{REDIS_PORT}/{REDIS_DB}"`.
+
 limiter = Limiter(
     key_func=get_remote_address,
     enabled=RATE_LIMIT_ENABLED,
     headers_enabled=True,
+    storage_uri=RATE_LIMIT_STORAGE_URI,
 )
 
 

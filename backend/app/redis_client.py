@@ -51,6 +51,10 @@ def _build_async_pool() -> aioredis.ConnectionPool:
         max_connections=50,
         health_check_interval=30,
         socket_keepalive=True,
+        # Acotamos peor caso ante conexiones colgadas: sin estos timeouts un
+        # comando podía esperar hasta el siguiente tick de health_check.
+        socket_timeout=5,
+        socket_connect_timeout=2,
         retry_on_timeout=True,
     )
 
@@ -62,6 +66,8 @@ def _build_sync_client() -> redis.Redis:
         db=REDIS_DB,
         decode_responses=True,
         socket_keepalive=True,
+        socket_timeout=5,
+        socket_connect_timeout=2,
         health_check_interval=30,
         retry_on_timeout=True,
     )

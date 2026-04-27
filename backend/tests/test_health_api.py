@@ -52,3 +52,34 @@ def test_root_still_returns_simple_payload(api_client):
     response = api_client.get("/")
     assert response.status_code == 200
     assert response.json() == {"status": "Backend configurado y listo"}
+
+
+def test_healthz_503_when_search_index_is_empty(api_client):
+    """`FT.INFO` con `num_docs == 0` se reporta como degradado.
+
+    Un índice vacío significa que RediSearch arrancó pero el catálogo no se
+    importó: el servicio responderá listas vacías a `/parkings`. Es preferible
+    sacar la réplica del rotation hasta que el operador investigue.
+    """
+    real_redis = api_client.app.state.redis
+
+    class EmptyIndexRedis:
+        async def ping(self):
+            return True
+
+        async def execute_command(self, *args, **_kwargs):
+            assert args[0] == "FT.INFO"
+            return ["index_name", args[1], "num_docs", 0]
+
+    api_client.app.state.redis = EmptyIndexRedis()
+    try:
+        response = api_client.get("/healthz")
+    finally:
+        api_client.app.state.redis = real_redis
+
+    assert response.status_code == 503
+    payload = response.json()
+    assert payload["status"] == "degraded"
+    assert payload["redis"]["status"] == "ok"
+    assert payload["search_index"]["status"] == "empty"
+    assert payload["search_index"]["num_docs"] == 0

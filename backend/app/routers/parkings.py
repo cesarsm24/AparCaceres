@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import math
 from typing import Optional
 
 import redis
@@ -123,8 +124,13 @@ def _build_nearby_cache_key(
     """Clave canónica de caché para `/parkings/nearby`.
 
     Reglas:
-    - `lat`/`lng` se truncan a 4 decimales (~10 m) para que peticiones
-      casi-iguales reutilicen la misma entrada.
+    - `lat`/`lng` se truncan a una precisión adaptativa al radio:
+      `decimals = max(4, ceil(log10(111_000 / radius)))`. Para radios grandes
+      (1 km) bastan 4 decimales (~11 m de granularidad), pero para radios
+      pequeños (50 m) necesitamos más decimales o el bucket de la clave acaba
+      siendo más grande que el propio radio y dos centros distintos chocan en
+      la misma entrada de caché. Es lo que la doc recomienda: el bucket no
+      debería superar a `radius`.
     - Cada lista de filtros se ordena alfabéticamente y se serializa con
       separadores claros, de modo que `?category=a&category=b` y
       `?category=b&category=a` produzcan la misma clave.
@@ -133,7 +139,8 @@ def _build_nearby_cache_key(
     - El prefijo `cache:nearby:v{n}:` permite invalidar todo con un único
       `INCR cache:version` (ver `app/importer.py`).
     """
-    parts = [f"{lat:.4f}", f"{lng:.4f}", str(int(radius))]
+    decimals = max(4, math.ceil(math.log10(111_000 / max(radius, 1.0))))
+    parts = [f"{lat:.{decimals}f}", f"{lng:.{decimals}f}", str(int(radius))]
     if vehicle_types:
         joined = ",".join(sorted(v.value for v in vehicle_types))
         parts.append(f"veh={joined}")

@@ -104,6 +104,35 @@ hash-tags (prematuro sin métricas).
   `PyJWT==2.10.1` añadidas como directas. Lockfile actualizado con sus
   transitivas.
 
+### Hardening (Redis quick wins)
+- **Socket timeouts en los clientes Redis** (`socket_timeout=5s`,
+  `socket_connect_timeout=2s`) para acotar el peor caso ante conexiones
+  colgadas: antes un comando podía esperar hasta el siguiente tick de
+  `health_check_interval` (30 s).
+- **`/healthz` reporta `degraded` cuando el índice está vacío**
+  (`num_docs == 0`): antes el handler devolvía 200 aunque el catálogo no se
+  hubiese importado, dejando réplicas servidoras de listas vacías en el
+  rotation del balanceador. Ahora retorna 503 con `search_index.status:
+  "empty"`.
+- **`geometryType` fuera del esquema RediSearch** y enums fuera del campo
+  `searchText`: el filtro por geometría no se usa desde el cliente y los
+  enums ya están como `TAG` con filtros dedicados; mezclarlos en `TEXT`
+  provocaba que `q="blue_zone"` trajera resultados que el usuario quería
+  aislar con el chip de filtro.
+- **slowapi con storage Redis** (`storage_uri` configurable, default al
+  Redis del servicio). Antes cada worker contaba en memoria local: con dos
+  workers el cupo efectivo se duplicaba. Ahora el cupo es global y honesto
+  entre réplicas. `RATE_LIMIT_STORAGE_URI` permite forzar otro backend en
+  tests/CI.
+- **Precisión adaptativa en la clave de caché de `/parkings/nearby`**:
+  `decimals = max(4, ceil(log10(111_000 / radius)))`. Con 4 decimales fijos
+  el bucket era ~11 m, así que para radios pequeños (<11 m) dos centros
+  distintos colisionaban. Ahora el bucket nunca supera al propio radio.
+- Tests: `test_healthz_503_when_search_index_is_empty`,
+  `test_nearby_cache_key_precision_adapts_to_radius`,
+  `test_nearby_cache_key_distinguishes_close_centers_for_small_radius`.
+  Suite total: 230 tests.
+
 ## [0.1.0] - 2026-04-26
 
 Primera versión etiquetada del backend. Sirve de baseline para staging tras
