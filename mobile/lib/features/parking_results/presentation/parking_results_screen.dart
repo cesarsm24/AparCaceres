@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:latlong2/latlong.dart';
 
 import '../../../shared/constants/app_strings.dart';
+import '../../../shared/widgets/api_error_state.dart';
 import '../../../shared/widgets/app_top_bar.dart';
 import '../../../theme/app_colors.dart';
 import '../../../theme/app_spacing.dart';
@@ -75,6 +76,16 @@ class _ParkingResultsScreenState extends State<ParkingResultsScreen> {
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Center(child: CircularProgressIndicator());
+                }
+                if (snapshot.hasError) {
+                  return ApiErrorState(
+                    error: snapshot.error!,
+                    onRetry: () => setState(
+                      () => _placesFuture = parkingRepository.getNearby(
+                        widget.filters.toQuery(),
+                      ),
+                    ),
+                  );
                 }
                 final places = _sortPlaces(
                   snapshot.data ?? const <ParkingPlace>[],

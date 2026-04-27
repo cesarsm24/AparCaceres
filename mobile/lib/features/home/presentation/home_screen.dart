@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:latlong2/latlong.dart';
 
 import '../../../shared/constants/app_strings.dart';
+import '../../../shared/widgets/api_error_state.dart';
 import '../../../shared/widgets/app_top_bar.dart';
 import '../../../shared/widgets/section_title.dart';
 import '../../../theme/app_colors.dart';
@@ -20,19 +21,44 @@ import 'widgets/location_actions.dart';
 import 'widgets/quick_access_row.dart';
 import 'widgets/suggestion_tile.dart';
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key, required this.onOpenMap});
 
   final ValueChanged<MapFilters> onOpenMap;
 
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
   static const int _radiusMeters = 1000;
+
+  late Future<List<ParkingPlace>> _suggestionsFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _suggestionsFuture = _fetchSuggestions();
+  }
+
+  /// Construye la future fuera de `build()` para que recargar la pantalla
+  /// (cambio de tab, foco, etc.) no dispare una request nueva en cada
+  /// frame. Se reconstruye explícitamente al reintentar.
+  Future<List<ParkingPlace>> _fetchSuggestions() {
+    return parkingRepository.getNearby(
+      ParkingQuery(
+        center: locationService.position.value,
+        radiusMeters: _radiusMeters,
+      ),
+    );
+  }
 
   Future<void> _pickLocation(BuildContext context) async {
     final suggestion = await Navigator.of(context).push<PlaceSuggestion>(
       MaterialPageRoute(builder: (_) => const LocationPickerScreen()),
     );
     if (suggestion == null) return;
-    onOpenMap(
+    widget.onOpenMap(
       MapFilters.atLocation(suggestion.position, label: suggestion.shortName),
     );
   }
@@ -54,12 +80,7 @@ class HomeScreen extends StatelessWidget {
           ),
           Expanded(
             child: FutureBuilder<List<ParkingPlace>>(
-              future: parkingRepository.getNearby(
-                ParkingQuery(
-                  center: locationService.position.value,
-                  radiusMeters: _radiusMeters,
-                ),
-              ),
+              future: _suggestionsFuture,
               builder: (context, snapshot) {
                 final places = snapshot.data ?? const <ParkingPlace>[];
                 final suggestions = places.take(4).toList();
@@ -83,13 +104,13 @@ class HomeScreen extends StatelessWidget {
                     const SizedBox(height: AppSpacing.md),
                     QuickAccessRow(
                       onVehicleSelected: (vehicleType) =>
-                          onOpenMap(MapFilters.forVehicle(vehicleType)),
+                          widget.onOpenMap(MapFilters.forVehicle(vehicleType)),
                       onAccessibleSelected: () =>
-                          onOpenMap(MapFilters.forAccessible()),
+                          widget.onOpenMap(MapFilters.forAccessible()),
                     ),
                     const SizedBox(height: AppSpacing.lg),
                     LocationActions(
-                      onUseCurrent: () => onOpenMap(MapFilters()),
+                      onUseCurrent: () => widget.onOpenMap(MapFilters()),
                       onPickLocation: () => _pickLocation(context),
                     ),
                     const SizedBox(height: AppSpacing.lg),
@@ -97,6 +118,13 @@ class HomeScreen extends StatelessWidget {
                     const SizedBox(height: AppSpacing.md),
                     if (snapshot.connectionState == ConnectionState.waiting)
                       const _LoadingState()
+                    else if (snapshot.hasError)
+                      ApiErrorState(
+                        error: snapshot.error!,
+                        onRetry: () => setState(
+                          () => _suggestionsFuture = _fetchSuggestions(),
+                        ),
+                      )
                     else if (suggestions.isEmpty)
                       const _EmptyState()
                     else

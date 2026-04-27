@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:latlong2/latlong.dart';
 
 import '../../../shared/constants/app_strings.dart';
+import '../../../shared/widgets/api_error_state.dart';
 import '../../../shared/widgets/app_top_bar.dart';
 import '../../../theme/app_colors.dart';
 import '../../../theme/app_spacing.dart';
@@ -12,9 +13,14 @@ import '../../parking/domain/parking_place.dart';
 import '../../parking_detail/presentation/parking_detail_screen.dart';
 import 'widgets/favorite_tile.dart';
 
-class FavoritesScreen extends StatelessWidget {
+class FavoritesScreen extends StatefulWidget {
   const FavoritesScreen({super.key});
 
+  @override
+  State<FavoritesScreen> createState() => _FavoritesScreenState();
+}
+
+class _FavoritesScreenState extends State<FavoritesScreen> {
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -29,12 +35,20 @@ class FavoritesScreen extends StatelessWidget {
                 return FutureBuilder<List<ParkingPlace>>(
                   future: parkingRepository.getFavorites(),
                   builder: (context, snapshot) {
-                    final favorites =
-                        snapshot.data ?? const <ParkingPlace>[];
                     if (snapshot.connectionState ==
                         ConnectionState.waiting) {
                       return const Center(child: CircularProgressIndicator());
                     }
+                    if (snapshot.hasError) {
+                      return ApiErrorState(
+                        error: snapshot.error!,
+                        // setState fuerza el rebuild que reconstruye la
+                        // future dentro del ListenableBuilder.
+                        onRetry: () => setState(() {}),
+                      );
+                    }
+                    final favorites =
+                        snapshot.data ?? const <ParkingPlace>[];
                     if (favorites.isEmpty) {
                       return const Center(
                         child: Text(

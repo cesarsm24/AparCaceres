@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:latlong2/latlong.dart';
 
 import '../../../shared/constants/app_strings.dart';
+import '../../../shared/widgets/api_error_state.dart';
 import '../../../theme/app_colors.dart';
 import '../../../theme/app_spacing.dart';
 import '../../location/data/location_service.dart';
@@ -68,6 +69,16 @@ class _SearchScreenState extends State<SearchScreen> {
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Center(child: CircularProgressIndicator());
+                }
+                if (snapshot.hasError) {
+                  return ApiErrorState(
+                    error: snapshot.error!,
+                    onRetry: () => setState(
+                      () => _placesFuture = parkingRepository.getNearby(
+                        const ParkingQuery(),
+                      ),
+                    ),
+                  );
                 }
                 final places = snapshot.data ?? const <ParkingPlace>[];
                 final trimmed = _query.trim();
