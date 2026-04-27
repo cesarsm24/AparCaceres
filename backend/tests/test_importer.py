@@ -5,7 +5,7 @@ Cubre:
 - Punto representativo por tipo geométrico (point / polygon / line_string).
 - Mapeo Feature -> ParkingPlaceOut con propiedades del dataset municipal.
 - Round-trip ParkingPlaceOut <-> hash de Redis.
-- Orquestación `run_import_sources`: idempotencia, persistencia íntegra del
+- Orquestación `run_import_sources`: doble buffer, persistencia íntegra del
   contrato, invalidación de caché y tolerancia a features degenerados.
 
 Para los tipos de geometría que el dataset real no incluye (polygon /

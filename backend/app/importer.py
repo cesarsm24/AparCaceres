@@ -15,8 +15,10 @@ de negocio (category, vehicleType, regulation) que no se pueden inferir del
 feature suelto, y un prefijo de id que permite generar fallbacks deterministas
 cuando no hay `mslink` ni id explícito.
 
-`feature_to_place(feat)` (sin source) sigue funcionando para tests y para los
-casos sintéticos: usa los defaults del enum y exige `mslink`/`id` explícito.
+El orquestador (`run_import_dir` / `run_import_sources`) implementa un doble
+buffer: construye la nueva generación bajo `parking_v2:*` con su propio
+índice y hace un swap atómico-en-lo-posible al catálogo activo. La caché de
+`/parkings/nearby` se invalida con un único `INCR cache:version`.
 """
 
 from __future__ import annotations
@@ -699,8 +701,9 @@ def feature_to_place(
         properties, "streetName", "NOMBREVIA", "NOMBRE_VIA", "DIRECCION"
     )
     street_type = _first_present(properties, "streetType", "TIPOVIA", "TIPO_VIA")
-    # Preferimos DISTRITO (subzona: OESTE, CENTRO) sobre NUCLEO (la ciudad).
-    # Mantenemos NUCLEO como último recurso para compat con el dataset clásico.
+    # Preferimos DISTRITO (subzona: OESTE, CENTRO) sobre NUCLEO (la ciudad)
+    # como último recurso, porque algunos datasets municipales solo aportan
+    # NUCLEO.
     district = _first_present(properties, "district", "DISTRITO", "NUCLEO")
     neighborhood = _first_present(properties, "neighborhood", "BARRIO")
     management = _first_present(properties, "management", "GESTION")

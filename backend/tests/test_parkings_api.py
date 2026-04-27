@@ -1,15 +1,15 @@
 """Tests HTTP de los endpoints `/parkings*`.
 
 Usan `seeded_client` (fixture de `conftest.py`): un `TestClient` de FastAPI
-contra una app con `FakeRedis` ya alimentada por `run_import_sources` con un dataset
-sintético que cubre los 3 tipos de geometría y variedad de enums.
+contra una app con `FakeRedis` ya alimentada por `run_import_sources` con un
+dataset sintético que cubre los 3 tipos de geometría y variedad de enums.
 
 Foco:
 - Shape de las respuestas == lo que consume `ParkingPlace.fromJson`.
 - Filtros (`q`, `ids`, `vehicleType`, `category`, `regulation`, `minSpaces`)
   con la misma semántica que el cliente Flutter.
 - Geometrías point / polygon / line_string viajan correctamente.
-- Caché de `/nearby` activa solo sin filtros (`X-Cache: HIT|MISS|BYPASS`).
+- Caché de `/nearby` con filtros de baja cardinalidad (`X-Cache: HIT|MISS|BYPASS`).
 - Alias legacy `radius` reconocido como sinónimo de `radiusMeters`.
 - 404 en detalle inexistente.
 """
@@ -250,6 +250,7 @@ def test_nearby_radius_meters_takes_precedence_over_radius(seeded_client):
         "/parkings/nearby",
         params={"lat": 39.4753, "lng": -6.3724, "radiusMeters": 200, "radius": 5000},
     )
+    assert response.status_code == 200
     for place in _items(response):
         assert place["distanceMeters"] <= 200
 
