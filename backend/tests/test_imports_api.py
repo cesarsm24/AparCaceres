@@ -44,6 +44,30 @@ def test_import_parkings_accepts_valid_token(api_client, monkeypatch):
     assert response.json()["status"] == "ok"
 
 
+def test_import_parkings_works_with_rate_limiter_enabled(api_client, monkeypatch):
+    """Regresión: con `@limiter.limit(...)` activo, slowapi inyecta cabeceras
+    `X-RateLimit-*` y para ello necesita un parámetro `response: Response` en
+    el handler. Sin él lanza `parameter response must be an instance of
+    starlette.responses.Response` y devuelve 500.
+
+    En el resto de la suite el limiter está deshabilitado (los decoradores
+    son no-op), así que la regresión solo se ve aquí, activándolo a mano.
+    """
+    _stub_import(monkeypatch)
+    monkeypatch.setattr(imports_router, "IMPORT_TOKEN", "")
+    monkeypatch.setattr(imports_router.limiter, "enabled", True)
+    # El cupo 1/min es global para slowapi; reseteamos el storage para que
+    # los hits acumulados por tests previos (o por reordering) no nos cuelen
+    # un 429 inesperado en este caso.
+    imports_router.limiter.reset()
+
+    response = api_client.post("/import-parkings")
+
+    assert response.status_code == 200
+    # slowapi añade estas cabeceras cuando `headers_enabled=True`.
+    assert any(h.lower().startswith("x-ratelimit") for h in response.headers)
+
+
 def test_import_increments_cache_version_for_nearby_namespacing(
     seeded_client, fake_redis, monkeypatch
 ):
