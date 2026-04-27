@@ -133,6 +133,22 @@ hash-tags (prematuro sin métricas).
   `test_nearby_cache_key_distinguishes_close_centers_for_small_radius`.
   Suite total: 230 tests.
 
+### Removed
+- **`parkings_en_superficie.geojson` eliminado del repo y de toda referencia
+  en código, docs, tests y respuesta del importador**. El fichero (15.000+
+  LineStrings genéricas sin propiedades) llevaba excluido vía
+  `EXCLUDED_DATASET_FILENAMES` desde fase 1; ahora se trata como si no
+  hubiese existido nunca: el constante de exclusión, el campo
+  `excluded_datasets` del summary del importer y los tests que verificaban
+  el filtrado se eliminan también. Suite: 229 tests.
+
+### Fixed
+- **`POST /import-parkings` devolvía 500** en producción al activar el
+  rate limiter: el handler no aceptaba `response: Response` y `slowapi`
+  fallaba al inyectar `X-RateLimit-*` con `headers_enabled=True`. La suite
+  no lo cogía porque `RATE_LIMIT_ENABLED=false` hace el decorador no-op;
+  añadido test de regresión que activa el limiter explícitamente.
+
 ## [0.1.0] - 2026-04-26
 
 Primera versión etiquetada del backend. Sirve de baseline para staging tras

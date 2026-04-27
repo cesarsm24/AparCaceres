@@ -37,7 +37,6 @@ _IMPORT_RESPONSE_EXAMPLE = {
     "cache_version": 7,
     "files_processed": 10,
     "files_skipped": [],
-    "excluded_datasets": ["parkings_en_superficie.geojson"],
     "sources": [
         {"sourceDataset": "aparcamientos", "imported": 24, "skipped": 0},
         {"sourceDataset": "aparcamientos_en_bateria", "imported": 1424, "skipped": 0},
@@ -80,10 +79,8 @@ def _check_import_token(provided: Optional[str]) -> None:
     "/import-parkings",
     summary="Reimporta todos los GeoJSON activos del directorio de datos",
     description=(
-        "Procesa por lotes los `*.geojson` activos de `backend/data/`, "
-        "normalizando cada feature contra el contrato móvil "
-        "(`ParkingPlaceOut`). El fichero `parkings_en_superficie.geojson` se "
-        "ignora aunque esté presente físicamente.\n\n"
+        "Procesa por lotes los `*.geojson` de `backend/data/`, normalizando "
+        "cada feature contra el contrato móvil (`ParkingPlaceOut`).\n\n"
         "El importador infiere `category`/`vehicleType`/`regulation` a partir "
         "del nombre del fichero cuando el feature no los aporta (p. ej. "
         "`zona_azul.geojson` -> `blue_zone`/`car`/`blue_zone`), genera ids "
