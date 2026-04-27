@@ -1,11 +1,11 @@
-"""Cliente Redis dual: `redis.asyncio` (principal) + sync (legacy).
+"""Cliente Redis dual: `redis.asyncio` (principal) + síncrono (flujos pesados).
 
 El cliente async, con un `ConnectionPool` propio, sirve a los handlers que
 no necesitan más que comandos directos (hgetall, zadd, get, setex...): no
 bloquean el event loop y aprovechan el pool entre requests.
 
 Para los flujos pesados (importer multi-fichero y las consultas de
-RediSearch encapsuladas en `app/search.py`) mantenemos un cliente síncrono
+RediSearch encapsuladas en `app/search.py`) usamos un cliente síncrono
 puro: los handlers async los invocan vía `asyncio.to_thread`, así no
 arrastramos la conversión async de ~1.500 líneas de lógica de parsing y
 construcción de queries que no se beneficiaría del cambio.

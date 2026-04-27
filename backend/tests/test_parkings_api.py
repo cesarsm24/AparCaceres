@@ -1,7 +1,7 @@
 """Tests HTTP de los endpoints `/parkings*`.
 
 Usan `seeded_client` (fixture de `conftest.py`): un `TestClient` de FastAPI
-contra una app con `FakeRedis` ya alimentada por `run_import` con un dataset
+contra una app con `FakeRedis` ya alimentada por `run_import_sources` con un dataset
 sintético que cubre los 3 tipos de geometría y variedad de enums.
 
 Foco:

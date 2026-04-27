@@ -15,10 +15,8 @@ load_dotenv(BACKEND_DIR / ".env")
 # Directorio con los datasets GeoJSON de Open Data Cáceres. El importador
 # procesa todos los `*.geojson` del directorio y normaliza cada fichero contra
 # el contrato móvil, infiriendo categoría/vehículo/régimen del filename
-# cuando el feature no los aporta. Mantenemos `DATA_FILE` para compatibilidad
-# con cualquier herramienta que aún apunte al fichero original.
+# cuando el feature no los aporta.
 DATA_DIR = BACKEND_DIR / "data"
-DATA_FILE = DATA_DIR / "aparcamientos.geojson"
 
 # Claves de Redis que usa la app:
 #   parking:{id}                              -> hash con metadatos del aparcamiento (HSET / HGETALL)
@@ -38,9 +36,6 @@ CACHE_NEARBY_PREFIX = "cache:nearby:"
 CACHE_VERSION_KEY = "cache:version"
 USER_FAVORITES_KEY_PREFIX = "user:"
 USER_FAVORITES_KEY_SUFFIX = ":favorites"
-# Limpieza de claves legacy de versiones previas. No se escriben ya.
-LEGACY_GEO_KEY = "geo:parkings"
-LEGACY_SET_INDEX_PREFIX = "idx:"
 
 # Filenames que el importador NUNCA procesa, aunque estén físicamente en
 # `backend/data/`. `parkings_en_superficie.geojson` queda fuera porque sus
