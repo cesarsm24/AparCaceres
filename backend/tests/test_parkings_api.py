@@ -475,3 +475,35 @@ def test_openapi_contains_examples_for_each_endpoint(seeded_client):
     # GET /parkings/{parking_id}
     detail_response = paths["/parkings/{parking_id}"]["get"]["responses"]["200"]
     assert "example" in detail_response["content"]["application/json"]
+
+
+def test_nearby_cache_key_precision_adapts_to_radius():
+    """La precisión de lat/lng en la clave de caché se ajusta al radio.
+
+    Con 4 decimales fijos el bucket es ~11 m. Para radios < 11 m dos centros
+    distintos colisionarían en la misma clave, devolviendo resultados erróneos
+    en el HIT. La fórmula `decimals = max(4, ceil(log10(111_000 / radius)))`
+    garantiza que el bucket nunca sea más grande que el propio radio.
+    """
+    from app.routers.parkings import _build_nearby_cache_key
+
+    big = _build_nearby_cache_key(
+        version="0", lat=39.4753, lng=-6.3724, radius=1000
+    )
+    small = _build_nearby_cache_key(
+        version="0", lat=39.4753, lng=-6.3724, radius=10
+    )
+
+    # Radio grande: precisión estándar (4 decimales, bucket ~11 m).
+    assert "39.4753:-6.3724:1000" in big
+    # Radio pequeño: 5 decimales (bucket ~1 m, por debajo del radio).
+    assert "39.47530:-6.37240:10" in small
+
+
+def test_nearby_cache_key_distinguishes_close_centers_for_small_radius():
+    """Con radio pequeño, dos centros separados ~5 m generan claves distintas."""
+    from app.routers.parkings import _build_nearby_cache_key
+
+    a = _build_nearby_cache_key(version="0", lat=39.47530, lng=-6.37240, radius=5)
+    b = _build_nearby_cache_key(version="0", lat=39.47535, lng=-6.37240, radius=5)
+    assert a != b

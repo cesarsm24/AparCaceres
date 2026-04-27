@@ -49,7 +49,14 @@ class ParkingNearbySearchResult:
 
 
 def build_search_text(place: ParkingPlaceOut) -> str:
-    """Texto normalizado indexable para búsqueda libre."""
+    """Texto normalizado indexable para búsqueda libre.
+
+    Solo incorpora campos descriptivos (nombre, vía, distrito, barrio y
+    `sourceDataset`). `category`/`vehicleType`/`regulation` quedan fuera a
+    propósito: ya están como `TAG` con filtro dedicado, y mezclarlos en el
+    `TEXT` provoca que `q="blue_zone"` traiga resultados que el usuario
+    pretendía aislar con el chip de filtro.
+    """
     values = [
         place.name,
         place.streetName,
@@ -57,9 +64,6 @@ def build_search_text(place: ParkingPlaceOut) -> str:
         place.district,
         place.neighborhood,
         place.sourceDataset,
-        place.category.value,
-        place.vehicleType.value,
-        place.regulation.value,
     ]
     return normalize_for_search(" ".join(v for v in values if v))
 
@@ -298,8 +302,6 @@ def _create_search_index(
             "regulation",
             "TAG",
             "sourceDataset",
-            "TAG",
-            "geometryType",
             "TAG",
             "location",
             "GEO",

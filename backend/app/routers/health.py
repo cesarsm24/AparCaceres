@@ -125,10 +125,17 @@ async def _check_search_index(rdb) -> dict:
     except (redis.ConnectionError, redis.TimeoutError, OSError) as exc:
         return {"status": "down", "error": str(exc)}
 
+    num_docs = _extract_num_docs(info)
+    # Un índice vacío significa que RediSearch arrancó pero el importer aún no
+    # ha poblado el catálogo (o un swap se quedó a mitad). Reportarlo como
+    # degradado evita que el balanceador siga mandando tráfico a una réplica
+    # que respondería con listas vacías a todos los `/parkings`.
+    if num_docs == 0:
+        return {"status": "empty", "name": SEARCH_INDEX_NAME, "num_docs": 0}
     return {
         "status": "ok",
         "name": SEARCH_INDEX_NAME,
-        "num_docs": _extract_num_docs(info),
+        "num_docs": num_docs,
     }
 
 
