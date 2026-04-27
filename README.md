@@ -47,7 +47,7 @@ Datasets activos importados:
 - `parking_motos_areas.geojson` → 48
 - `parking_motos_puntos.geojson` → 46
 
-Total activo esperado: `7314` features. `parkings_en_superficie.geojson` se ignora siempre porque es masivo, genérico y no trae propiedades útiles para usuarios reales.
+Total activo esperado: `7314` features.
 
 ## Tecnologías
 

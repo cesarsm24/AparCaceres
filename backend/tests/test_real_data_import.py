@@ -28,7 +28,6 @@ def test_real_geojson_import_counts_and_ids_are_stable(fake_redis):
     assert summary["imported"] == sum(EXPECTED_DATASET_COUNTS.values()) == 7314
     assert summary["skipped"] == 0
     assert summary["ids_disambiguated"] == 11
-    assert summary["excluded_datasets"] == ["parkings_en_superficie.geojson"]
 
     by_dataset = {row["sourceDataset"]: row for row in summary["sources"]}
     assert set(by_dataset) == set(EXPECTED_DATASET_COUNTS)
@@ -43,7 +42,6 @@ def test_real_geojson_import_counts_and_ids_are_stable(fake_redis):
     ]
     assert len(ids) == 7314
     assert len(ids) == len(set(ids))
-    assert all(not pid.startswith("parkings_en_superficie:") for pid in ids)
 
 
 def test_real_geojson_import_includes_carga_descarga_multipolygons(fake_redis):

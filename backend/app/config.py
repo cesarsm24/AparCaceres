@@ -39,14 +39,6 @@ CACHE_VERSION_KEY = "cache:version"
 USER_FAVORITES_KEY_PREFIX = "user:"
 USER_FAVORITES_KEY_SUFFIX = ":favorites"
 
-# Filenames que el importador NUNCA procesa, aunque estén físicamente en
-# `backend/data/`. `parkings_en_superficie.geojson` queda fuera porque sus
-# 15.000+ LineStrings con `properties: {}` no aportan datos accionables y
-# saturarían los índices y respuestas de la API.
-EXCLUDED_DATASET_FILENAMES: frozenset[str] = frozenset({
-    "parkings_en_superficie.geojson",
-})
-
 # ---------- Config leída del entorno / .env (defaults para dev) ----------
 REDIS_HOST = os.getenv("REDIS_HOST", "localhost")
 REDIS_PORT = int(os.getenv("REDIS_PORT", "6379"))

@@ -97,14 +97,6 @@ def test_source_registry_covers_all_active_files():
     assert expected.issubset(SOURCE_REGISTRY.keys())
 
 
-def test_source_registry_excludes_parkings_en_superficie():
-    """`parkings_en_superficie.geojson` no es un dataset activo: ni siquiera
-    debe tener profile, para que cualquier intento de importarlo caiga en
-    `profile_for` -> profile genérico Y luego sea filtrado por
-    `discover_geojson_files` antes de llegar al importer."""
-    assert "parkings_en_superficie.geojson" not in SOURCE_REGISTRY
-
-
 def test_profile_for_known_file_returns_registered_profile():
     profile = profile_for("zona_azul.geojson")
     assert profile.default_category == ParkingCategory.BLUE_ZONE
@@ -367,13 +359,6 @@ def test_discover_geojson_files_lists_only_geojson_sorted(tmp_path: Path):
     (tmp_path / "leeme.txt").write_text("ignorame", encoding="utf-8")
     files = discover_geojson_files(tmp_path)
     assert [p.name for p in files] == ["a.geojson", "b.geojson"]
-
-
-def test_discover_geojson_files_excludes_surface_dataset(tmp_path: Path):
-    _write_geojson(tmp_path, "aparcamientos_en_linea.geojson", [])
-    _write_geojson(tmp_path, "parkings_en_superficie.geojson", [])
-    files = discover_geojson_files(tmp_path)
-    assert [p.name for p in files] == ["aparcamientos_en_linea.geojson"]
 
 
 def test_discover_geojson_files_returns_empty_for_missing_dir(tmp_path: Path):

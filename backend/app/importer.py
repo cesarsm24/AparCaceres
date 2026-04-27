@@ -35,7 +35,6 @@ import redis
 
 from .config import (
     CACHE_VERSION_KEY,
-    EXCLUDED_DATASET_FILENAMES,
     PARKING_KEY_PREFIX,
     SEARCH_INDEX_NAME,
     STAGING_INDEX_NAME,
@@ -182,7 +181,7 @@ class SourceProfile:
 
     El registry (`SOURCE_REGISTRY`) mapea filename -> profile y se usa para:
     - inferir `category` / `vehicleType` / `regulation` cuando el feature no
-      los aporta (p. ej. `parkings_en_superficie.geojson` con `properties: {}`),
+      los aporta,
     - etiquetar `sourceDataset` con el nombre lógico del dataset,
     - generar un id determinista cuando no hay `mslink` ni id explícito
       (`{sourceDataset}:{sha256_de_geometria_y_props}`).
@@ -1011,22 +1010,14 @@ def _rename(pipe, src: str, dst: str) -> None:
 # ============================================================
 
 def discover_geojson_files(data_dir: Path) -> list[Path]:
-    """Lista los `*.geojson` activos del directorio, ordenados por nombre.
+    """Lista los `*.geojson` del directorio, ordenados por nombre.
 
-    - Filtra explícitamente los ficheros listados en `EXCLUDED_DATASET_FILENAMES`
-      (p. ej. `parkings_en_superficie.geojson`): el fichero puede quedar
-      físicamente en disco, pero el backend lo ignora a todos los efectos
-      (no importa, no indexa, no aparece en endpoints).
-    - Orden alfabético para que el resultado sea reproducible (y los
-      contadores aparezcan en el mismo orden en logs y respuesta).
+    Orden alfabético para que el resultado sea reproducible (y los
+    contadores aparezcan en el mismo orden en logs y respuesta).
     """
     if not data_dir.exists() or not data_dir.is_dir():
         return []
-    return sorted(
-        p
-        for p in data_dir.glob("*.geojson")
-        if p.is_file() and p.name not in EXCLUDED_DATASET_FILENAMES
-    )
+    return sorted(p for p in data_dir.glob("*.geojson") if p.is_file())
 
 
 def _load_features(path: Path) -> list[dict]:
@@ -1051,17 +1042,6 @@ def run_import_dir(data_dir: Path, rdb: redis.Redis) -> dict[str, Any]:
     if not files:
         logger.warning("No se encontraron ficheros *.geojson en %s", data_dir)
 
-    excluded_present = sorted(
-        p.name
-        for p in data_dir.glob("*.geojson")
-        if p.is_file() and p.name in EXCLUDED_DATASET_FILENAMES
-    )
-    if excluded_present:
-        logger.info(
-            "Ignorando datasets excluidos presentes en disco: %s",
-            ", ".join(excluded_present),
-        )
-
     sources: list[tuple[list[dict], SourceProfile]] = []
     skipped_files: list[dict[str, str]] = []
 
@@ -1078,5 +1058,4 @@ def run_import_dir(data_dir: Path, rdb: redis.Redis) -> dict[str, Any]:
     summary = run_import_sources(sources, rdb)
     summary["files_processed"] = len(sources)
     summary["files_skipped"] = skipped_files
-    summary["excluded_datasets"] = excluded_present
     return summary
