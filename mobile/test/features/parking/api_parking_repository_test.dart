@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:aparcaceres/core/network/api_client.dart';
@@ -155,6 +156,22 @@ void main() {
         ParkingCategory.paidParking,
         ParkingCategory.blueZone,
       ]);
+    });
+  });
+
+  group('ApiParkingRepository cancellation', () {
+    test('cancel token aborts a pending getNearby before it lands', () async {
+      // Handler que nunca resuelve para que la cancelación gane la carrera.
+      final repo = _repo((_) => Completer<http.Response>().future);
+
+      final token = CancelToken();
+      final pending = repo.getNearby(
+        const ParkingQuery(),
+        cancelToken: token,
+      );
+      token.cancel();
+
+      await expectLater(pending, throwsA(isA<ApiCancelledException>()));
     });
   });
 
