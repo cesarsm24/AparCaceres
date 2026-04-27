@@ -47,7 +47,7 @@ class ApiClient {
 
   Future<dynamic> getJson(
     String path, {
-    Map<String, String>? query,
+    Map<String, dynamic>? query,
     bool requiresAuth = false,
     CancelToken? cancelToken,
   }) {
@@ -63,7 +63,7 @@ class ApiClient {
   Future<dynamic> postJson(
     String path, {
     Object? body,
-    Map<String, String>? query,
+    Map<String, dynamic>? query,
     bool requiresAuth = false,
     CancelToken? cancelToken,
   }) {
@@ -80,7 +80,7 @@ class ApiClient {
   Future<dynamic> putJson(
     String path, {
     Object? body,
-    Map<String, String>? query,
+    Map<String, dynamic>? query,
     bool requiresAuth = false,
     CancelToken? cancelToken,
   }) {
@@ -96,7 +96,7 @@ class ApiClient {
 
   Future<dynamic> deleteJson(
     String path, {
-    Map<String, String>? query,
+    Map<String, dynamic>? query,
     bool requiresAuth = false,
     CancelToken? cancelToken,
   }) {
@@ -114,7 +114,7 @@ class ApiClient {
   Future<dynamic> _send({
     required String method,
     required String path,
-    Map<String, String>? query,
+    Map<String, dynamic>? query,
     Object? body,
     bool requiresAuth = false,
     CancelToken? cancelToken,
@@ -193,11 +193,28 @@ class ApiClient {
     ]);
   }
 
-  Uri _buildUri(String path, Map<String, String>? query) {
+  /// Construye la URI absoluta. `query` admite tanto `String` como
+  /// `Iterable<String>` por valor para soportar parámetros repetibles
+  /// (`?category=a&category=b`), que el backend usa como OR dentro de una
+  /// dimensión. Los `null` se omiten para que las pantallas puedan pasar
+  /// filtros opcionales sin construir el mapa condicionalmente.
+  Uri _buildUri(String path, Map<String, dynamic>? query) {
     final normalisedPath = path.startsWith('/') ? path : '/$path';
     final base = Uri.parse('${ApiConfig.baseUrl}$normalisedPath');
     if (query == null || query.isEmpty) return base;
-    return base.replace(queryParameters: {...base.queryParameters, ...query});
+    final merged = <String, dynamic>{...base.queryParametersAll};
+    for (final entry in query.entries) {
+      final value = entry.value;
+      if (value == null) continue;
+      if (value is Iterable && value is! String) {
+        final values = value.cast<String>().toList();
+        if (values.isEmpty) continue;
+        merged[entry.key] = values;
+      } else {
+        merged[entry.key] = value.toString();
+      }
+    }
+    return base.replace(queryParameters: merged);
   }
 
   Future<Map<String, String>> _buildHeaders({
