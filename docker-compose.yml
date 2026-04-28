@@ -5,8 +5,9 @@
 # ============================================================
 #
 # Comandos habituales:
-#   docker compose up -d              # arranca los dos servicios
+#   docker compose up -d              # arranca los servicios
 #   docker compose logs -f api        # tail del backend
+#   docker compose logs -f web        # tail del frontend Flutter web
 #   docker compose exec api curl -s http://localhost:8000/healthz | jq
 #   docker compose down               # parar (mantiene el volumen)
 #   docker compose down -v            # parar y BORRAR los datos persistentes
@@ -75,6 +76,21 @@ services:
       IMPORT_TOKEN: ""
     ports:
       - "127.0.0.1:8000:8000"
+
+  web:
+    build:
+      context: ./mobile
+      dockerfile: Dockerfile
+      args:
+        API_BASE_URL: ${API_BASE_URL:-http://localhost:8000}
+    image: aparcaceres-web:0.2.0-dev
+    container_name: aparcaceres-web
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_started
+    ports:
+      - "127.0.0.1:5000:80"
 
 volumes:
   redis-data:

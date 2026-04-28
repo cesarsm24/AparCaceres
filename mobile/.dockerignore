@@ -1,0 +1,12 @@
+.dart_tool
+.idea
+build
+android
+ios
+linux
+macos
+windows
+.flutter-plugins
+.flutter-plugins-dependencies
+.metadata
+.DS_Store
