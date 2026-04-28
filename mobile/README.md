@@ -20,21 +20,17 @@ Por defecto la app apunta al backend dockerizado en `localhost:8000`:
 
 ## Variables de compilación
 
-Se inyectan con `--dart-define`. Definidas en [`lib/core/config/api_config.dart`](lib/core/config/api_config.dart) y [`lib/features/parking/data/parking_repository_provider.dart`](lib/features/parking/data/parking_repository_provider.dart).
+Se inyectan con `--dart-define`. Definida en [`lib/core/config/api_config.dart`](lib/core/config/api_config.dart).
 
 | Flag | Tipo | Default | Para qué |
 |---|---|---|---|
 | `API_BASE_URL` | `String` | resolución por plataforma | Forzar otro backend (staging, IP de la LAN, túnel ngrok, etc.). Sin trailing slash. |
-| `USE_LOCAL_DATA` | `bool` | `false` | Modo demo: usa el fixture mock (`assets/mock/parking_places.json`) y un `FavoritesStore` en memoria; no toca la red. Útil para presentar la app sin levantar el backend. |
 
-Ejemplos:
+Ejemplo:
 
 ```bash
 # dispositivo físico apuntando a un backend en la LAN
 flutter run --dart-define=API_BASE_URL=http://192.168.1.10:8000
-
-# modo demo offline
-flutter run --dart-define=USE_LOCAL_DATA=true
 ```
 
 ## Tests
@@ -94,17 +90,6 @@ flutter run
 | Detalle | Tap en un marcador → "Ver detalle" | Pantalla con datos del backend, sin "Ubicación sin nombre" |
 | Favorito persistente | Tap en corazón en detalle → matar app → reabrir | El corazón sigue lleno (vino de `/users/me/favorites`) |
 | Pantalla favoritos | Abrir tab Favoritos | Lista cargada del servidor, ordenada por fecha de adición desc |
-| Backend caído | `docker compose stop backend` y refrescar lista | `ApiErrorState` con copy "Servicio no disponible" + botón Reintentar |
+| Backend caído | `docker compose stop api` y refrescar lista | `ApiErrorState` con copy "Servicio no disponible" + botón Reintentar |
 | Cancelación | Tocar varios filtros rápido | Solo la última request se ve reflejada (no hay flicker de resultados antiguos) |
 | Fuera de Cáceres | En el emulador iOS: Features → Location → Custom (37.78, -122.41) | Banner "Estás fuera de Cáceres" con CTA Buscar; el picker filtra a Cáceres y permite continuar |
-| Modo demo | `flutter run --dart-define=USE_LOCAL_DATA=true` | App funciona sin backend, usa fixtures locales |
-
-## Modo demo
-
-`USE_LOCAL_DATA=true` desconecta el cliente del backend completo:
-
-- `parkingRepository` → `LocalParkingRepository` (lee `assets/mock/parking_places.json`).
-- `favoritesStore` → `LocalFavoritesStore` con ids semilla en memoria.
-- `AuthSession` y `ApiClient` siguen instanciados pero no se usan.
-
-Pensado para demos sin docker. No se mantiene en producción.
