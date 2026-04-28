@@ -1,4 +1,4 @@
-# macOS
+# MacOS
 .DS_Store
 
 # Python
@@ -11,13 +11,13 @@ __pycache__/
 venv/
 env/
 
-# Environment files
+# Ficheros de entorno
 .env
 
 # Logs
 *.log
 
-# Node
+# Node y artefactos de compilación
 node_modules/
 dist/
 build/
@@ -27,11 +27,12 @@ build/
 .idea/
 *.iml
 
+# Ficheros auxiliares locales
 CLAUDE.md
 informe.md
 .claude/
 
-# Data files opcionales
+# Ficheros de datos opcionales
 *.sqlite3
 
 # Flutter / Dart
@@ -58,8 +59,8 @@ mobile/android/app/profile/
 mobile/android/app/release/
 
 # Flutter - iOS
-mobile/ios/Flutter/App.framework
-mobile/ios/Flutter/Flutter.framework
+mobile/ios/Flutter/App.framework/
+mobile/ios/Flutter/Flutter.framework/
 mobile/ios/Flutter/Flutter.podspec
 mobile/ios/Flutter/Generated.xcconfig
 mobile/ios/Flutter/ephemeral/

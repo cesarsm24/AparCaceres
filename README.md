@@ -304,18 +304,14 @@ Los listados devuelven:
 contenedor `bootstrap` reutiliza la misma clave para ejecutar la primera
 importación tras el arranque.
 
-## Despliegue, TLS y backups
+## Documentación técnica
 
-La guía operativa vive en [`docs/operations.md`](docs/operations.md):
-
-- topología `nginx → uvicorn → redis-stack` con un sample de configuración
-  nginx con TLS y propagación de `X-Request-ID`,
-- variables de entorno mínimas en producción (`FAVORITES_SECRET`,
-  `IMPORT_TOKEN`, `RATE_LIMIT_ENABLED`, `METRICS_ENABLED`...),
-- backups de Redis y procedimiento de restore documentados en
-  [`docs/operations.md`](docs/operations.md),
-- procedimiento de restore desde un snapshot,
-- runbook rápido con los síntomas más comunes y por dónde mirar primero.
+- [`docs/operations.md`](docs/operations.md): despliegue, TLS, persistencia,
+  backups, restore y runbook operativo.
+- [`docs/architecture.md`](docs/architecture.md): visión general del sistema,
+  componentes y flujo entre backend, frontend y Redis Stack.
+- [`docs/redis.md`](docs/redis.md): modelado de claves, índices, caché y uso
+  de Redis Stack en el backend.
 
 ## Autores
 

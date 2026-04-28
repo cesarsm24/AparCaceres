@@ -1,33 +1,34 @@
-# Operaciones del backend AparCáceres
+# Operaciones del backend
 
-Guía operativa para desplegar y mantener el backend en producción.
-Asume el stack `docker compose` del repo (`docker-compose.yml`) con la
-configuración del backend en `backend/.env`, más un reverse proxy (nginx en
-los ejemplos; Traefik / Caddy serían equivalentes).
+> Guía operativa para desplegar y mantener el backend de AparCáceres en
+> producción con `docker compose`.
 
-## 1. Topología de despliegue recomendada
+Para una visión estructural del sistema y un desglose del uso de Redis Stack,
+ver [`docs/architecture.md`](architecture.md) y [`docs/redis.md`](redis.md).
 
+## 🧭 Topología de despliegue recomendada
+
+```text
+                (público, TLS)
+Cliente ───────────────► nginx ─────► uvicorn (api:8000) ─────► redis-stack (6379)
+                             │              │                             │
+                             │              │                       AOF + RDB
+                             │              │                       en /data
+                             │              │
+                             │              └─ /metrics (Prometheus scrape)
+                             └─ /healthz (loadbalancer probe)
 ```
-                 (público, TLS)
-   Cliente ──────────────────► nginx ─────► uvicorn (api:8000) ─────► redis-stack (6379)
-                                  │              │                             │
-                                  │              │                       AOF + RDB
-                                  │              │                       en /data
-                                  │              │
-                                  │              └─ /metrics (Prometheus scrape)
-                                  └─ /healthz (loadbalancer probe)
-```
 
-- nginx termina TLS y reenvía cabeceras (`X-Forwarded-For`, `X-Forwarded-Proto`,
-  `X-Request-ID`).
-- uvicorn corre con `--proxy-headers` para que Starlette tome las cabeceras
-  forwarded en serio (necesario para `slowapi.get_remote_address`).
-- redis-stack queda en la red interna del compose; nunca se publica en
+• nginx termina TLS y reenvía cabeceras (`X-Forwarded-For`,
+  `X-Forwarded-Proto`, `X-Request-ID`).
+• uvicorn corre con `--proxy-headers` para que Starlette interprete las
+  cabeceras forwarded de forma correcta.
+• redis-stack queda en la red interna del compose; no debe publicarse en
   Internet sin autenticación.
-- `/metrics` se expone solo en la red interna; el scrape de Prometheus
-  ocurre por la misma vía.
+• `/metrics` se expone solo en la red interna; el scrape de Prometheus ocurre
+  por esa misma vía.
 
-## 2. nginx + TLS
+## 🔐 nginx + TLS
 
 Plantilla mínima para terminar TLS y proxiar al `api`:
 
@@ -47,7 +48,7 @@ server {
         root /var/www/certbot;
     }
 
-    # Resto del tráfico se redirige a HTTPS.
+    # El resto del tráfico se redirige a HTTPS.
     location / {
         return 301 https://$host$request_uri;
     }
@@ -70,11 +71,11 @@ server {
     add_header X-Frame-Options DENY always;
     add_header X-Content-Type-Options nosniff always;
 
-    # Tamaño máximo de body (los GeoJSON municipales no se suben por API,
-    # pero dejamos margen para futuros uploads de catálogo).
+    # Tamaño máximo de body. Los GeoJSON municipales no se suben por API,
+    # pero se deja margen para futuros uploads de catálogo.
     client_max_body_size 5m;
 
-    # Generación / propagación de Request ID. El backend lo respeta si llega.
+    # Generación y propagación de Request ID. El backend lo respeta si llega.
     set $request_id_header $http_x_request_id;
     if ($request_id_header = "") {
         set $request_id_header $request_id;
@@ -118,17 +119,17 @@ Renovación de certificados (cron):
 0 3 * * * root certbot renew --quiet --post-hook "systemctl reload nginx"
 ```
 
-### Sobre `/metrics`
+### 📈 Sobre `/metrics`
 
-El endpoint `/metrics` (Prometheus) NO se expone públicamente. Se accede
+El endpoint `/metrics` (Prometheus) no se expone públicamente. Se accede
 desde la red interna del compose, donde corre el scraper. Para exposiciones
 externas autenticadas, añadir un `location = /metrics` con `auth_basic`.
 
-## 3. Persistencia de Redis
+## 💾 Persistencia de Redis
 
 `docker-compose.yml` ya configura AOF (`--appendonly yes --appendfsync everysec`)
-y RDB (`--save 900 1 --save 300 10`). El volumen nombrado `redis-data` sobrevive
-a `docker compose down` (se pierde solo con `docker compose down -v`).
+y RDB (`--save 900 1 --save 300 10`). El volumen nombrado `redis-data`
+sobrevive a `docker compose down` y solo se pierde con `docker compose down -v`.
 
 Comprobaciones rápidas tras un deploy:
 
@@ -139,13 +140,14 @@ docker compose exec redis redis-cli INFO persistence | head -20
 ```
 
 Esperado:
-- `appendonly` = `yes`
-- `LASTSAVE` reciente (RDB)
-- `aof_enabled:1`, `aof_last_rewrite_time_sec` razonable.
 
-## 4. Backups
+• `appendonly` = `yes`
+• `LASTSAVE` reciente (RDB)
+• `aof_enabled:1`, `aof_last_rewrite_time_sec` razonable.
 
-### 4.1 Manual
+## 🧰 Backups
+
+### Manual
 
 Para generar un snapshot puntual del volumen de Redis:
 
@@ -158,13 +160,13 @@ docker compose cp redis:/data/dump.rdb "$SNAPSHOT_DIR/dump.rdb"
 docker compose cp redis:/data/appendonlydir "$SNAPSHOT_DIR/appendonlydir"
 ```
 
-### 4.2 Automatizado (cron en el host)
+### Automatizado
 
 Si se automatiza fuera del repositorio, conviene envolver los comandos
 anteriores en un job del sistema de despliegue con la política de retención
 que corresponda al entorno.
 
-### 4.3 Off-site (S3 / object storage)
+### Off-site
 
 Tras cada backup local, sincronizar a un bucket. Ejemplo con `rclone`:
 
@@ -176,34 +178,39 @@ rclone sync /var/backups/aparcaceres remote:aparcaceres-backups/redis \
 `rclone` se configura una vez (`rclone config`) con credenciales del
 proveedor (S3, B2, GCS...).
 
-## 5. Restore desde backup
+## ♻️ Restore desde backup
 
-1. Parar el servicio:
-   ```bash
-   docker compose stop api redis
-   ```
-2. Restaurar el volumen:
-   ```bash
-   # Desmontar el volumen actual y reemplazarlo por el backup.
-   docker run --rm \
-       -v aparcaceres_redis-data:/restore \
-       -v /var/backups/aparcaceres/2026-04-26T03-00-00:/backup \
-       alpine sh -c "rm -rf /restore/* && cp -a /backup/. /restore/"
-   ```
-3. Re-arrancar:
-   ```bash
-   docker compose up -d redis
-   docker compose exec redis redis-cli PING   # PONG
-   docker compose up -d api
-   curl -fsS http://localhost:8000/healthz | jq
-   ```
+• Parar el servicio:
+
+```bash
+docker compose stop api redis
+```
+
+• Restaurar el volumen:
+
+```bash
+# Desmontar el volumen actual y reemplazarlo por el backup.
+docker run --rm \
+    -v aparcaceres_redis-data:/restore \
+    -v /var/backups/aparcaceres/2026-04-26T03-00-00:/backup \
+    alpine sh -c "rm -rf /restore/* && cp -a /backup/. /restore/"
+```
+
+• Re-arrancar:
+
+```bash
+docker compose up -d redis
+docker compose exec redis redis-cli PING   # PONG
+docker compose up -d api
+curl -fsS http://localhost:8000/healthz | jq
+```
 
 Si el backup era íntegro y el AOF estaba habilitado, los favoritos
-(`user:*:favorites`) y el catálogo (`parking:*`) reaparecen tal cual. Si
-solo restaurás el RDB sin el AOF, puede perderse la última franja de
-escrituras (depende de cuándo fue el último BGSAVE).
+(`user:*:favorites`) y el catálogo (`parking:*`) reaparecen tal cual. Si solo
+se restaura el RDB sin el AOF, puede perderse la última franja de escrituras
+según el momento del último `BGSAVE`.
 
-## 6. Variables de entorno mínimas en producción
+## ⚙️ Variables de entorno mínimas en producción
 
 ```env
 APP_ENV=production
@@ -230,11 +237,11 @@ CACHE_NEARBY_TTL=60
 DEFAULT_PARKING_LIMIT=100
 MAX_PARKING_LIMIT=500
 
-# Resolución de fotos durante el import. Cuando true, el importador
+# Resolución de fotos durante el import. Cuando es true, el importador
 # descarga las fichas SIG (fichatoponimia.php / fichacalle.php) de los
 # places sin URL_FOTO explícito, extrae la <img> de /fotosOriginales/
 # y persiste la URL resuelta. Cachea por id en parking_photo:{id}
-# (TTL 90 días por defecto) para que un re-import no rescraperar.
+# (TTL 90 días por defecto) para que un re-import no vuelva a hacer scraping.
 FETCH_PHOTOS=true
 PHOTO_FETCH_CONCURRENCY=20
 PHOTO_FETCH_TIMEOUT_SECONDS=5.0
@@ -242,18 +249,16 @@ PHOTO_CACHE_TTL_SECONDS=7776000
 ```
 
 Los secretos (`IMPORT_TOKEN`, `FAVORITES_SECRET`) deben generarse con
-`openssl rand -hex 32` y guardarse en el gestor de secretos del orquestador
-(no commitear el `.env` con valores reales).
+`openssl rand -hex 32` y guardarse en el gestor de secretos del orquestador.
+No debe commitearse el `.env` con valores reales.
 
-## 7. Runbook rápido
+## 🚦 Runbook rápido
 
 | Síntoma                                       | Primera comprobación                                         |
 | --------------------------------------------- | ------------------------------------------------------------ |
 | 503 en todo                                   | `curl /healthz` → ver qué componente está `down`             |
-| 503 sólo en `/parkings*`                      | `redis-cli FT.INFO idx:parkings_search` → reimport si falta  |
+| 503 solo en `/parkings*`                      | `redis-cli FT.INFO idx:parkings_search` → reimport si falta  |
 | Respuestas "vacías" tras un import            | Doble buffer en swap; reintentar en ~5s                      |
 | Caché de nearby aparece "antigua"             | `redis-cli GET cache:version` debería haber subido           |
 | 401 en `/users/me/favorites`                  | Cliente sin Bearer válido o `FAVORITES_SECRET` cambiado      |
 | 429 en `/parkings/nearby`                     | Cliente excediendo `RATE_LIMIT_NEARBY`; revisar logs nginx   |
-| `LASTSAVE` no avanza                          | Disco lleno o AOF roto; revisar `redis INFO persistence`     |
-| `/metrics` no responde                        | `METRICS_ENABLED=false` o instrumentation no se enganchó     |
