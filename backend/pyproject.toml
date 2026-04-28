@@ -2,6 +2,6 @@
 testpaths = ["tests"]
 python_files = ["test_*.py"]
 addopts = "-q"
-# `app/` vive en backend/, que es el rootdir cuando pytest encuentra este pyproject.
-# Lo añadimos a sys.path para que `from app.xxx import ...` funcione desde los tests.
+
+# Permite importar `app.*` desde tests ejecutados con `backend/` como raíz.
 pythonpath = ["."]

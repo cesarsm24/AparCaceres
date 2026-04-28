@@ -11,7 +11,7 @@ from __future__ import annotations
 from fastapi import APIRouter
 from pydantic import BaseModel, Field
 
-from ..auth import issue_token
+from ..core.auth import issue_token
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 

@@ -21,14 +21,14 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from app.config import PARKING_KEY_PREFIX
+from app.core.config import PARKING_KEY_PREFIX
 from app.enums import (
     ParkingCategory,
     ParkingGeometryType,
     ParkingRegulation,
     ParkingVehicleType,
 )
-from app.importer import (
+from app.infra.redis.importer import (
     SOURCE_REGISTRY,
     derive_stable_id,
     discover_geojson_files,

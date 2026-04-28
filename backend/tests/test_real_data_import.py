@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from app.config import DATA_DIR, PARKING_KEY_PREFIX
-from app.importer import run_import_dir
+from app.core.config import DATA_DIR, PARKING_KEY_PREFIX
+from app.infra.redis.importer import run_import_dir
 
 EXPECTED_DATASET_COUNTS = {
     "aparcamientos": 24,

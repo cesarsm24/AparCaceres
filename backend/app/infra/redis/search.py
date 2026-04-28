@@ -1,8 +1,13 @@
-"""Capa de búsqueda del catálogo de aparcamientos.
+"""Búsqueda del catálogo de aparcamientos.
 
-Producción usa Redis Stack / RediSearch sobre los hashes `parking:{id}`.
-Los tests usan un fallback en memoria contra `FakeRedis`, para no depender de
-un servidor Redis Stack real en CI.
+Esta capa traduce el contrato de consulta del backend a RediSearch. En
+producción, Redis Stack actúa como motor de búsqueda: el índice almacena lo
+necesario para filtrar por tags, texto libre, geolocalización y ordenación por
+distancia.
+
+La capa no degrada a una implementación alternativa si RediSearch no está
+disponible. En ese caso se propaga un error de configuración o disponibilidad
+para que el servicio falle de forma explícita.
 """
 
 from __future__ import annotations
@@ -15,47 +20,60 @@ from typing import Iterable, Optional
 import redis
 from redis.exceptions import ResponseError
 
-from .config import (
+from ...core.config import (
     PARKING_KEY_PREFIX,
     SEARCH_INDEX_NAME,
 )
-from .enums import (
+from ...enums import (
     ParkingCategory,
-    ParkingGeometryType,
     ParkingRegulation,
     ParkingVehicleType,
 )
-from .filters import apply_filters, normalize_for_search
-from .schemas import ParkingFacetsOut, ParkingPlaceNearbyOut, ParkingPlaceOut
+from ...filters import apply_filters, normalize_for_search
+from ...schemas import ParkingFacetsOut, ParkingPlaceNearbyOut, ParkingPlaceOut
 
 _EARTH_RADIUS_M = 6_371_000.0
 _TEXT_TOKEN_RE = re.compile(r"[a-z0-9_]+")
 
 
 class SearchIndexError(RuntimeError):
-    """Error de configuración de RediSearch."""
+    """Error de configuración o disponibilidad de RediSearch.
+
+    Se usa para diferenciar fallos de consulta ordinarios de una instalación
+    incompleta del módulo de búsqueda.
+    """
 
 
 @dataclass(frozen=True)
 class ParkingSearchResult:
+    """Resultado paginado de búsqueda de aparcamientos.
+
+    `total` refleja el conjunto completo que satisface el filtro; `items`
+    contiene solo la ventana pedida por `offset` y `limit`.
+    """
+
     items: list[ParkingPlaceOut]
     total: int
 
 
 @dataclass(frozen=True)
 class ParkingNearbySearchResult:
+    """Resultado paginado de búsqueda geográfica de aparcamientos.
+
+    Mantiene el mismo patrón de paginación que `ParkingSearchResult`, pero
+    incorpora la distancia calculada por RediSearch para cada elemento.
+    """
+
     items: list[ParkingPlaceNearbyOut]
     total: int
 
 
 def build_search_text(place: ParkingPlaceOut) -> str:
-    """Texto normalizado indexable para búsqueda libre.
+    """Construye el texto indexable para búsqueda libre.
 
-    Solo incorpora campos descriptivos (nombre, vía, distrito, barrio y
-    `sourceDataset`). `category`/`vehicleType`/`regulation` quedan fuera a
-    propósito: ya están como `TAG` con filtro dedicado, y mezclarlos en el
-    `TEXT` provoca que `q="blue_zone"` traiga resultados que el usuario
-    pretendía aislar con el chip de filtro.
+    Solo incluye campos descriptivos y el dataset de origen para que el campo
+    `TEXT` represente lenguaje natural. Las dimensiones filtrables se dejan
+    fuera a propósito y se expresan como `TAG` independientes.
     """
     values = [
         place.name,
@@ -65,11 +83,11 @@ def build_search_text(place: ParkingPlaceOut) -> str:
         place.neighborhood,
         place.sourceDataset,
     ]
-    return normalize_for_search(" ".join(v for v in values if v))
+    return normalize_for_search(" ".join(value for value in values if value))
 
 
 def build_location(place: ParkingPlaceOut) -> str:
-    """Formato GEO de RediSearch: `lon,lat`."""
+    """Devuelve la ubicación en formato GEO de RediSearch."""
     return f"{place.longitude},{place.latitude}"
 
 
@@ -79,28 +97,32 @@ def recreate_search_index(
     name: str = SEARCH_INDEX_NAME,
     key_prefix: str = PARKING_KEY_PREFIX,
 ) -> None:
-    """Recrea un índice RediSearch de forma idempotente.
+    """Recrea un índice RediSearch sin eliminar los hashes indexados.
 
-    Los parámetros `name` y `key_prefix` permiten construir un índice de
-    staging para el doble buffer del importador sin tocar el activo.
-
-    No usa `DD`: el importador gestiona los hashes explícitamente, así
-    evitamos que `FT.DROPINDEX` borre datos por accidente.
+    Se usa durante el import con doble buffer para construir una generación
+    nueva sobre un prefijo distinto y luego sustituir el catálogo activo.
     """
     if not hasattr(rdb, "execute_command"):
         return
+
     try:
         rdb.execute_command("FT.DROPINDEX", name)
     except ResponseError as exc:
         if not _is_unknown_index(exc):
             _raise_stack_error(exc)
+
     _create_search_index(rdb, name=name, key_prefix=key_prefix)
 
 
 def drop_search_index(rdb: redis.Redis, *, name: str) -> None:
-    """`FT.DROPINDEX` idempotente: ignora "unknown index" y deja los hashes."""
+    """Elimina un índice RediSearch de forma idempotente.
+
+    No borra los hashes, solo la metadata del índice. La operación tolera que
+    el índice ya no exista para simplificar los swaps del importador.
+    """
     if not hasattr(rdb, "execute_command"):
         return
+
     try:
         rdb.execute_command("FT.DROPINDEX", name)
     except ResponseError as exc:
@@ -109,15 +131,21 @@ def drop_search_index(rdb: redis.Redis, *, name: str) -> None:
 
 
 def ensure_search_index(rdb: redis.Redis) -> None:
-    """Crea el índice RediSearch principal si no existe."""
+    """Garantiza que el índice principal de búsqueda existe.
+
+    El arranque del backend lo llama para autocurar una instalación nueva
+    cuando el índice todavía no ha sido creado.
+    """
     if not hasattr(rdb, "execute_command"):
         return
+
     try:
         rdb.execute_command("FT.INFO", SEARCH_INDEX_NAME)
     except ResponseError as exc:
         if _is_unknown_index(exc):
             _create_search_index(rdb)
             return
+
         _raise_stack_error(exc)
 
 
@@ -134,24 +162,13 @@ def search_parkings(
     offset: int = 0,
     limit: int = 100,
 ) -> ParkingSearchResult:
-    """Busca aparcamientos con filtros indexados.
+    """Busca aparcamientos mediante filtros indexados.
 
-    Los resultados se devuelven con sus hashes completos (`FT.SEARCH` sin
-    `NOCONTENT`) para evitar el round-trip extra `HGETALL` por id.
+    La consulta combina texto libre, tags y filtros numéricos. Si el servidor
+    no soporta RediSearch, la función falla de forma explícita con un error de
+    configuración.
     """
-    if not _has_redisearch(rdb):
-        return _search_parkings_fake(
-            rdb,
-            ids=ids,
-            q=q,
-            vehicle_types=vehicle_types,
-            categories=categories,
-            regulations=regulations,
-            datasets=datasets,
-            min_spaces=min_spaces,
-            offset=offset,
-            limit=limit,
-        )
+    _require_redisearch(rdb)
 
     query = _build_query(
         ids=ids,
@@ -182,23 +199,12 @@ def search_nearby(
     offset: int = 0,
     limit: int = 100,
 ) -> ParkingNearbySearchResult:
-    """Busca por radio y ordena por distancia ascendente."""
-    if not _has_redisearch(rdb):
-        return _search_nearby_fake(
-            rdb,
-            lat=lat,
-            lng=lng,
-            radius_meters=radius_meters,
-            ids=ids,
-            q=q,
-            vehicle_types=vehicle_types,
-            categories=categories,
-            regulations=regulations,
-            datasets=datasets,
-            min_spaces=min_spaces,
-            offset=offset,
-            limit=limit,
-        )
+    """Busca aparcamientos dentro de un radio y los ordena por distancia.
+
+    RediSearch calcula la distancia en el propio query y devuelve ya el
+    subconjunto paginado ordenado de forma ascendente.
+    """
+    _require_redisearch(rdb)
 
     query = _build_query(
         ids=ids,
@@ -236,19 +242,13 @@ def search_in_bounds(
     offset: int = 0,
     limit: int = 100,
 ) -> ParkingSearchResult:
-    """Busca por viewport rectangular usando campos numéricos indexados."""
-    if not _has_redisearch(rdb):
-        return _search_parkings_fake(
-            rdb,
-            vehicle_types=vehicle_types,
-            categories=categories,
-            regulations=regulations,
-            datasets=datasets,
-            min_spaces=min_spaces,
-            bounds=(min_lat, min_lng, max_lat, max_lng),
-            offset=offset,
-            limit=limit,
-        )
+    """Busca aparcamientos dentro de un rectángulo geográfico.
+
+    Se usa para consultas de viewport del mapa, donde el backend debe
+    recortar por límites de latitud y longitud antes de aplicar los demás
+    filtros.
+    """
+    _require_redisearch(rdb)
 
     query = _build_query(
         vehicle_types=vehicle_types,
@@ -263,9 +263,12 @@ def search_in_bounds(
 
 
 def get_facets(rdb: redis.Redis) -> ParkingFacetsOut:
-    """Conteos por dimensión, vía RediSearch en producción."""
-    if not _has_redisearch(rdb):
-        return _facets_fake(rdb)
+    """Obtiene conteos agregados por dimensiones filtrables.
+
+    Calcula facetas globales por categoría, vehículo, regulación y dataset
+    para alimentar filtros de interfaz sin duplicar lógica en Flutter.
+    """
+    _require_redisearch(rdb)
 
     total, _ = _ft_search_ids(rdb, "*", offset=0, limit=0)
     return ParkingFacetsOut(
@@ -319,8 +322,11 @@ def _create_search_index(
         _raise_stack_error(exc)
 
 
-def _has_redisearch(rdb: redis.Redis) -> bool:
-    return hasattr(rdb, "execute_command")
+def _require_redisearch(rdb: redis.Redis) -> None:
+    if hasattr(rdb, "execute_command"):
+        return
+
+    raise SearchIndexError("Redis Stack / RediSearch es obligatorio en producción")
 
 
 def _is_unknown_index(exc: ResponseError) -> bool:
@@ -332,6 +338,7 @@ def _raise_stack_error(exc: ResponseError) -> None:
     msg = str(exc).lower()
     if "unknown command" in msg or "module" in msg:
         raise SearchIndexError("Redis Stack / RediSearch es obligatorio en producción") from exc
+
     raise exc
 
 
@@ -342,8 +349,9 @@ def _ft_search_ids(
     offset: int,
     limit: int,
 ) -> tuple[int, list[str]]:
-    """`FT.SEARCH NOCONTENT`: para conteos y para flujos que no necesitan el hash."""
+    """Ejecuta una búsqueda sin payload y devuelve ids de aparcamiento."""
     ensure_search_index(rdb)
+
     try:
         resp = rdb.execute_command(
             "FT.SEARCH",
@@ -361,8 +369,9 @@ def _ft_search_ids(
 
     if not resp:
         return 0, []
+
     total = int(resp[0])
-    return total, [_key_to_id(k) for k in resp[1:]]
+    return total, [_key_to_id(key) for key in resp[1:]]
 
 
 def _ft_search_with_payload(
@@ -372,17 +381,10 @@ def _ft_search_with_payload(
     offset: int,
     limit: int,
 ) -> tuple[int, list[ParkingPlaceOut]]:
-    """`FT.SEARCH` con hashes completos: una sola llamada en lugar de SEARCH+HGETALL.
-
-    Formato de respuesta de `FT.SEARCH` sin `NOCONTENT`:
-        [total, key1, [field1, value1, field2, value2, ...], key2, [...]]
-    El parser asume orden estable de la respuesta de RediSearch (lo es desde
-    la versión 1.x).
-    """
+    """Ejecuta una búsqueda RediSearch y reconstruye modelos desde el payload."""
     ensure_search_index(rdb)
+
     if limit == 0:
-        # Caso especial: solo queremos `total` (p. ej. facets). El payload
-        # nunca se usaría, así que evitamos pedirlo.
         total, _ = _ft_search_ids(rdb, query, offset=0, limit=0)
         return total, []
 
@@ -402,19 +404,19 @@ def _ft_search_with_payload(
 
     if not resp:
         return 0, []
-    total = int(resp[0])
-    # Importación local para evitar el ciclo importer <-> search.
+
     from .importer import place_from_redis_hash
 
+    total = int(resp[0])
     places: list[ParkingPlaceOut] = []
     body = resp[1:]
-    # Pares (key, fields_array). Si por algún motivo viene impar, ignoramos
-    # el sobrante para no levantar.
-    for i in range(0, len(body) - 1, 2):
-        fields = body[i + 1]
+
+    for index in range(0, len(body) - 1, 2):
+        fields = body[index + 1]
         data = _row_to_dict(fields)
         if data:
             places.append(place_from_redis_hash(data))
+
     return total, places
 
 
@@ -427,17 +429,14 @@ def _ft_nearby_rows(
     offset: int,
     limit: int,
 ) -> tuple[int, list[ParkingPlaceNearbyOut]]:
-    """Nearby ordenado en Redis con `geodistance(...)` y hashes en una sola llamada.
+    """Ejecuta búsqueda geográfica ordenada por distancia en RediSearch.
 
-    `FT.AGGREGATE … LOAD *` carga todos los campos del hash en la propia
-    pipeline, junto al `distance` calculado por `APPLY geodistance(...)`. Así:
-    - una sola llamada a Redis (antes: AGGREGATE + pipeline HGETALL),
-    - el orden por distancia ASC se calcula en Redis sobre toda la ventana
-      (`MAX sort_window`), evitando perder los puntos realmente más cercanos
-      cuando el índice crezca.
+    Se carga el hash completo junto al campo calculado `distance` para evitar
+    llamadas adicionales por resultado.
     """
     ensure_search_index(rdb)
     sort_window = max(offset + limit, limit)
+
     try:
         resp = rdb.execute_command(
             "FT.AGGREGATE",
@@ -467,31 +466,34 @@ def _ft_nearby_rows(
     if not resp:
         return 0, []
 
-    # Importación local para evitar el ciclo importer <-> search.
     from .importer import place_from_redis_hash
 
     nearby: list[ParkingPlaceNearbyOut] = []
+
     for row in resp[1:]:
         values = _row_to_dict(row)
         if not values:
             continue
+
         try:
             distance = float(values.get("distance", 0))
         except (TypeError, ValueError):
             distance = 0.0
-        # `distance` es un campo computado de la pipeline y no forma parte del
-        # hash original; lo retiramos antes de hidratar el modelo.
+
         values.pop("distance", None)
+
         try:
             place = place_from_redis_hash(values)
-        except Exception:  # noqa: BLE001 — hash corrupto, lo saltamos sin tirar.
+        except Exception:  # noqa: BLE001
             continue
+
         nearby.append(
             ParkingPlaceNearbyOut(
                 **place.model_dump(),
                 distanceMeters=distance,
             )
         )
+
     return int(resp[0]), nearby
 
 
@@ -520,23 +522,28 @@ def _aggregate_tag_counts(rdb: redis.Redis, field: str) -> dict[str, int]:
 
     out: dict[str, int] = {}
     rows = resp[1:] if resp else []
+
     for row in rows:
         pairs = _row_to_dict(row)
         value = pairs.get(field)
         if value:
             out[str(value)] = int(pairs.get("count", 0))
+
     return dict(sorted(out.items()))
 
 
 def _row_to_dict(row) -> dict[str, str]:
     if isinstance(row, dict):
-        return {str(k): str(v) for k, v in row.items()}
+        return {str(key): str(value) for key, value in row.items()}
+
     if not isinstance(row, (list, tuple)):
         return {}
+
     out: dict[str, str] = {}
-    for i in range(0, len(row), 2):
-        if i + 1 < len(row):
-            out[str(row[i])] = str(row[i + 1])
+    for index in range(0, len(row), 2):
+        if index + 1 < len(row):
+            out[str(row[index])] = str(row[index + 1])
+
     return out
 
 
@@ -553,37 +560,43 @@ def _build_query(
     geo: Optional[tuple[float, float, float]] = None,
 ) -> str:
     parts: list[str] = []
+
     _append_tag_filter(parts, "id", ids)
-    _append_tag_filter(parts, "vehicleType", [v.value for v in vehicle_types or []])
-    _append_tag_filter(parts, "category", [c.value for c in categories or []])
-    _append_tag_filter(parts, "regulation", [r.value for r in regulations or []])
+    _append_tag_filter(parts, "vehicleType", [value.value for value in vehicle_types or []])
+    _append_tag_filter(parts, "category", [value.value for value in categories or []])
+    _append_tag_filter(parts, "regulation", [value.value for value in regulations or []])
     _append_tag_filter(parts, "sourceDataset", datasets)
 
     text = _text_query(q)
     if text:
         parts.append(text)
+
     if min_spaces > 0:
         parts.append(f"@totalSpaces:[{min_spaces} +inf]")
+
     if bounds is not None:
         min_lat, min_lng, max_lat, max_lng = bounds
         parts.append(f"@latitude:[{min_lat} {max_lat}]")
         parts.append(f"@longitude:[{min_lng} {max_lng}]")
+
     if geo is not None:
         lng, lat, radius_meters = geo
         parts.append(f"@location:[{lng} {lat} {radius_meters} m]")
+
     return " ".join(parts) if parts else "*"
 
 
 def _append_tag_filter(parts: list[str], field: str, values: Optional[Iterable[str]]) -> None:
-    raw = [str(v) for v in values or [] if str(v).strip()]
+    raw = [str(value) for value in values or [] if str(value).strip()]
     if not raw:
         return
-    joined = "|".join(_escape_tag(v.strip()) for v in raw)
+
+    joined = "|".join(_escape_tag(value.strip()) for value in raw)
     parts.append(f"@{field}:{{{joined}}}")
 
 
 def _escape_tag(value: str) -> str:
-    return "".join(ch if ch.isalnum() or ch == "_" else f"\\{ch}" for ch in value)
+    return "".join(char if char.isalnum() or char == "_" else f"\\{char}" for char in value)
 
 
 def _text_query(q: Optional[str]) -> str:
@@ -591,106 +604,13 @@ def _text_query(q: Optional[str]) -> str:
     terms = _TEXT_TOKEN_RE.findall(normalized)
     if not terms:
         return ""
+
     return "@searchText:(" + " ".join(f"{term}*" for term in terms) + ")"
 
 
 def _key_to_id(key: str) -> str:
     key = str(key)
     return key[len(PARKING_KEY_PREFIX):] if key.startswith(PARKING_KEY_PREFIX) else key
-
-
-def _all_places_fake(rdb) -> list[ParkingPlaceOut]:
-    from .importer import place_from_redis_hash
-
-    places: list[ParkingPlaceOut] = []
-    if hasattr(rdb, "hashes"):
-        keys = [k for k in rdb.hashes if k.startswith(PARKING_KEY_PREFIX)]
-    else:
-        keys = list(rdb.scan_iter(match=f"{PARKING_KEY_PREFIX}*"))
-    for key in keys:
-        data = rdb.hgetall(key)
-        if data:
-            places.append(place_from_redis_hash(data))
-    return places
-
-
-def _search_parkings_fake(
-    rdb,
-    *,
-    ids: Optional[Iterable[str]] = None,
-    q: Optional[str] = None,
-    vehicle_types: Optional[Iterable[ParkingVehicleType]] = None,
-    categories: Optional[Iterable[ParkingCategory]] = None,
-    regulations: Optional[Iterable[ParkingRegulation]] = None,
-    datasets: Optional[Iterable[str]] = None,
-    min_spaces: int = 0,
-    bounds: Optional[tuple[float, float, float, float]] = None,
-    offset: int = 0,
-    limit: int = 100,
-) -> ParkingSearchResult:
-    places = _all_places_fake(rdb)
-    filtered = _filter_places(
-        places,
-        ids=ids,
-        q=q,
-        vehicle_types=vehicle_types,
-        categories=categories,
-        regulations=regulations,
-        datasets=datasets,
-        min_spaces=min_spaces,
-        bounds=bounds,
-    )
-    return ParkingSearchResult(
-        items=filtered[offset : offset + limit],
-        total=len(filtered),
-    )
-
-
-def _search_nearby_fake(
-    rdb,
-    *,
-    lat: float,
-    lng: float,
-    radius_meters: float,
-    ids: Optional[Iterable[str]] = None,
-    q: Optional[str] = None,
-    vehicle_types: Optional[Iterable[ParkingVehicleType]] = None,
-    categories: Optional[Iterable[ParkingCategory]] = None,
-    regulations: Optional[Iterable[ParkingRegulation]] = None,
-    datasets: Optional[Iterable[str]] = None,
-    min_spaces: int = 0,
-    offset: int = 0,
-    limit: int = 100,
-) -> ParkingNearbySearchResult:
-    candidates = []
-    for place in _all_places_fake(rdb):
-        distance = _haversine_m(lat, lng, place.latitude, place.longitude)
-        if distance <= radius_meters:
-            candidates.append((place, distance))
-
-    filtered = _filter_places(
-        [place for place, _ in candidates],
-        ids=ids,
-        q=q,
-        vehicle_types=vehicle_types,
-        categories=categories,
-        regulations=regulations,
-        datasets=datasets,
-        min_spaces=min_spaces,
-    )
-    distance_by_id = {place.id: distance for place, distance in candidates}
-    out = [
-        ParkingPlaceNearbyOut(
-            **place.model_dump(),
-            distanceMeters=distance_by_id[place.id],
-        )
-        for place in filtered
-    ]
-    out.sort(key=lambda p: p.distanceMeters)
-    return ParkingNearbySearchResult(
-        items=out[offset : offset + limit],
-        total=len(out),
-    )
 
 
 def _filter_places(
@@ -706,7 +626,8 @@ def _filter_places(
     bounds: Optional[tuple[float, float, float, float]] = None,
 ) -> list[ParkingPlaceOut]:
     normalized_q = normalize_for_search(q) if q else None
-    dataset_set = {str(d) for d in datasets or [] if str(d).strip()}
+    dataset_set = {str(dataset) for dataset in datasets or [] if str(dataset).strip()}
+
     filtered = apply_filters(
         places,
         ids=set(ids) if ids else None,
@@ -716,49 +637,31 @@ def _filter_places(
         regulations=set(regulations or []),
         min_spaces=min_spaces,
     )
+
     out: list[ParkingPlaceOut] = []
+
     for place in filtered:
         if dataset_set and place.sourceDataset not in dataset_set:
             continue
+
         if bounds is not None:
             min_lat, min_lng, max_lat, max_lng = bounds
             if not (min_lat <= place.latitude <= max_lat and min_lng <= place.longitude <= max_lng):
                 continue
+
         out.append(place)
+
     return out
-
-
-def _facets_fake(rdb) -> ParkingFacetsOut:
-    places = _all_places_fake(rdb)
-    return ParkingFacetsOut(
-        total=len(places),
-        categories=_count_field(places, "category"),
-        vehicleTypes=_count_field(places, "vehicleType"),
-        regulations=_count_field(places, "regulation"),
-        datasets=_count_field(places, "sourceDataset"),
-    )
-
-
-def _count_field(places: Iterable[ParkingPlaceOut], field: str) -> dict[str, int]:
-    counts: dict[str, int] = {}
-    for place in places:
-        value = getattr(place, field)
-        if value is None:
-            continue
-        if isinstance(value, (ParkingCategory, ParkingVehicleType, ParkingRegulation, ParkingGeometryType)):
-            key = value.value
-        else:
-            key = str(value)
-        counts[key] = counts.get(key, 0) + 1
-    return dict(sorted(counts.items()))
 
 
 def _haversine_m(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
     phi1, phi2 = math.radians(lat1), math.radians(lat2)
     dphi = math.radians(lat2 - lat1)
     dlamb = math.radians(lon2 - lon1)
+
     a = (
         math.sin(dphi / 2) ** 2
         + math.cos(phi1) * math.cos(phi2) * math.sin(dlamb / 2) ** 2
     )
+
     return _EARTH_RADIUS_M * 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))

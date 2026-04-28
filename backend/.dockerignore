@@ -1,5 +1,4 @@
-# Excluye del contexto de build todo lo que no se necesite dentro de la imagen.
-# El objetivo es minimizar el tamaño del contexto y evitar enviar secretos.
+# Reduce el contexto de build y evita copiar artefactos locales o secretos.
 
 venv/
 .venv/
@@ -18,7 +17,6 @@ __pycache__/
 tests/
 *.egg-info/
 
-# Documentación y artefactos de IDE.
 *.md
 .idea/
 .vscode/

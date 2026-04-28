@@ -1,7 +1,8 @@
 # ============================================================
-# Stack de desarrollo / staging para AparCáceres.
-# Levanta Redis Stack (Redis + RediSearch) con persistencia AOF y la API
-# FastAPI conectada a él. Reproducible en cualquier máquina con Docker.
+# Stack de producción reproducible para AparCáceres.
+# Levanta Redis Stack (Redis + RediSearch) con persistencia AOF, la API
+# FastAPI y el frontend web. El backend lee su configuración desde
+# `backend/.env`.
 # ============================================================
 #
 # Comandos habituales:
@@ -51,11 +52,13 @@ services:
     image: aparcaceres-api:0.2.0-dev
     container_name: aparcaceres-api
     restart: unless-stopped
+    env_file:
+      - ./backend/.env
     depends_on:
       redis:
         condition: service_healthy
     environment:
-      APP_ENV: development
+      APP_ENV: production
       REDIS_HOST: redis
       REDIS_PORT: "6379"
       REDIS_DB: "0"
@@ -63,15 +66,9 @@ services:
       CACHE_NEARBY_TTL: "60"
       DEFAULT_PARKING_LIMIT: "100"
       MAX_PARKING_LIMIT: "500"
-      # CORS abierto a los puertos típicos del runner de Flutter web. En
-      # producción sustituir por los dominios reales del cliente.
-      CORS_ORIGINS: >-
-        http://localhost:3000,http://127.0.0.1:3000,
-        http://localhost:5000,http://127.0.0.1:5000,
-        http://localhost:8080,http://127.0.0.1:8080
-      # En desarrollo dejamos el endpoint de import abierto. En producción
-      # fijar un valor y enviarlo como X-Import-Token.
-      IMPORT_TOKEN: ""
+      RATE_LIMIT_ENABLED: "true"
+      METRICS_ENABLED: "true"
+      FETCH_PHOTOS: "true"
     ports:
       - "127.0.0.1:8000:8000"
 
@@ -79,13 +76,13 @@ services:
     image: aparcaceres-api:0.2.0-dev
     container_name: aparcaceres-bootstrap
     restart: "no"
+    env_file:
+      - ./backend/.env
     depends_on:
       redis:
         condition: service_healthy
       api:
         condition: service_started
-    environment:
-      IMPORT_TOKEN: ""
     command:
       - /bin/sh
       - -ec
@@ -93,7 +90,8 @@ services:
         until curl --fail --silent --show-error http://api:8000/ >/dev/null; do
           sleep 2
         done
-        curl --fail --silent --show-error -X POST http://api:8000/import-parkings
+        curl --fail --silent --show-error -X POST http://api:8000/import-parkings \
+          -H "X-Import-Token: $$IMPORT_TOKEN"
 
   web:
     build:

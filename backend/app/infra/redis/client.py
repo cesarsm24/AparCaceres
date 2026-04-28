@@ -1,30 +1,14 @@
-"""Clientes Redis del servicio: async para handlers, síncrono para flujos pesados.
+"""Clientes Redis compartidos del servicio.
 
-El cliente async, con un `ConnectionPool` propio, sirve a los handlers que
-solo necesitan comandos directos (hgetall, zadd, get, setex...): no bloquean
-el event loop y aprovechan el pool entre requests.
+Esta capa centraliza la conexión a Redis Stack para todo el backend. Expone
+un cliente asíncrono para handlers HTTP y un cliente síncrono para flujos
+pesados ejecutados fuera del event loop, como la importación del catálogo y
+la construcción de consultas RediSearch.
 
-Para los flujos pesados (importer multi-fichero y las consultas de
-RediSearch encapsuladas en `app/search.py`) usamos un cliente síncrono: los
-handlers async lo invocan vía `asyncio.to_thread`, así no arrastramos la
-conversión async de la lógica de parsing y construcción de queries, que no
-se beneficiaría del cambio.
-
-Ambos clientes apuntan al mismo Redis y comparten parámetros (host/port/db).
-
-`get_redis` y `get_redis_sync` son las dependencias FastAPI que los routers
-importan. Mantener los nombres distintos evita confusiones (`rdb` síncrono
-en search.py, `rdb` async en favorites/health).
-
-Configuración del pool async:
-- `max_connections=50`: holgado para una sola réplica; si se escala a varios
-  workers, conviene revisarlo.
-- `health_check_interval=30`: ping silencioso cada 30 s; mata conexiones
-  rotas tras NAT timeouts antes de que un usuario las cobre como 503.
-- `socket_keepalive=True`: TCP keepalive para detectar peers idos sin
-  esperar al timeout del SO.
-- `retry_on_timeout=True`: reintenta los comandos que fallen por
-  `TimeoutError` (no por `ConnectionError`). Suficiente para flips de red.
+El `lifespan` crea ambos clientes al arrancar, intenta verificar la
+disponibilidad del servidor y prepara el índice de búsqueda si RediSearch
+responde. La ausencia inicial de Redis no aborta el arranque: los handlers
+devuelven 503 cuando necesitan el cliente y la dependencia no está operativa.
 """
 
 from __future__ import annotations
@@ -36,13 +20,18 @@ import redis
 import redis.asyncio as aioredis
 from fastapi import FastAPI, HTTPException, Request
 
-from .config import REDIS_DB, REDIS_HOST, REDIS_PORT
+from ...core.config import REDIS_DB, REDIS_HOST, REDIS_PORT
 from .search import SearchIndexError, ensure_search_index
 
 logger = logging.getLogger(__name__)
 
 
 def _build_async_pool() -> aioredis.ConnectionPool:
+    """Construye el pool Redis asíncrono usado por los handlers HTTP.
+
+    El pool comparte parámetros con el cliente síncrono para mantener el
+    mismo contrato de conectividad frente al mismo servidor Redis.
+    """
     return aioredis.ConnectionPool(
         host=REDIS_HOST,
         port=REDIS_PORT,
@@ -51,8 +40,6 @@ def _build_async_pool() -> aioredis.ConnectionPool:
         max_connections=50,
         health_check_interval=30,
         socket_keepalive=True,
-        # Acotamos peor caso ante conexiones colgadas: sin estos timeouts un
-        # comando podía esperar hasta el siguiente tick de health_check.
         socket_timeout=5,
         socket_connect_timeout=2,
         retry_on_timeout=True,
@@ -60,6 +47,11 @@ def _build_async_pool() -> aioredis.ConnectionPool:
 
 
 def _build_sync_client() -> redis.Redis:
+    """Construye el cliente Redis síncrono usado por flujos en thread.
+
+    Se usa con `asyncio.to_thread` para operaciones bloqueantes que no se
+    benefician de una API asíncrona propia.
+    """
     return redis.Redis(
         host=REDIS_HOST,
         port=REDIS_PORT,
@@ -75,16 +67,17 @@ def _build_sync_client() -> redis.Redis:
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Abre los clientes Redis al arrancar y los cierra al apagarse.
+    """Registra clientes Redis durante el ciclo de vida de la aplicación.
 
-    Si el `PING` falla, solo se loggea: los endpoints devolverán 503 cuando
-    intenten usar el cliente. Eso permite que la app arranque incluso con
-    Redis aún no disponible (por ejemplo en docker-compose, durante la
-    ventana en que `redis` aún no responde a `healthcheck`).
+    El arranque valida la conectividad, registra el estado del backend y
+    garantiza el índice principal de RediSearch cuando el módulo está
+    disponible. Si Redis todavía no responde, la aplicación sigue en pie y
+    las rutas devolverán 503 al intentar acceder a la dependencia.
     """
     pool = _build_async_pool()
     client = aioredis.Redis(connection_pool=pool)
     sync_client = _build_sync_client()
+
     try:
         await client.ping()
         logger.info(
@@ -93,6 +86,7 @@ async def lifespan(app: FastAPI):
             REDIS_PORT,
             REDIS_DB,
         )
+
         try:
             ensure_search_index(sync_client)
         except SearchIndexError as exc:
@@ -102,6 +96,7 @@ async def lifespan(app: FastAPI):
 
     app.state.redis = client
     app.state.redis_sync = sync_client
+
     try:
         yield
     finally:
@@ -115,15 +110,27 @@ async def lifespan(app: FastAPI):
 
 
 def get_redis(request: Request) -> aioredis.Redis:
-    """Dependency: cliente async para uso directo desde handlers async."""
+    """Devuelve el cliente Redis asíncrono de la aplicación.
+
+    Lo usan los handlers que realizan operaciones directas y cortas sobre
+    Redis sin necesidad de saltar a un hilo adicional.
+    """
     return request.app.state.redis
 
 
 def get_redis_sync(request: Request) -> redis.Redis:
-    """Dependency: cliente síncrono para `asyncio.to_thread(search_*, ...)`."""
+    """Devuelve el cliente Redis síncrono de la aplicación.
+
+    Lo usan los handlers que delegan en `asyncio.to_thread` para mantener el
+    event loop libre mientras se ejecutan consultas o importaciones pesadas.
+    """
     return request.app.state.redis_sync
 
 
 def raise_redis_503(exc: Exception) -> HTTPException:
-    """Helper: convierte un fallo de conexión a Redis en HTTP 503."""
+    """Convierte un fallo de Redis en una respuesta HTTP 503.
+
+    Mantiene homogéneo el contrato de error cuando la infraestructura de
+    persistencia o búsqueda no está disponible.
+    """
     return HTTPException(status_code=503, detail=f"Redis no disponible: {exc}")

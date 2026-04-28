@@ -15,7 +15,7 @@ import redis
 import redis.asyncio as aioredis
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
 
-from ..config import (
+from ..core.config import (
     CACHE_NEARBY_PREFIX,
     CACHE_NEARBY_TTL,
     CACHE_VERSION_KEY,
@@ -24,22 +24,22 @@ from ..config import (
     PARKING_KEY_PREFIX,
     SEARCH_INDEX_NAME,
 )
+from ..core.rate_limit import RATE_LIMIT_NEARBY, limiter
 from ..enums import ParkingCategory, ParkingRegulation, ParkingVehicleType
-from ..importer import place_from_redis_hash
-from ..rate_limit import RATE_LIMIT_NEARBY, limiter
-from ..redis_client import get_redis, get_redis_sync, raise_redis_503
-from ..schemas import (
-    ParkingFacetsOut,
-    ParkingPlaceOut,
-    ParkingPlacesEnvelopeOut,
-    ParkingPlacesNearbyEnvelopeOut,
-)
-from ..search import (
+from ..infra.redis.client import get_redis, get_redis_sync, raise_redis_503
+from ..infra.redis.importer import place_from_redis_hash
+from ..infra.redis.search import (
     SearchIndexError,
     get_facets,
     search_in_bounds,
     search_nearby,
     search_parkings,
+)
+from ..schemas import (
+    ParkingFacetsOut,
+    ParkingPlaceOut,
+    ParkingPlacesEnvelopeOut,
+    ParkingPlacesNearbyEnvelopeOut,
 )
 
 logger = logging.getLogger(__name__)
@@ -137,7 +137,7 @@ def _build_nearby_cache_key(
     - Los filtros vacíos no aparecen, manteniendo cortas las claves del caso
       sin filtros (que es el más frecuente).
     - El prefijo `cache:nearby:v{n}:` permite invalidar todo con un único
-      `INCR cache:version` (ver `app/importer.py`).
+      `INCR cache:version` (ver `app/infra/redis/importer.py`).
     """
     decimals = max(4, math.ceil(math.log10(111_000 / max(radius, 1.0))))
     parts = [f"{lat:.{decimals}f}", f"{lng:.{decimals}f}", str(int(radius))]
@@ -298,7 +298,7 @@ async def list_parkings(
     effective_limit = _resolve_limit(limit)
     effective_offset = _resolve_offset(offset)
     try:
-        # Las funciones de `app/search.py` son síncronas (parsing/build de
+        # Las funciones de `app/infra/redis/search.py` son síncronas (parsing/build de
         # queries pesado, llamadas a Redis bloqueantes). Las lanzamos en el
         # threadpool para no bloquear el event loop.
         result = await asyncio.to_thread(

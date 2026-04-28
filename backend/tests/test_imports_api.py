@@ -75,7 +75,7 @@ def test_import_increments_cache_version_for_nearby_namespacing(
     `/parkings/nearby` la incluye como prefijo `v{n}`. Las entradas previas
     quedan inalcanzables al cambiar el namespace y caducan por TTL (O(1)).
     """
-    from app.config import CACHE_VERSION_KEY
+    from app.core.config import CACHE_VERSION_KEY
     from app.routers import imports as imports_router
 
     monkeypatch.setattr(
@@ -90,7 +90,10 @@ def test_import_increments_cache_version_for_nearby_namespacing(
 
     initial_version = int(fake_redis.get(CACHE_VERSION_KEY) or "0")
 
-    response = seeded_client.post("/import-parkings")
+    response = seeded_client.post(
+        "/import-parkings",
+        headers={"X-Import-Token": imports_router.IMPORT_TOKEN},
+    )
     assert response.status_code == 200
 
     new_version = int(fake_redis.get(CACHE_VERSION_KEY))

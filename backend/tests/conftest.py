@@ -23,10 +23,14 @@ from __future__ import annotations
 
 import os
 
-# Debe ejecutarse ANTES de importar la app (incluye `app.rate_limit`).
+# Debe ejecutarse ANTES de importar la app (incluye `app.core.rate_limit`).
 os.environ.setdefault("RATE_LIMIT_ENABLED", "false")
 os.environ.setdefault("RATE_LIMIT_STORAGE_URI", "memory://")
 os.environ.setdefault("METRICS_ENABLED", "false")
+# Valores explícitos para que la configuración de producción no quede
+# ambigua durante la suite.
+os.environ.setdefault("CORS_ORIGINS", "http://localhost:5000")
+os.environ.setdefault("IMPORT_TOKEN", "test-import-token")
 # Clave de firma fija para los tokens de favoritos. Cualquier valor sirve;
 # solo importa que sea estable durante la suite.
 os.environ.setdefault("FAVORITES_SECRET", "test-secret-do-not-leak")
@@ -36,6 +40,7 @@ from typing import Iterator  # noqa: E402
 import pytest  # noqa: E402
 from fastapi import FastAPI  # noqa: E402
 from fastapi.testclient import TestClient  # noqa: E402
+from redis.exceptions import ResponseError  # noqa: E402
 
 
 class FakeRedis:
@@ -46,12 +51,15 @@ class FakeRedis:
     - `hashes`: para `HSET`/`HGETALL` (`parking:{id}`).
     - `zsets`: sorted sets para `ZADD`/`ZREM`/`ZREVRANGE`/`ZSCORE` (favoritos
       por usuario `user:{id}:favorites`). `{member: score}`.
+    - `search_indices`: metadatos mínimos de RediSearch para `FT.CREATE`,
+      `FT.DROPINDEX`, `FT.INFO`, `FT.SEARCH` y `FT.AGGREGATE`.
     """
 
     def __init__(self) -> None:
         self.strings: dict[str, str] = {}
         self.hashes: dict[str, dict[str, str]] = {}
         self.zsets: dict[str, dict[str, float]] = {}
+        self.search_indices: set[str] = set()
 
     # ---------- API directa (no pipeline) ----------
 
@@ -132,6 +140,25 @@ class FakeRedis:
         new_value = current + int(amount)
         self.strings[key] = str(new_value)
         return new_value
+
+    def execute_command(self, *args):
+        """Subset mínimo de comandos RediSearch usados por la capa de búsqueda."""
+        if not args:
+            raise AssertionError("comando vacío")
+
+        command = str(args[0]).upper()
+        if command == "FT.CREATE":
+            return self._ft_create(*args[1:])
+        if command == "FT.DROPINDEX":
+            return self._ft_dropindex(*args[1:])
+        if command == "FT.INFO":
+            return self._ft_info(*args[1:])
+        if command == "FT.SEARCH":
+            return self._ft_search(*args[1:])
+        if command == "FT.AGGREGATE":
+            return self._ft_aggregate(*args[1:])
+
+        raise AssertionError(f"comando inesperado: {args!r}")
 
     def zscore(self, key: str, member: str) -> float | None:
         zset = self.zsets.get(key)
@@ -225,6 +252,236 @@ class FakeRedis:
                 store[dst] = store.pop(src)
                 return True
         raise KeyError(f"no such key: {src}")
+
+    def _ft_create(self, name: str, *_args):
+        self.search_indices.add(str(name))
+        return "OK"
+
+    def _ft_dropindex(self, name: str, *_args):
+        name = str(name)
+        if name not in self.search_indices:
+            raise ResponseError("Unknown index name")
+        self.search_indices.remove(name)
+        return "OK"
+
+    def _ft_info(self, name: str):
+        name = str(name)
+        if name not in self.search_indices:
+            raise ResponseError("Unknown index name")
+
+        from app.core.config import PARKING_KEY_PREFIX
+
+        num_docs = sum(
+            1 for key in self.hashes if key.startswith(PARKING_KEY_PREFIX)
+        )
+        return ["index_name", name, "num_docs", num_docs]
+
+    def _ft_search(self, name: str, query: str, *args):
+        self._ensure_index(name)
+        places = self._filtered_places(query)
+
+        nocontent = any(str(arg).upper() == "NOCONTENT" for arg in args)
+        offset, limit = self._extract_limit(args)
+        sliced = places[offset : offset + limit]
+
+        out: list = [len(places)]
+        for place in sliced:
+            out.append(f"parking:{place.id}")
+            if not nocontent:
+                out.append(self._row_to_list(place.model_dump(mode="json")))
+        return out
+
+    def _ft_aggregate(self, name: str, query: str, *args):
+        self._ensure_index(name)
+        if any(str(arg).upper() == "GROUPBY" for arg in args):
+            return self._ft_aggregate_facets(query, *args)
+        return self._ft_aggregate_nearby(query, *args)
+
+    def _ft_aggregate_facets(self, query: str, *args):
+        places = self._filtered_places(query)
+        field = self._extract_groupby_field(args)
+        counts: dict[str, int] = {}
+
+        for place in places:
+            value = getattr(place, field, None)
+            if value is None:
+                continue
+            if hasattr(value, "value"):
+                value = value.value
+            key = str(value)
+            counts[key] = counts.get(key, 0) + 1
+
+        rows = []
+        for key in sorted(counts):
+            rows.append([field, key, "count", counts[key]])
+        return [len(places), *rows]
+
+    def _ft_aggregate_nearby(self, query: str, *args):
+        places = self._filtered_places(query)
+        geo = self._extract_geo(query)
+        offset, limit = self._extract_limit(args)
+        if geo is None:
+            rows = [self._row_to_list(place.model_dump(mode="json")) for place in places]
+            return [len(places), *rows[offset : offset + limit]]
+
+        lng, lat, radius = geo
+        from app.infra.redis.search import _haversine_m
+
+        distances = [
+            (place, _haversine_m(lat, lng, place.latitude, place.longitude))
+            for place in places
+        ]
+        distances = [item for item in distances if item[1] <= radius]
+        distances.sort(key=lambda item: (item[1], item[0].id))
+
+        rows = []
+        for place, distance in distances[offset : offset + limit]:
+            data = place.model_dump(mode="json")
+            data["distance"] = distance
+            rows.append(self._row_to_list(data))
+
+        return [len(distances), *rows]
+
+    def _filtered_places(self, query: str):
+        from app.infra.redis.importer import place_from_redis_hash
+        from app.infra.redis.search import _filter_places
+
+        places = [
+            place_from_redis_hash(data)
+            for key, data in self.hashes.items()
+            if key.startswith("parking:")
+        ]
+        params = self._parse_query(query)
+        return _filter_places(
+            places,
+            ids=params["ids"],
+            q=params["q"],
+            vehicle_types=params["vehicle_types"],
+            categories=params["categories"],
+            regulations=params["regulations"],
+            datasets=params["datasets"],
+            min_spaces=params["min_spaces"],
+            bounds=params["bounds"],
+        )
+
+    def _parse_query(self, query: str) -> dict:
+        import re
+
+        tag_pattern = re.compile(r"@(?P<field>\w+):\{(?P<value>[^}]*)\}")
+        text_pattern = re.compile(r"@searchText:\((?P<value>[^)]*)\)")
+        min_spaces_pattern = re.compile(r"@totalSpaces:\[(?P<min>\d+) \+inf\]")
+        lat_pattern = re.compile(r"@latitude:\[(?P<min>[-\d.]+) (?P<max>[-\d.]+)\]")
+        lng_pattern = re.compile(r"@longitude:\[(?P<min>[-\d.]+) (?P<max>[-\d.]+)\]")
+
+        ids = vehicle_types = categories = regulations = datasets = None
+        q = None
+        min_spaces = 0
+        bounds = None
+
+        mapping = {
+            "id": "ids",
+            "vehicleType": "vehicle_types",
+            "category": "categories",
+            "regulation": "regulations",
+            "sourceDataset": "datasets",
+        }
+        collected: dict[str, list[str]] = {
+            "ids": [],
+            "vehicle_types": [],
+            "categories": [],
+            "regulations": [],
+            "datasets": [],
+        }
+        for match in tag_pattern.finditer(query):
+            field = match.group("field")
+            target = mapping.get(field)
+            if target is None:
+                continue
+            values = [value.replace("\\", "") for value in match.group("value").split("|")]
+            collected[target].extend(v for v in values if v)
+
+        if collected["ids"]:
+            ids = collected["ids"]
+        if collected["vehicle_types"]:
+            vehicle_types = collected["vehicle_types"]
+        if collected["categories"]:
+            categories = collected["categories"]
+        if collected["regulations"]:
+            regulations = collected["regulations"]
+        if collected["datasets"]:
+            datasets = collected["datasets"]
+
+        text_match = text_pattern.search(query)
+        if text_match:
+            tokens = [
+                token.rstrip("*")
+                for token in text_match.group("value").split()
+                if token.rstrip("*")
+            ]
+            q = " ".join(tokens)
+
+        min_match = min_spaces_pattern.search(query)
+        if min_match:
+            min_spaces = int(min_match.group("min"))
+
+        lat_match = lat_pattern.search(query)
+        lng_match = lng_pattern.search(query)
+        if lat_match and lng_match:
+            bounds = (
+                float(lat_match.group("min")),
+                float(lng_match.group("min")),
+                float(lat_match.group("max")),
+                float(lng_match.group("max")),
+            )
+
+        return {
+            "ids": ids,
+            "q": q,
+            "vehicle_types": vehicle_types,
+            "categories": categories,
+            "regulations": regulations,
+            "datasets": datasets,
+            "min_spaces": min_spaces,
+            "bounds": bounds,
+        }
+
+    def _extract_geo(self, query: str):
+        import re
+
+        match = re.search(
+            r"@location:\[(?P<lng>[-\d.]+) (?P<lat>[-\d.]+) (?P<radius>[-\d.]+) m\]",
+            query,
+        )
+        if not match:
+            return None
+        return (
+            float(match.group("lng")),
+            float(match.group("lat")),
+            float(match.group("radius")),
+        )
+
+    def _extract_groupby_field(self, args) -> str:
+        for index, arg in enumerate(args):
+            if str(arg).upper() == "GROUPBY" and index + 2 < len(args):
+                field = str(args[index + 2])
+                return field.lstrip("@")
+        raise AssertionError("GROUPBY no encontrado")
+
+    def _extract_limit(self, args) -> tuple[int, int]:
+        for index, arg in enumerate(args):
+            if str(arg).upper() == "LIMIT" and index + 2 < len(args):
+                return int(args[index + 1]), int(args[index + 2])
+        return 0, 100
+
+    def _ensure_index(self, name: str) -> None:
+        if str(name) not in self.search_indices:
+            raise ResponseError("Unknown index name")
+
+    def _row_to_list(self, data: dict) -> list:
+        out: list = []
+        for key, value in data.items():
+            out.extend([str(key), str(value)])
+        return out
 
     # ---------- Pipeline ----------
 
@@ -381,7 +638,7 @@ def fake_redis() -> FakeRedis:
 @pytest.fixture
 def auth_headers():
     """Devuelve un helper `make(sub)` que produce las cabeceras Bearer."""
-    from app.auth import issue_token
+    from app.core.auth import issue_token
 
     def make(sub: str) -> dict[str, str]:
         token, _ = issue_token(sub)
@@ -405,7 +662,7 @@ def _build_test_app(fake_redis: FakeRedis) -> FastAPI:
     así que las inspecciones directas (`fake_redis.hashes`) ven los cambios
     hechos por cualquiera de los dos.
     """
-    from app.rate_limit import limiter
+    from app.core.rate_limit import limiter
     from app.routers import auth, favorites, health, imports, parkings
 
     app = FastAPI()
@@ -587,7 +844,7 @@ def seeded_client(
     Cada feature se empareja con su `SourceProfile` para que los ids sean
     namespaced (`{sourceDataset}:{mslink}`), igual que en producción.
     """
-    from app.importer import SOURCE_REGISTRY, run_import_sources
+    from app.infra.redis.importer import SOURCE_REGISTRY, run_import_sources
 
     # Bucket por filename para conservar el agrupamiento por dataset que usa
     # `run_import_sources`.

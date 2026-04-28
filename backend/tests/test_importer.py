@@ -16,14 +16,14 @@ from __future__ import annotations
 
 import json
 
-from app.config import CACHE_VERSION_KEY, PARKING_KEY_PREFIX
+from app.core.config import CACHE_VERSION_KEY, PARKING_KEY_PREFIX
 from app.enums import (
     ParkingCategory,
     ParkingGeometryType,
     ParkingRegulation,
     ParkingVehicleType,
 )
-from app.importer import (
+from app.infra.redis.importer import (
     SOURCE_REGISTRY,
     derive_stable_id,
     feature_to_place,
@@ -489,7 +489,7 @@ def test_run_import_uses_double_buffer_and_leaves_staging_clean(fake_redis):
     wipe. Si quedaran claves de staging las lecturas verían "doble" durante
     un re-import o se consumiría memoria innecesaria entre imports.
     """
-    from app.config import STAGING_KEY_PREFIX
+    from app.core.config import STAGING_KEY_PREFIX
 
     summary = run_import_sources(_all_geometries_sources(), fake_redis)
     assert summary["status"] == "ok"
@@ -509,7 +509,7 @@ def test_run_import_uses_double_buffer_and_leaves_staging_clean(fake_redis):
 def test_run_import_recovers_from_orphan_staging(fake_redis):
     """Si un import previo abortó dejando claves en staging, el siguiente
     import debe limpiarlas antes de empezar — no escribir encima."""
-    from app.config import STAGING_KEY_PREFIX
+    from app.core.config import STAGING_KEY_PREFIX
 
     fake_redis.hashes[f"{STAGING_KEY_PREFIX}leftover:1"] = {"id": "leftover:1"}
     fake_redis.hashes[f"{STAGING_KEY_PREFIX}leftover:2"] = {"id": "leftover:2"}

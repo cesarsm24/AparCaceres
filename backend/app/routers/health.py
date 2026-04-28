@@ -21,8 +21,8 @@ import redis.asyncio as aioredis
 from fastapi import APIRouter, Depends, Response
 from redis.exceptions import ResponseError
 
-from ..config import SEARCH_INDEX_NAME
-from ..redis_client import get_redis
+from ..core.config import SEARCH_INDEX_NAME
+from ..infra.redis.client import get_redis
 
 logger = logging.getLogger(__name__)
 

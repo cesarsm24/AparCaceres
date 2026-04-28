@@ -1,13 +1,9 @@
-"""Schemas Pydantic alineados 1:1 con el cliente Flutter.
+"""Modelos Pydantic del contrato público de aparcamientos.
 
-Wire format:
-- Campos en camelCase.
-- Enums como string en snake_case (ver `app/enums.py`).
-- Optional[...] = `null` (no cadena vacía).
-- Geometrías GeoJSON `[lon, lat]`.
-
-Toda la API de lectura (`/parkings`, `/parkings/nearby`, `/parkings/{id}`,
-`/parkings/categories`) y el importador serializan a través de estos modelos.
+Define el formato JSON expuesto por la API y consumido por el cliente móvil:
+campos en camelCase, enumeraciones serializadas como cadenas y valores
+opcionales representados como `null`. También centraliza la normalización
+tolerante de datos de catálogo antes de devolverlos o persistirlos.
 """
 
 from __future__ import annotations
@@ -33,25 +29,15 @@ from .normalization import (
     coerce_vehicle_type,
 )
 
-# ============================================================
-# Contrato móvil — lo que consume Flutter
-# ============================================================
 
 class ParkingPlaceOut(BaseModel):
-    """Contrato de salida alineado 1:1 con `ParkingPlace.fromJson` en Flutter.
+    """Aparcamiento serializado según el contrato de lectura público.
 
-    Reglas de normalización aplicadas en `mode='before'` (vienen del wire):
-    - Enums desconocidos / vacíos / `None` -> default del enum (no error).
-    - Strings opcionales vacíos / whitespace -> `None`.
-    - `totalSpaces` admite int, float (redondeado), string parseable o `None`.
-
-    Reglas en `mode='after'` (dependencia entre campos):
-    - POINT: se descarta cualquier `coordinates` que llegue (ruido).
-    - POLYGON: `coordinates` se valida como lista de anillos (cada anillo ≥3 pts).
-    - LINE_STRING: `coordinates` se valida como lista de puntos.
+    Los valores incompletos o desconocidos se normalizan de forma tolerante
+    para evitar que registros parciales del catálogo rompan las respuestas.
+    Las coordenadas se ajustan según `geometryType`.
     """
 
-    # extra='ignore' porque el dataset GeoJSON tiene muchos campos que no nos interesan.
     model_config = ConfigDict(extra="ignore")
 
     id: str
@@ -62,12 +48,6 @@ class ParkingPlaceOut(BaseModel):
     geometryType: ParkingGeometryType = ParkingGeometryType.POINT
     latitude: float
     longitude: float
-
-    # Forma de `coordinates` según `geometryType`:
-    #   POINT       -> None
-    #   POLYGON     -> list[list[tuple[float, float]]]   (rings de [lon, lat])
-    #   LINE_STRING -> list[tuple[float, float]]         (puntos [lon, lat])
-    # Lo declaramos como `list` genérico aquí y normalizamos en model_validator.
     coordinates: Optional[list] = None
 
     totalSpaces: Optional[int] = None
@@ -81,12 +61,9 @@ class ParkingPlaceOut(BaseModel):
     urlVia: Optional[str] = None
     management: Optional[str] = None
 
-    # ---------- Normalización per-campo ----------
-
     @field_validator("name", mode="before")
     @classmethod
     def _normalize_name(cls, v):
-        # `name` no es opcional pero permitimos `None` -> "" (Flutter hace lo mismo).
         return "" if v is None else str(v)
 
     @field_validator("category", mode="before")
@@ -130,33 +107,30 @@ class ParkingPlaceOut(BaseModel):
     def _normalize_total_spaces(cls, v):
         return coerce_optional_int(v)
 
-    # ---------- Normalización dependiente del tipo geométrico ----------
-
     @model_validator(mode="after")
     def _normalize_coordinates(self):
+        """Normaliza la geometría al formato esperado por el tipo declarado."""
         if self.geometryType == ParkingGeometryType.POINT:
-            # POINT no usa el campo coordinates; lo limpiamos para no enviar ruido.
             self.coordinates = None
         elif self.geometryType == ParkingGeometryType.POLYGON:
             self.coordinates = coerce_polygon(self.coordinates)
         elif self.geometryType == ParkingGeometryType.LINE_STRING:
             self.coordinates = coerce_line_string(self.coordinates)
+
         return self
 
 
 class ParkingPlaceNearbyOut(ParkingPlaceOut):
-    """`ParkingPlaceOut` + distancia al punto de búsqueda, en metros.
+    """Aparcamiento cercano con distancia calculada desde el punto consultado."""
 
-    Flutter actualmente ignora `distanceMeters` (su `ParkingPlace.fromJson` no
-    lo lee), pero exponerlo es útil para depurar y para futuras pantallas
-    de "ordenar por distancia" sin recálculo en cliente.
-    """
-
-    distanceMeters: float = Field(..., description="Distancia en metros desde el punto consultado")
+    distanceMeters: float = Field(
+        ...,
+        description="Distancia en metros desde el punto consultado.",
+    )
 
 
 class ParkingFacetsOut(BaseModel):
-    """Conteos agregados del catálogo para alimentar filtros y badges."""
+    """Conteos agregados del catálogo para filtros de cliente."""
 
     total: int = 0
     categories: dict[str, int] = Field(default_factory=dict)
@@ -166,7 +140,7 @@ class ParkingFacetsOut(BaseModel):
 
 
 class ParkingPlacesEnvelopeOut(BaseModel):
-    """Respuesta paginada de endpoints de listado."""
+    """Respuesta paginada de listados de aparcamientos."""
 
     items: list[ParkingPlaceOut] = Field(default_factory=list)
     total: int = 0
@@ -177,7 +151,7 @@ class ParkingPlacesEnvelopeOut(BaseModel):
 
 
 class ParkingPlacesNearbyEnvelopeOut(BaseModel):
-    """Respuesta paginada de `/parkings/nearby`."""
+    """Respuesta paginada de búsquedas de aparcamientos cercanos."""
 
     items: list[ParkingPlaceNearbyOut] = Field(default_factory=list)
     total: int = 0
@@ -187,57 +161,36 @@ class ParkingPlacesNearbyEnvelopeOut(BaseModel):
     facets: Optional[ParkingFacetsOut] = None
 
 
-# ============================================================
-# Favoritos por usuario — respuestas de PUT / DELETE.
-# El GET de favoritos reutiliza `ParkingPlaceOut` para devolver directamente
-# la lista lista para alimentar la pantalla de favoritos en Flutter.
-# ============================================================
-
 class FavoriteAdded(BaseModel):
-    """Respuesta de `PUT /users/me/favorites/{parkingId}`.
+    """Resultado de añadir un aparcamiento a favoritos.
 
-    `created` distingue entre "lo acabo de añadir" y "ya estaba" para que el
-    cliente pueda dar feedback distinto si quiere; en ambos casos `addedAt`
-    refleja la marca temporal real persistida (no se reescribe al re-PUT,
-    para que el orden newest-first sea estable).
+    `created` permite distinguir una creación real de una repetición
+    idempotente. `addedAt` conserva la marca temporal persistida.
     """
 
     id: str = Field(..., description="Id del aparcamiento favoritado.")
     addedAt: str = Field(
         ...,
-        description="Marca temporal ISO 8601 UTC del momento en que entró en favoritos.",
+        description="Marca temporal ISO 8601 UTC de entrada en favoritos.",
     )
     created: bool = Field(
         ...,
-        description="True si la entrada se acaba de crear; False si ya existía (idempotente).",
+        description="Indica si la entrada se ha creado en esta operación.",
     )
 
 
 class FavoriteRemoved(BaseModel):
-    """Respuesta de `DELETE /users/me/favorites/{parkingId}`.
-
-    Idempotente: si el aparcamiento existe en el catálogo pero no estaba
-    en favoritos, devolvemos 200 con `removed=False` en vez de 404.
-    """
+    """Resultado de eliminar un aparcamiento de favoritos."""
 
     id: str = Field(..., description="Id del aparcamiento sobre el que se actuó.")
     removed: bool = Field(
         ...,
-        description="True si estaba en favoritos y se quitó; False si no estaba.",
+        description="Indica si existía una entrada de favorito y se eliminó.",
     )
 
 
-# ============================================================
-# Filtros de consulta — espejo de `ParkingQuery` en Flutter.
-# Se usarán cuando se refactoricen los endpoints en PRs posteriores.
-# ============================================================
-
 class ParkingQueryFilters(BaseModel):
-    """Filtros de `/parkings/nearby` alineados con `ParkingQuery` en Flutter.
-
-    No se usa todavía en ningún endpoint; queda definido para que el cliente
-    Flutter ya pueda formar la query y para tener un lugar único donde validar.
-    """
+    """Filtros de consulta compartidos para búsquedas de aparcamientos."""
 
     model_config = ConfigDict(extra="forbid")
 

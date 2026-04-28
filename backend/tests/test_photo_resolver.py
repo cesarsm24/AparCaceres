@@ -17,14 +17,12 @@ from __future__ import annotations
 import asyncio
 
 import httpx
-import pytest
 
-from app.photo_resolver import (
+from app.infra.redis.photo_resolver import (
     _CACHE_NEGATIVE_SENTINEL,
     extract_photo_url,
     resolve_many,
 )
-
 
 # ============================================================
 # Fixtures HTML
@@ -184,7 +182,7 @@ def test_resolve_many_resuelve_y_cachea(monkeypatch, fake_redis):
     })
 
     # Inyectamos el transport falso reemplazando `AsyncClient` en el módulo.
-    import app.photo_resolver as pr
+    import app.infra.redis.photo_resolver as pr
     real_client_cls = pr.httpx.AsyncClient
 
     def fake_client(*args, **kwargs):
@@ -220,7 +218,7 @@ def test_resolve_many_prueba_varias_urls_hasta_encontrar_foto(monkeypatch, fake_
         ),
     })
 
-    import app.photo_resolver as pr
+    import app.infra.redis.photo_resolver as pr
     real_client_cls = pr.httpx.AsyncClient
 
     def fake_client(*args, **kwargs):
@@ -261,7 +259,7 @@ def test_resolve_many_cache_hit_no_hace_red(monkeypatch, fake_redis):
         requests_made.append(str(request.url))
         return httpx.Response(200, text=_FICHA_TOPONIMIA_CON_FOTO)
 
-    import app.photo_resolver as pr
+    import app.infra.redis.photo_resolver as pr
     real_client_cls = pr.httpx.AsyncClient
     transport = httpx.MockTransport(handler)
 
@@ -294,7 +292,7 @@ def test_resolve_many_cache_hit_negativo_no_reintenta(monkeypatch, fake_redis):
         requests_made.append(str(request.url))
         return httpx.Response(200, text=_FICHA_TOPONIMIA_CON_FOTO)
 
-    import app.photo_resolver as pr
+    import app.infra.redis.photo_resolver as pr
     real_client_cls = pr.httpx.AsyncClient
     transport = httpx.MockTransport(handler)
 
@@ -320,7 +318,7 @@ def test_resolve_many_persiste_sentinel_negativo(monkeypatch, fake_redis):
         "/serweb/fichasig/fichatoponimia.php?mslink=99": (200, _FICHA_SIN_FOTO),
     })
 
-    import app.photo_resolver as pr
+    import app.infra.redis.photo_resolver as pr
     real_client_cls = pr.httpx.AsyncClient
 
     def fake_client(*args, **kwargs):
@@ -345,7 +343,7 @@ def test_resolve_many_tolerante_a_404(monkeypatch, fake_redis):
     def handler(request: httpx.Request) -> httpx.Response:
         return httpx.Response(404, text="not found")
 
-    import app.photo_resolver as pr
+    import app.infra.redis.photo_resolver as pr
     real_client_cls = pr.httpx.AsyncClient
     transport = httpx.MockTransport(handler)
 

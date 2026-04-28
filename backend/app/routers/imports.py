@@ -4,8 +4,8 @@ Protección con `X-Import-Token`:
 - Si la variable de entorno `IMPORT_TOKEN` está definida, el endpoint exige
   que la petición incluya esa cabecera y que coincida (constant-time compare)
   con el valor configurado. En caso contrario responde 401.
-- Si `IMPORT_TOKEN` está vacío (default en dev), el endpoint queda abierto
-  para facilitar la iteración local.
+- En producción, la configuración valida que `IMPORT_TOKEN` exista antes de
+  arrancar el servicio.
 """
 
 import asyncio
@@ -16,11 +16,11 @@ from typing import Optional
 import redis
 from fastapi import APIRouter, Depends, Header, HTTPException, Request, Response
 
-from ..config import DATA_DIR, IMPORT_TOKEN
-from ..importer import run_import_dir
-from ..rate_limit import RATE_LIMIT_IMPORT, limiter
-from ..redis_client import get_redis_sync, raise_redis_503
-from ..search import SearchIndexError
+from ..core.config import DATA_DIR, IMPORT_TOKEN
+from ..core.rate_limit import RATE_LIMIT_IMPORT, limiter
+from ..infra.redis.client import get_redis_sync, raise_redis_503
+from ..infra.redis.importer import run_import_dir
+from ..infra.redis.search import SearchIndexError
 
 logger = logging.getLogger(__name__)
 

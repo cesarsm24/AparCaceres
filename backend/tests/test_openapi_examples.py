@@ -9,7 +9,7 @@ Validan que los ejemplos:
 from __future__ import annotations
 
 from app.enums import ParkingCategory
-from app.routers.auth import SessionResponse, _SESSION_RESPONSE_EXAMPLE
+from app.routers.auth import _SESSION_RESPONSE_EXAMPLE, SessionResponse
 from app.routers.favorites import (
     _FAVORITE_ADDED_EXAMPLE,
     _FAVORITE_REMOVED_EXAMPLE,

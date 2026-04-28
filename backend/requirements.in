@@ -1,14 +1,8 @@
 # Dependencias directas del backend AparCáceres.
 #
-# Este fichero es la fuente de verdad de las dependencias declaradas a mano.
-# `requirements.txt` es el lockfile congelado (pip-compile / pip freeze) que
-# incluye también las dependencias transitivas con sus versiones exactas.
-#
-# Para regenerar el lockfile tras modificar este fichero:
-#   pip install pip-tools
-#   pip-compile requirements.in --output-file requirements.txt
-#
-# Runtime esperado: Python >=3.11. Producción requiere Redis Stack / RediSearch.
+# Este fichero declara los paquetes de runtime mantenidos manualmente. El
+# lockfile generado debe fijar también las dependencias transitivas con sus
+# versiones exactas.
 
 fastapi==0.136.1
 uvicorn==0.46.0
@@ -18,7 +12,6 @@ python-dotenv==1.2.2
 slowapi==0.1.9
 prometheus-fastapi-instrumentator==7.0.0
 PyJWT==2.10.1
-# httpx resuelve URLs de fotos durante el import (scraping HTTPS de fichas SIG
-# con timeouts y conexión asíncrona). El paquete httpx ya está en
-# requirements-dev (TestClient lo usa); aquí se declara también en runtime.
+
+# Cliente HTTP asíncrono usado por el importador para resolver fotos externas.
 httpx>=0.27,<1

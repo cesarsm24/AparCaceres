@@ -11,7 +11,7 @@ from datetime import datetime, timedelta, timezone
 
 import jwt
 
-from app import auth as auth_module
+from app.core import auth as auth_module
 
 # ============================================================
 # POST /auth/session
@@ -49,7 +49,7 @@ def test_create_session_503_when_secret_missing(api_client, monkeypatch):
 
     response = api_client.post("/auth/session", json={"sub": "alice"})
     assert response.status_code == 503
-    assert "FAVORITES_SECRET" in response.json()["detail"]
+    assert "configurada" in response.json()["detail"]
 
 
 # ============================================================
@@ -82,18 +82,6 @@ def test_token_signed_with_other_key_rejected(seeded_client):
     assert response.status_code == 401
 
 
-def test_dev_fallback_secret_logs_warning(monkeypatch, caplog):
+def test_resolve_secret_none_when_missing(monkeypatch):
     monkeypatch.delenv("FAVORITES_SECRET", raising=False)
-    monkeypatch.setenv("APP_ENV", "development")
-
-    with caplog.at_level("WARNING", logger=auth_module.logger.name):
-        secret = auth_module._resolve_secret()
-
-    assert secret == "dev-only-secret-do-not-use-in-prod"
-    assert any("FAVORITES_SECRET" in rec.message for rec in caplog.records)
-
-
-def test_resolve_secret_none_in_production_without_env(monkeypatch):
-    monkeypatch.delenv("FAVORITES_SECRET", raising=False)
-    monkeypatch.setenv("APP_ENV", "production")
     assert auth_module._resolve_secret() is None
