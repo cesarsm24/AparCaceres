@@ -91,7 +91,7 @@ La capa de consultas vive en [`backend/app/infra/redis/search.py`](../backend/ap
 
 ### Facetas
 
-`GET /parkings/facets` usa `FT.AGGREGATE` para contar valores por `category`, `vehicleType`, `regulation` y `sourceDataset`. Estas facetas alimentan los filtros de la interfaz sin duplicar lógica en Flutter.
+`GET /parkings/facets` usa `FT.AGGREGATE` para contar valores por `category`, `vehicleType`, `regulation` y `sourceDataset`. La interfaz actual consume `/parkings/categories` para construir los filtros de categoría disponibles; ese endpoint reutiliza la agregación de facetas y evita duplicar lógica en Flutter.
 
 <div style="margin-top: 2.5rem"></div>
 

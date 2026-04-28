@@ -1,318 +1,203 @@
 <div align="center">
 
-<img src="mobile/assets/images/logo.png" alt="Logo de AparCáceres" width="180" />
+<img src="mobile/assets/images/logo_transparente.png" alt="Logo de AparCáceres" width="170" />
 
-# AparCáceres
+<h1>AparCáceres</h1>
 
-Localizador de aparcamientos públicos de Cáceres por proximidad.
+<p>
+Aplicación móvil para la consulta de aparcamientos en Cáceres con Flutter, FastAPI y Redis Stack.
+</p>
+
+<p>
+  <img alt="backend-ci" src="https://img.shields.io/badge/backend--ci-ruff%20%2B%20pytest-2EA44F?logo=githubactions&logoColor=white" />
+  <img alt="flutter-ci" src="https://img.shields.io/badge/flutter--ci-analyze%20%2B%20test-02569B?logo=githubactions&logoColor=white" />
+  <img alt="Python 3.11" src="https://img.shields.io/badge/Python-3.11-3776AB?logo=python&logoColor=white" />
+  <img alt="FastAPI" src="https://img.shields.io/badge/FastAPI-backend-009688?logo=fastapi&logoColor=white" />
+  <img alt="Flutter" src="https://img.shields.io/badge/Flutter-frontend-02569B?logo=flutter&logoColor=white" />
+  <img alt="Redis Stack" src="https://img.shields.io/badge/Redis%20Stack-data%20engine-DC382D?logo=redis&logoColor=white" />
+  <img alt="Docker Compose" src="https://img.shields.io/badge/Docker%20Compose-deploy-2496ED?logo=docker&logoColor=white" />
+</p>
 
 </div>
 
-## Descripción
 
-AparCáceres es una aplicación móvil que permite buscar los aparcamientos públicos más cercanos a una ubicación dentro de la ciudad de Cáceres.
+<div style="margin-top: 2.5rem"></div>
 
-El proyecto utiliza datos abiertos municipales y pone el foco en **Redis Stack** como base de datos principal para realizar consultas geoespaciales, filtros y búsqueda textual con RediSearch.
+---
 
-## Estructura del repositorio
+## 🧭 Visión general
 
-```
-AparCaceres/
-├── backend/    API REST en FastAPI + Redis Stack
-│   ├── app/core/        Configuración, auth, logging, métricas y rate limit
-│   ├── app/infra/redis/ Integración con Redis Stack, búsqueda e importador
-│   └── app/routers/     Endpoints HTTP por dominio
-└── mobile/     Cliente móvil en Flutter (Material 3)
-```
+AparCáceres permite consultar aparcamientos públicos de Cáceres por mapa, cercanía, filtros, categoría y favoritos. El sistema está preparado para ejecutarse de forma reproducible con `docker compose` y mantiene una separación clara entre experiencia de usuario, contrato HTTP y persistencia.
 
-## Objetivo
+| Capa | Tecnología | Responsabilidad |
+|---|---|---|
+| Backend | FastAPI | API, autenticación de favoritos, importación y contrato OpenAPI |
+| Frontend | Flutter | UI móvil/web, mapa, búsqueda, favoritos y rutas |
+| Datos | Redis Stack | Catálogo, RediSearch, geoespacial, caché y favoritos |
+| Despliegue | Docker Compose | Stack reproducible con API, Redis, bootstrap y web |
 
-Permitir al usuario:
-- buscar aparcamientos cercanos por latitud, longitud y radio
-- filtrar por vehículo, categoría, regulación, plazas mínimas y dataset
-- ver los resultados ordenados por distancia
-- visualizar los aparcamientos en un mapa
-- consultar información básica de cada aparcamiento
+<div style="margin-top: 2.5rem"></div>
 
-## Fuente de datos
+---
 
-- Open Data Cáceres: movilidad, aparcamientos, PMR, motos, bicis, zona azul y carga/descarga.
+## 🚀 Arranque con Docker Compose
 
-Datasets activos importados:
-- `aparcamientos.geojson` → 24
-- `parkings.geojson` → 8
-- `aparcamientos_en_bateria.geojson` → 1424
-- `aparcamientos_en_linea.geojson` → 4779
-- `zona_azul.geojson` → 101
-- `carga_descarga.geojson` → 73
-- `movilidad_reducida.geojson` → 743
-- `parking_bicis.geojson` → 68
-- `parking_motos_areas.geojson` → 48
-- `parking_motos_puntos.geojson` → 46
-
-Total activo esperado: `7314` features.
-
-## Tecnologías
-
-- **Redis Stack / RediSearch** para almacenamiento, geoespacial, filtros y búsqueda
-- Backend en **FastAPI** (Python)
-- Cliente móvil en **Flutter** (Material 3)
-- Datos en GeoJSON o CSV
-
-## Backend
-
-Requisitos:
-- Python `>=3.11`
-- Redis Stack con RediSearch habilitado
-
-Estructura interna principal:
-- `app/core/` concentra la configuración, autenticación, logging, métricas y rate limiting.
-- `app/infra/redis/` contiene el cliente Redis, la búsqueda, el importador y la resolución de fotos.
-- `app/routers/` expone la capa HTTP y mantiene la lógica de negocio fuera de los handlers.
-
-### Ejecución local sin Docker
-
-```bash
-cd backend
-python3.11 -m venv .venv311
-. .venv311/bin/activate
-pip install -r requirements-dev.txt
-cp .env.example .env   # ajustar CORS_ORIGINS, FAVORITES_SECRET, IMPORT_TOKEN, etc.
-pytest
-uvicorn main:app --reload
-```
-
-Tras la primera arrancada hay que poblar el catálogo:
-
-```bash
-curl -X POST http://localhost:8000/import-parkings
-```
-
-### Ejecución con Docker Compose
-
-`docker-compose.yml` levanta Redis Stack con AOF persistente, la API y el
-frontend web. Es la ruta pensada para un despliegue reproducible con Docker:
+El flujo principal del proyecto es levantar todo el stack desde la raíz:
 
 ```bash
 cp backend/.env.example backend/.env
-# Completar backend/.env con CORS_ORIGINS, FAVORITES_SECRET e IMPORT_TOKEN.
+openssl rand -hex 32
+openssl rand -hex 32
+```
+
+Después de generar los secretos, completar en `backend/.env`:
+
+```env
+CORS_ORIGINS=http://localhost:5000
+IMPORT_TOKEN=<token-generado>
+FAVORITES_SECRET=<secreto-generado>
+```
+
+Levantar el entorno:
+
+```bash
 docker compose up -d --build
 docker compose logs -f bootstrap
-docker compose exec api curl -s http://localhost:8000/healthz | jq
-docker compose down       # parar; conserva el volumen redis-data
-docker compose down -v    # parar y BORRAR los datos persistentes
+docker compose exec api curl -s http://localhost:8000/healthz
 ```
 
-### CORS
+Servicios expuestos en local:
 
-El cliente nativo Android/iOS no envía cabecera `Origin`, por lo que CORS no
-le afecta. Solo hace falta declarar orígenes para Flutter web
-(`flutter run -d chrome`) o paneles web futuros.
-
-| Entorno      | `CORS_ORIGINS` recomendado                                    |
-|--------------|---------------------------------------------------------------|
-| Compose local| `http://localhost:5000` si el frontend se sirve desde el puerto expuesto |
-| Staging      | URL pública del Flutter web de staging                        |
-| Producción   | Lista explícita de dominios reales. Nunca `*`                 |
-
-### Healthcheck
-
-`GET /healthz` comprueba `PING` a Redis y `FT.INFO` sobre el índice
-`idx:parkings_search`. Devuelve 200 cuando todo está sano y 503 con desglose
-por componente cuando algo falla. Recomendado como liveness/readiness probe en
-Kubernetes y como `HEALTHCHECK` del contenedor Docker (ya configurado).
-
-### Logging
-
-Los logs salen como JSON por línea (sin dependencias externas). Cada entrada
-incluye `timestamp`, `level`, `logger`, `message` y `request_id`. El nivel se
-controla con la variable `LOG_LEVEL` (`DEBUG`, `INFO`, `WARNING`, ...).
-
-El middleware `RequestIdMiddleware` propaga la cabecera `X-Request-ID` de
-extremo a extremo: si el cliente la envía se respeta, si no se genera un UUID4
-y se devuelve en la respuesta para correlación.
-
-### Reimportar el catálogo en producción
-
-`POST /import-parkings` exige cabecera `X-Import-Token` cuando la variable de
-entorno `IMPORT_TOKEN` está configurada (la comparación es constant-time):
-
-```bash
-curl -X POST https://api.aparcaceres.app/import-parkings \
-  -H "X-Import-Token: $IMPORT_TOKEN"
-```
-
-La invalidación de caché es `O(1)`: incrementa `cache:version` y las claves
-antiguas quedan inalcanzables (caducan por TTL).
-
-## Frontend Flutter
-
-El cliente móvil vive en [`mobile/`](mobile/) y consume el backend FastAPI
-por HTTP. El flujo pensado para producción es el del `docker compose up`
-de la raíz del repo, que levanta también el frontend web servido por nginx.
-
-### Arranque rápido
-
-```bash
-cd mobile
-flutter pub get
-flutter run
-```
-
-Por defecto la app apunta al backend dockerizado en `localhost:8000`:
-
-| Plataforma | URL base por defecto |
+| Servicio | URL |
 |---|---|
-| Android (emulador) | `http://10.0.2.2:8000` |
-| iOS / macOS / Linux / Windows / Web | `http://localhost:8000` |
+| Frontend web | `http://localhost:5000` |
+| Backend API | `http://localhost:8000` |
+| OpenAPI | `http://localhost:8000/docs` |
+| Healthcheck | `http://localhost:8000/healthz` |
 
-(El emulador Android resuelve `10.0.2.2` como el host; `localhost` apuntaría
-al propio AVD.)
+<div style="margin-top: 2.5rem"></div>
 
-### Variables de compilación
+---
 
-Se inyectan con `--dart-define` y se resuelven en
-[`mobile/lib/core/config/api_config.dart`](mobile/lib/core/config/api_config.dart).
+## 🗂️ Fuente de datos
 
-| Flag | Tipo | Default | Para qué |
-|---|---|---|---|
-| `API_BASE_URL` | `String` | resolución por plataforma | Forzar otro backend (staging, IP de la LAN, túnel ngrok, etc.). Sin trailing slash. |
+El catálogo parte de datos abiertos municipales publicados por el Ayuntamiento de Cáceres en el portal [Open Data Cáceres](https://opendata.caceres.es/datosabiertos/catalogo/es/dataset/).
 
-Ejemplo:
+El importador procesa datasets GeoJSON relacionados con aparcamientos, movilidad reducida, zona azul, carga y descarga, bicicletas y motos. La normalización concreta de esos datasets se documenta en [`docs/redis.md`](docs/redis.md) y en la capa de importación del backend.
+
+<div style="margin-top: 2.5rem"></div>
+
+---
+
+## 🧱 Estructura
+
+```text
+AparCaceres/
+├── backend/              # FastAPI + Redis Stack
+│   ├── app/core/         # Configuración, auth, logging, métricas y rate limit
+│   ├── app/infra/redis/  # Cliente Redis, RediSearch, importador y fotos
+│   ├── app/routers/      # Endpoints HTTP por dominio
+│   └── tests/            # Suite pytest
+├── mobile/               # Frontend Flutter
+│   ├── lib/core/         # Configuración, red y sesión
+│   ├── lib/features/     # Funcionalidades de aplicación
+│   └── test/             # Suite Flutter
+├── docs/                 # Arquitectura, operación y Redis
+└── docker-compose.yml    # Stack reproducible
+```
+
+<div style="margin-top: 2.5rem"></div>
+
+---
+
+## 🧪 Calidad
+
+El repositorio incluye CI separada para backend y frontend:
+
+| Workflow | Validaciones |
+|---|---|
+| `backend-ci` | `ruff check`, Redis Stack real y `pytest -q` |
+| `flutter-ci` | `flutter analyze` y `flutter test` |
+
+Workflows:
+
+| Workflow | Archivo |
+|---|---|
+| `backend-ci` | [`.github/workflows/backend-ci.yml`](.github/workflows/backend-ci.yml) |
+| `flutter-ci` | [`.github/workflows/flutter-ci.yml`](.github/workflows/flutter-ci.yml) |
+
+Comandos locales:
+
+```bash
+cd backend
+ruff check app tests main.py
+pytest -q
+```
 
 ```bash
 cd mobile
-flutter run --dart-define=API_BASE_URL=http://192.168.1.10:8000
+flutter analyze
+flutter test
 ```
 
-### Tests
+<div style="margin-top: 2.5rem"></div>
 
-```bash
-cd mobile
-flutter test          # suite completa
-flutter analyze       # lints + type checks
-```
+---
 
-La cobertura actual se reparte entre:
-- tests de `core/` para cliente HTTP, sesión auth y error states
-- tests de `data/` para el repositorio de aparcamientos y favoritos
-- widget tests ligeros en `test/widget_test.dart` y `test/shared/widgets/`
+## 🗺️ Integración frontend-backend
 
-### Arquitectura
+El frontend consume el backend por HTTP y no accede directamente a Redis. Los flujos principales están alineados con los endpoints de producción:
 
-```
-lib/
-├── core/                  # Infraestructura compartida
-│   ├── auth/              # AuthSession (POST /auth/session)
-│   ├── config/            # ApiConfig
-│   ├── network/           # ApiClient, excepciones, parser de envelope
-│   └── providers.dart     # sharedApiClient + authSession singletons
-├── features/              # Pantallas y datos por feature
-│   ├── parking/
-│   │   ├── data/          # ApiParkingRepository, ServerFavoritesStore, …
-│   │   └── domain/        # ParkingPlace, ParkingQuery, ParkingRepository
-│   ├── map/, home/, search/, favorites/, parking_detail/, …
-│   └── location/          # LocationService (Geolocator + bbox de Cáceres)
-└── shared/                # Widgets/temas reutilizables
-```
+| Flujo | Endpoint principal |
+|---|---|
+| Catálogo general | `GET /parkings` |
+| Mapa por movimiento manual | `GET /parkings/in-bounds` |
+| Centrar ubicación o dirección buscada | `GET /parkings/nearby` |
+| Categorías disponibles | `GET /parkings/categories` |
+| Detalle | `GET /parkings/{id}` |
+| Favoritos | `GET/PUT/DELETE /users/me/favorites` |
+| Importación inicial | `POST /import-parkings` |
 
-Puntos clave:
+<div style="margin-top: 2.5rem"></div>
 
-- `ApiClient` es un wrapper sobre `package:http` con timeouts, cancelación
-  cooperativa (`CancelToken`), inyección opcional de `Authorization: Bearer`,
-  y mapeo de errores a `ApiException` / `ApiUnavailableException` /
-  `ApiTimeoutException`.
-- `AuthSession` genera un `sub` aleatorio en el primer arranque, lo persiste
-  en `SharedPreferences` y lo intercambia por un JWT con TTL de 30 días vía
-  `POST /auth/session`. Refresca cuando faltan ≤ 1 día.
-- `ServerFavoritesStore` mantiene la caché local en memoria (`contains`
-  síncrono para el corazón) y aplica `add`/`remove` optimistas con rollback si
-  el backend rechaza.
-- `ApiErrorState` es la pantalla común de fallo (timeout / servicio caído /
-  4xx / genérico) que reaparece en cada `FutureBuilder`.
+---
 
-### Smoke test manual
+## 🧠 Redis Stack
 
-Antes de cortar release, levantar el backend y recorrer este checklist:
+Redis Stack actúa como almacenamiento canónico y motor de consulta. El backend aprovecha hashes, sorted sets, RediSearch, campos geoespaciales, rangos numéricos, caché con versión y expiración de claves.
 
-```bash
-# desde la raíz del repo
-docker compose up -d
-curl -s http://localhost:8000/healthz | jq .   # esperar status: ok
-```
+Resumen de piezas:
 
-Luego, en `mobile/`:
+| Pieza | Uso |
+|---|---|
+| `parking:{id}` | Catálogo activo normalizado |
+| `idx:parkings_search` | Índice RediSearch de producción |
+| `parking_v2:{id}` | Generación temporal durante importación |
+| `user:{sub}:favorites` | Favoritos ordenados por fecha |
+| `cache:nearby:v{version}:...` | Caché versionada de consultas cercanas |
+| `parking_photo:{id}` | Foto resuelta o caché negativa |
 
-```bash
-flutter run
-```
+El detalle técnico está en [`docs/redis.md`](docs/redis.md).
 
-| Caso | Acción | Resultado esperado |
-|---|---|---|
-| Mapa carga | Abrir tab Mapa | Marcadores visibles, sin spinner persistente |
-| Filtros | Abrir drawer, marcar Plazas≥10 + categoría Zona Azul | Resultados se reducen sin colgar |
-| Detalle | Tap en un marcador → "Ver detalle" | Pantalla con datos del backend, sin "Ubicación sin nombre" |
-| Favorito persistente | Tap en corazón en detalle → matar app → reabrir | El corazón sigue lleno (vino de `/users/me/favorites`) |
-| Pantalla favoritos | Abrir tab Favoritos | Lista cargada del servidor, ordenada por fecha de adición desc |
-| Backend caído | `docker compose stop api` y refrescar lista | `ApiErrorState` con copy "Servicio no disponible" + botón Reintentar |
-| Cancelación | Tocar varios filtros rápido | Solo la última request se ve reflejada (no hay flicker de resultados antiguos) |
-| Fuera de Cáceres | En el emulador iOS: Features → Location → Custom (37.78, -122.41) | Banner "Estás fuera de Cáceres" con CTA Buscar; el picker filtra a Cáceres y permite continuar |
+<div style="margin-top: 2.5rem"></div>
 
-## Redis Stack en el proyecto
+---
 
-Redis Stack es la pieza central del backend.
+## 📚 Documentación
 
-Se utiliza para:
-- almacenar el contrato canónico en hashes `parking:{id}`
-- indexar búsqueda con `idx:parkings_search`
-- resolver filtros por TAG (`category`, `vehicleType`, `regulation`, `sourceDataset`)
-- resolver geoespacial con `location`
-- resolver bounds del mapa con `latitude` y `longitude`
-- cachear búsquedas cercanas repetidas con TTL
+| Documento | Contenido |
+|---|---|
+| [`docs/architecture.md`](docs/architecture.md) | Arquitectura, capas, flujos y decisiones de diseño |
+| [`docs/operations.md`](docs/operations.md) | Despliegue, variables, TLS, persistencia y runbook |
+| [`docs/redis.md`](docs/redis.md) | Modelo de datos, índices, búsquedas, caché e importación |
 
-Ejemplo de claves:
-- `parking:{id}`
-- `idx:parkings_search`
-- `cache:nearby:{...}`
+<div style="margin-top: 2.5rem"></div>
 
-Los ids son namespaced por dataset: `{sourceDataset}:{key}`. Si no hay `mslink` ni id municipal fiable, se usa un fallback estable `sha256[:20]` de geometría y propiedades clave. Los pocos `mslink` repetidos del dataset oficial se desambiguan con sufijo ordinal estable dentro del import, evitando sobrescrituras.
+---
 
-## API principal
+## 👥 Autores
 
-- `GET /parkings` → envelope paginado con filtros
-- `GET /parkings/nearby` → envelope paginado con distancia
-- `GET /parkings/in-bounds` → envelope paginado para viewport de mapa
-- `GET /parkings/facets` → conteos por categoría, vehículo, regulación y dataset
-- `GET /parkings/categories` → categorías presentes
-- `GET /parkings/{id}` → detalle de un aparcamiento
-- `POST /import-parkings` → reimporta datasets activos y recrea RediSearch
-
-Los listados devuelven:
-
-```json
-{
-  "items": [],
-  "total": 0,
-  "limit": 100,
-  "offset": 0,
-  "truncated": false,
-  "facets": null
-}
-```
-
-`POST /import-parkings` exige `X-Import-Token` en el stack de Compose. El
-contenedor `bootstrap` reutiliza la misma clave para ejecutar la primera
-importación tras el arranque.
-
-## Documentación técnica
-
-- [`docs/operations.md`](docs/operations.md): despliegue, TLS, persistencia,
-  backups, restore y runbook operativo.
-- [`docs/architecture.md`](docs/architecture.md): visión general del sistema,
-  componentes y flujo entre backend, frontend y Redis Stack.
-- [`docs/redis.md`](docs/redis.md): modelado de claves, índices, caché y uso
-  de Redis Stack en el backend.
-
-## Autores
-
-César Sánchez Montes, Miguel Ángel Campón Iglesias
+| Autor | GitHub |
+|---|---|
+| César Sánchez Montes | [@cesarsm24](https://github.com/cesarsm24) |
+| Miguel Ángel Campón Iglesias | [@Miguelit011](https://github.com/Miguelit011) |

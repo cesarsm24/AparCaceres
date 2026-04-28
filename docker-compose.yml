@@ -1,18 +1,18 @@
 # ============================================================
-# Stack de producción reproducible para AparCáceres.
+# Stack reproducible para AparCáceres.
 # Levanta Redis Stack (Redis + RediSearch) con persistencia AOF, la API
-# FastAPI y el frontend web. El backend lee su configuración desde
-# `backend/.env`.
+# FastAPI, un bootstrap de importación inicial y el frontend web.
+#
+# El backend lee su configuración sensible desde `backend/.env`.
 # ============================================================
 #
 # Comandos habituales:
 #   docker compose up -d              # arranca los servicios
-#   docker compose logs -f api        # tail del backend
-#   docker compose logs -f web        # tail del frontend Flutter web
-#   docker compose logs -f bootstrap  # tail del import inicial
-#   docker compose exec api curl -s http://localhost:8000/healthz | jq
-#   docker compose down               # parar (mantiene el volumen)
-#   docker compose down -v            # parar y BORRAR los datos persistentes
+#   docker compose logs -f api        # logs del backend
+#   docker compose logs -f web        # logs del frontend Flutter web
+#   docker compose logs -f bootstrap  # logs del import inicial
+#   docker compose down               # para los servicios y conserva el volumen
+#   docker compose down -v            # para los servicios y BORRA los datos persistentes
 # ============================================================
 
 services:
@@ -20,8 +20,8 @@ services:
     image: redis/redis-stack-server:7.4.0-v0
     container_name: aparcaceres-redis
     restart: unless-stopped
-    # AOF (append-only file) garantiza durabilidad por escritura: no perdemos
-    # favoritos ante un reinicio. `everysec` equilibra throughput y safety.
+    # AOF garantiza durabilidad por escritura: no se pierden favoritos ante un
+    # reinicio. `everysec` equilibra rendimiento y seguridad.
     command:
       - "redis-stack-server"
       - "--appendonly"
@@ -33,8 +33,8 @@ services:
       - "--save"
       - "300 10"
     ports:
-      # Solo expuesto en localhost del host: evita exponer Redis sin auth a
-      # la red local. En staging/prod conviene quitar esta sección.
+      # Expuesto solo en localhost del host para poder inspeccionar Redis en
+      # despliegues controlados sin publicarlo en la red local.
       - "127.0.0.1:6379:6379"
     volumes:
       - redis-data:/data
@@ -112,5 +112,5 @@ services:
 
 volumes:
   redis-data:
-    # Volumen nombrado: persiste favoritos y catálogo entre reinicios.
-    # `docker compose down` lo conserva; `docker compose down -v` lo borra.
+  # Volumen nombrado: persiste favoritos y catálogo entre reinicios.
+  # `docker compose down` lo conserva; `docker compose down -v` lo borra.
