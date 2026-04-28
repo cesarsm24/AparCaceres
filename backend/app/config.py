@@ -26,6 +26,7 @@ DATA_DIR = BACKEND_DIR / "data"
 #   cache:nearby:v{n}:{lat}:{lng}:{radius}    -> JSON cacheado del resultado de /parkings/nearby (SETEX)
 #   cache:version                             -> entero monotónico que namespacia las claves de caché
 #   user:{user_id}:favorites                  -> sorted set con ids favoritados, score = epoch ms (ZREVRANGE para newest-first)
+#   parking_photo:{id}                        -> URL de foto resuelta vía scraping del SIG (o "" si no hay), TTL configurable
 PARKING_KEY_PREFIX = "parking:"
 SEARCH_INDEX_NAME = "idx:parkings_search"
 # Doble buffer para imports sin downtime: el importador construye la nueva
@@ -83,6 +84,34 @@ MAX_PARKING_LIMIT = int(os.getenv("MAX_PARKING_LIMIT", "500"))
 # Nivel de logging raíz del proceso. Se aplica desde `main.py` vía
 # `configure_logging(LOG_LEVEL)`.
 LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO").upper()
+
+# ---------- Resolución de fotos durante el import ----------
+# Muchos datasets municipales no traen `URL_FOTO`, pero la URL de ficha
+# (`fichatoponimia.php` / `fichacalle.php`) sí embebe una foto en su HTML.
+# Cuando `FETCH_PHOTOS=true`, el importador descarga esas fichas, extrae el
+# `<img src="/fotosOriginales/...">` y persiste el resultado en el hash
+# `parking:{id}` y en una caché aparte (`parking_photo:{id}`) para que un
+# re-import no rescraperar lo ya conocido.
+FETCH_PHOTOS = os.getenv("FETCH_PHOTOS", "true").strip().lower() in {
+    "1", "true", "yes", "on",
+}
+# Concurrencia máxima de scraping. 20 mantiene un import completo (~7000
+# features) por debajo del minuto sin saturar al SIG municipal.
+PHOTO_FETCH_CONCURRENCY = int(os.getenv("PHOTO_FETCH_CONCURRENCY", "20"))
+# Timeout total por petición (conexión + lectura). 5 s es generoso para una
+# página HTML pequeña y corta el long-tail de fichas inaccesibles.
+PHOTO_FETCH_TIMEOUT_SECONDS = float(
+    os.getenv("PHOTO_FETCH_TIMEOUT_SECONDS", "5.0")
+)
+# Caché por id ya resuelto. Una entrada vive mucho tiempo (las fotos no
+# cambian a menudo); 90 días es un equilibrio entre re-descubrir cambios
+# editoriales del SIG y evitar rescrapeos masivos.
+PHOTO_CACHE_TTL_SECONDS = int(
+    os.getenv("PHOTO_CACHE_TTL_SECONDS", str(60 * 60 * 24 * 90))
+)
+# Prefijo de la caché. La key es `parking_photo:{place_id}` y guarda la URL
+# resuelta o el sentinel "" cuando comprobamos que no hay foto disponible.
+PHOTO_CACHE_KEY_PREFIX = "parking_photo:"
 
 # ---------- Favoritos por usuario ----------
 # Tope superior de favoritos por usuario. Cuando el usuario añade uno nuevo y
