@@ -1,8 +1,6 @@
 <div align="center">
 
-<img src="mobile/assets/images/logo_transparente.png" alt="Logo de AparCáceres" width="170" />
-
-<h1>AparCáceres</h1>
+<img src="mobile/assets/images/logo_transparente.png" alt="Logo de AparCáceres" width="250" />
 
 <p>
 Aplicación móvil para la consulta de aparcamientos en Cáceres con Flutter, FastAPI y Redis Stack.
