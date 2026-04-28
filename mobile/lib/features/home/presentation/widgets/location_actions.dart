@@ -5,6 +5,10 @@ import '../../../../shared/widgets/app_card.dart';
 import '../../../../theme/app_colors.dart';
 import '../../../../theme/app_spacing.dart';
 
+/// Acciones de selección de ubicación en la pantalla principal.
+///
+/// Permite usar la posición actual o abrir el selector para buscar otro punto
+/// de referencia dentro de Cáceres.
 class LocationActions extends StatelessWidget {
   const LocationActions({
     super.key,

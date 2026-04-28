@@ -8,6 +8,10 @@ import '../../../parking/presentation/parking_ui.dart';
 import '../../../parking/presentation/widgets/parking_thumbnail.dart';
 import '../../../parking/presentation/widgets/regulation_badge.dart';
 
+/// Elemento de listado para resultados de aparcamiento.
+///
+/// Resume distancia, categoría, regulación y plazas conocidas, y permite abrir
+/// la pantalla de detalle desde el listado.
 class ParkingResultTile extends StatelessWidget {
   const ParkingResultTile({
     super.key,

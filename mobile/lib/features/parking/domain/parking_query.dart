@@ -2,6 +2,11 @@ import 'package:latlong2/latlong.dart';
 
 import 'parking_place.dart';
 
+/// Criterios de consulta para el catálogo de aparcamientos.
+///
+/// Si `center` es `null`, la consulta representa un listado global filtrado.
+/// Si incluye centro, el repositorio usa búsqueda por radio y ordenación por
+/// distancia.
 class ParkingQuery {
   const ParkingQuery({
     this.center,

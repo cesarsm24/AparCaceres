@@ -7,6 +7,10 @@ import '../../../parking/domain/parking_place.dart';
 import '../../../parking/presentation/parking_ui.dart';
 import '../../../parking/presentation/widgets/parking_thumbnail.dart';
 
+/// Elemento de resultado para la búsqueda de aparcamientos.
+///
+/// Muestra nombre, distancia, categoría y plazas registradas, con una miniatura
+/// compacta para mantener el listado denso y legible.
 class SearchResultTile extends StatelessWidget {
   const SearchResultTile({
     super.key,

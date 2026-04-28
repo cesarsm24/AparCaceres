@@ -3,6 +3,10 @@ import 'package:flutter/material.dart';
 import '../../../../theme/app_colors.dart';
 import '../../../../theme/app_spacing.dart';
 
+/// Fila de información del detalle de aparcamiento.
+///
+/// Presenta una etiqueta fija a la izquierda y un valor flexible alineado a la
+/// derecha para mantener una lectura consistente entre campos.
 class DetailInfoRow extends StatelessWidget {
   const DetailInfoRow({super.key, required this.label, required this.value});
 

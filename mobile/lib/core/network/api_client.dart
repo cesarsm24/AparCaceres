@@ -8,15 +8,14 @@ import 'package:http/http.dart' as http;
 import '../config/api_config.dart';
 import 'api_exceptions.dart';
 
-/// Devuelve el JWT a inyectar en `Authorization` o `null` si la request es
-/// pública. Se resuelve por petición para que el cliente pueda renovar el
-/// token sin reconstruir el `ApiClient`.
+/// Proveedor de token de sesión para peticiones autenticadas.
 typedef TokenProvider = Future<String?> Function();
 
-/// Token cooperativo de cancelación. El caller lo crea, lo pasa a la request
-/// y llama a [cancel] cuando ya no quiere el resultado (cambio de pantalla,
-/// nuevos filtros, etc.). El `ApiClient` corre la request contra este
-/// completer y lanza [ApiCancelledException] si gana la cancelación.
+/// Token de cancelación cooperativa para descartar una petición en curso.
+///
+/// La cancelación no aborta necesariamente el socket subyacente de
+/// `package:http`; únicamente hace que el resultado deje de propagarse al
+/// consumidor.
 class CancelToken {
   final Completer<void> _completer = Completer<void>();
 
@@ -29,28 +28,24 @@ class CancelToken {
   }
 }
 
-/// Cliente HTTP de la app. Envuelve `package:http` para añadir:
-///   - URL base (`ApiConfig.baseUrl`) y cabeceras por defecto.
-///   - Inyección opcional de `Authorization: Bearer <jwt>` vía [TokenProvider].
-///   - Timeout uniforme con [ApiConfig.requestTimeout].
-///   - Mapeo de fallos a la jerarquía de [ApiException] para que las pantallas
-///     reaccionen sin conocer detalles del transporte.
-///   - Cancelación cooperativa con [CancelToken].
-///   - Logging en modo debug de cabeceras útiles del backend (`X-Cache`,
-///     `X-Total-Count`, `X-RateLimit-Remaining`, `X-Request-ID`) y latencia.
+/// Cliente HTTP de la aplicación.
+///
+/// Centraliza construcción de URLs, cabeceras comunes, autenticación opcional,
+/// timeout, cancelación cooperativa, decodificación JSON y traducción de
+/// errores de transporte a excepciones del dominio de red.
 class ApiClient {
   ApiClient({http.Client? httpClient, this.tokenProvider})
-    : _http = httpClient ?? http.Client();
+      : _http = httpClient ?? http.Client();
 
   final http.Client _http;
   final TokenProvider? tokenProvider;
 
   Future<dynamic> getJson(
-    String path, {
-    Map<String, dynamic>? query,
-    bool requiresAuth = false,
-    CancelToken? cancelToken,
-  }) {
+      String path, {
+        Map<String, dynamic>? query,
+        bool requiresAuth = false,
+        CancelToken? cancelToken,
+      }) {
     return _send(
       method: 'GET',
       path: path,
@@ -61,12 +56,12 @@ class ApiClient {
   }
 
   Future<dynamic> postJson(
-    String path, {
-    Object? body,
-    Map<String, dynamic>? query,
-    bool requiresAuth = false,
-    CancelToken? cancelToken,
-  }) {
+      String path, {
+        Object? body,
+        Map<String, dynamic>? query,
+        bool requiresAuth = false,
+        CancelToken? cancelToken,
+      }) {
     return _send(
       method: 'POST',
       path: path,
@@ -78,12 +73,12 @@ class ApiClient {
   }
 
   Future<dynamic> putJson(
-    String path, {
-    Object? body,
-    Map<String, dynamic>? query,
-    bool requiresAuth = false,
-    CancelToken? cancelToken,
-  }) {
+      String path, {
+        Object? body,
+        Map<String, dynamic>? query,
+        bool requiresAuth = false,
+        CancelToken? cancelToken,
+      }) {
     return _send(
       method: 'PUT',
       path: path,
@@ -95,11 +90,11 @@ class ApiClient {
   }
 
   Future<dynamic> deleteJson(
-    String path, {
-    Map<String, dynamic>? query,
-    bool requiresAuth = false,
-    CancelToken? cancelToken,
-  }) {
+      String path, {
+        Map<String, dynamic>? query,
+        bool requiresAuth = false,
+        CancelToken? cancelToken,
+      }) {
     return _send(
       method: 'DELETE',
       path: path,
@@ -128,6 +123,7 @@ class ApiClient {
 
     final stopwatch = Stopwatch()..start();
     final http.Response response;
+
     try {
       response = await _race(
         _dispatch(method, uri, headers, encodedBody),
@@ -149,12 +145,13 @@ class ApiClient {
   }
 
   Future<http.Response> _dispatch(
-    String method,
-    Uri uri,
-    Map<String, String> headers,
-    String? encodedBody,
-  ) {
+      String method,
+      Uri uri,
+      Map<String, String> headers,
+      String? encodedBody,
+      ) {
     final Future<http.Response> future;
+
     switch (method) {
       case 'GET':
         future = _http.get(uri, headers: headers);
@@ -171,41 +168,39 @@ class ApiClient {
       default:
         throw ArgumentError.value(method, 'method', 'Unsupported HTTP method');
     }
+
     return future.timeout(ApiConfig.requestTimeout);
   }
 
-  /// Carrera entre la request real y la cancelación cooperativa. Si gana la
-  /// cancelación, propagamos `ApiCancelledException`; si gana la request,
-  /// devolvemos su resultado normal.
   Future<http.Response> _race(
-    Future<http.Response> request,
-    CancelToken? cancelToken,
-  ) {
+      Future<http.Response> request,
+      CancelToken? cancelToken,
+      ) {
     if (cancelToken == null) return request;
     if (cancelToken.isCancelled) {
       return Future<http.Response>.error(const ApiCancelledException());
     }
+
     return Future.any<http.Response>([
       request,
       cancelToken.whenCancelled.then<http.Response>(
-        (_) => throw const ApiCancelledException(),
+            (_) => throw const ApiCancelledException(),
       ),
     ]);
   }
 
-  /// Construye la URI absoluta. `query` admite tanto `String` como
-  /// `Iterable<String>` por valor para soportar parámetros repetibles
-  /// (`?category=a&category=b`), que el backend usa como OR dentro de una
-  /// dimensión. Los `null` se omiten para que las pantallas puedan pasar
-  /// filtros opcionales sin construir el mapa condicionalmente.
   Uri _buildUri(String path, Map<String, dynamic>? query) {
     final normalisedPath = path.startsWith('/') ? path : '/$path';
     final base = Uri.parse('${ApiConfig.baseUrl}$normalisedPath');
+
     if (query == null || query.isEmpty) return base;
+
     final merged = <String, dynamic>{...base.queryParametersAll};
+
     for (final entry in query.entries) {
       final value = entry.value;
       if (value == null) continue;
+
       if (value is Iterable && value is! String) {
         final values = value.cast<String>().toList();
         if (values.isEmpty) continue;
@@ -214,6 +209,7 @@ class ApiClient {
         merged[entry.key] = value.toString();
       }
     }
+
     return base.replace(queryParameters: merged);
   }
 
@@ -225,20 +221,25 @@ class ApiClient {
       'Accept': 'application/json',
       'User-Agent': ApiConfig.userAgent,
     };
+
     if (hasBody) headers['Content-Type'] = 'application/json';
+
     if (requiresAuth) {
       final token = await tokenProvider?.call();
       if (token != null && token.isNotEmpty) {
         headers['Authorization'] = 'Bearer $token';
       }
     }
+
     return headers;
   }
 
   dynamic _decode(http.Response response) {
     final status = response.statusCode;
+
     if (status >= 200 && status < 300) {
       if (response.body.isEmpty) return null;
+
       try {
         return jsonDecode(response.body);
       } on FormatException catch (e) {
@@ -249,7 +250,9 @@ class ApiClient {
         );
       }
     }
+
     final message = _extractErrorMessage(response.body) ?? 'HTTP $status';
+
     if (status >= 500) {
       throw ApiUnavailableException(
         message,
@@ -257,13 +260,13 @@ class ApiClient {
         body: response.body,
       );
     }
+
     throw ApiException(message, statusCode: status, body: response.body);
   }
 
-  /// FastAPI devuelve errores como `{"detail": "..."}`. Si el cuerpo no encaja
-  /// con ese shape devolvemos `null` y dejamos que el caller use el genérico.
   String? _extractErrorMessage(String body) {
     if (body.isEmpty) return null;
+
     try {
       final decoded = jsonDecode(body);
       if (decoded is Map<String, dynamic>) {
@@ -271,18 +274,18 @@ class ApiClient {
         if (detail is String) return detail;
       }
     } on FormatException {
-      // Cuerpo no JSON (HTML de un proxy, texto plano de un 502): lo dejamos
-      // pasar para usar el mensaje genérico.
+      return null;
     }
+
     return null;
   }
 
   void _logResponse(
-    String method,
-    Uri uri,
-    http.Response response,
-    Duration elapsed,
-  ) {
+      String method,
+      Uri uri,
+      http.Response response,
+      Duration elapsed,
+      ) {
     final cache = response.headers['x-cache'];
     final total = response.headers['x-total-count'];
     final rate = response.headers['x-ratelimit-remaining'];
@@ -294,9 +297,10 @@ class ApiClient {
       if (reqId != null) 'req=$reqId',
     ];
     final suffix = tags.isEmpty ? '' : ' ${tags.join(' ')}';
+
     debugPrint(
       '[api] $method ${uri.path} -> ${response.statusCode} '
-      'in ${elapsed.inMilliseconds}ms$suffix',
+          'in ${elapsed.inMilliseconds}ms$suffix',
     );
   }
 }

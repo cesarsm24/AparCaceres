@@ -3,6 +3,10 @@ import 'package:flutter/material.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_spacing.dart';
 
+/// Contenedor visual reutilizable con estilo de tarjeta.
+///
+/// Encapsula superficie, borde y estado táctil para mantener una presentación
+/// homogénea en listados y bloques de contenido.
 class AppCard extends StatelessWidget {
   const AppCard({
     super.key,
@@ -18,6 +22,7 @@ class AppCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final borderRadius = BorderRadius.circular(AppSpacing.radiusLg);
+
     return Material(
       color: AppColors.surface,
       borderRadius: borderRadius,

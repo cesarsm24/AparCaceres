@@ -8,6 +8,11 @@ import '../../shell/presentation/app_shell.dart';
 import 'widgets/welcome_branding.dart';
 import 'widgets/welcome_subtitle.dart';
 
+/// Pantalla inicial de la app.
+///
+/// Solicita la posición inicial, si está disponible, y entra en el shell
+/// principal. Si la ubicación falla o se deniega, la app continúa usando el
+/// fallback de Cáceres.
 class WelcomeScreen extends StatefulWidget {
   const WelcomeScreen({super.key});
 
@@ -20,9 +25,13 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
 
   Future<void> _start() async {
     if (_starting) return;
+
     setState(() => _starting = true);
+
     await locationService.ensurePosition();
+
     if (!mounted) return;
+
     Navigator.of(context).pushReplacement(
       MaterialPageRoute(builder: (_) => const AppShell()),
     );

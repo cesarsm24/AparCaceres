@@ -1,5 +1,6 @@
 import '../../parking/domain/parking_place.dart';
 
+/// Perfil OSRM más adecuado para una categoría de aparcamiento.
 String osrmProfileFor(ParkingCategory category) {
   return switch (category) {
     ParkingCategory.bicycle => 'bike',
@@ -7,6 +8,7 @@ String osrmProfileFor(ParkingCategory category) {
   };
 }
 
+/// Modo de viaje usado al abrir la ruta en Google Maps.
 String googleTravelModeFor(ParkingCategory category) {
   return switch (category) {
     ParkingCategory.bicycle => 'bicycling',
@@ -15,6 +17,7 @@ String googleTravelModeFor(ParkingCategory category) {
   };
 }
 
+/// Etiqueta breve para mensajes de cálculo de ruta.
 String routingLabelFor(ParkingCategory category) {
   return switch (category) {
     ParkingCategory.bicycle => 'en bici',

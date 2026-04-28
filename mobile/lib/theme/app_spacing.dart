@@ -1,3 +1,7 @@
+/// Escala común de espaciado, radios y tamaños base.
+///
+/// Centraliza medidas de interfaz para mantener consistencia visual entre
+/// pantallas y componentes.
 class AppSpacing {
   const AppSpacing._();
 

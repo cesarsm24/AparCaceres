@@ -26,6 +26,10 @@ import 'widgets/map_controls.dart';
 import 'widgets/map_results_sheet.dart';
 import 'widgets/parking_map_marker.dart';
 
+/// Pantalla de mapa y exploración geográfica.
+///
+/// Coordina consulta de aparcamientos cercanos, filtros, selección de marcador,
+/// cálculo de rutas y navegación a detalle o listado de resultados.
 class MapScreen extends StatefulWidget {
   const MapScreen({
     super.key,
@@ -67,6 +71,7 @@ class _MapScreenState extends State<MapScreen> {
     _filters = widget.initialFilters ?? MapFilters();
     _placesFuture = _fetchPlaces();
     routeRequest.addListener(_onRouteRequested);
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (routeRequest.request != null && mounted) _onRouteRequested();
     });
@@ -81,13 +86,13 @@ class _MapScreenState extends State<MapScreen> {
     super.dispose();
   }
 
-  /// Punto único donde se construye la `Future` del listado: cancela cualquier
-  /// request anterior pendiente para no propagar resultados obsoletos cuando
-  /// el usuario cambia filtros, recentra o pica una ubicación nueva.
+  /// Crea la consulta activa y cancela cualquier petición previa pendiente.
   Future<List<ParkingPlace>> _fetchPlaces() {
     _placesCancelToken?.cancel();
+
     final token = CancelToken();
     _placesCancelToken = token;
+
     return parkingRepository.getNearby(
       _filters.toQuery(),
       cancelToken: token,
@@ -97,31 +102,38 @@ class _MapScreenState extends State<MapScreen> {
   void _onRouteRequested() {
     final place = routeRequest.request;
     if (place == null) return;
+
     routeRequest.consume();
+
     final origin = _activeCenter;
+
     setState(() {
       _selectedPlace = place;
       _route = null;
       _routeOrigin = origin;
       _loadingRoute = true;
     });
+
     _mapController.move(place.position, _focusedZoom);
     _fetchRoute(osrmProfileFor(place.category), origin, place.position);
   }
 
   Future<void> _fetchRoute(
-    String profile,
-    LatLng origin,
-    LatLng destination,
-  ) async {
+      String profile,
+      LatLng origin,
+      LatLng destination,
+      ) async {
     try {
       final route = await _osrm.route(profile, origin, destination);
       if (!mounted) return;
+
       setState(() {
         _route = route;
         _loadingRoute = false;
       });
+
       final fullPath = <LatLng>[origin, ...route.coordinates, destination];
+
       _mapController.fitCamera(
         CameraFit.bounds(
           bounds: LatLngBounds.fromPoints(fullPath),
@@ -130,11 +142,13 @@ class _MapScreenState extends State<MapScreen> {
       );
     } catch (_) {
       if (!mounted) return;
+
       setState(() {
         _route = null;
         _routeOrigin = null;
         _loadingRoute = false;
       });
+
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('No se pudo calcular la ruta.')),
       );
@@ -144,14 +158,17 @@ class _MapScreenState extends State<MapScreen> {
   Future<void> _launchGoogleMaps() async {
     final origin = _routeOrigin;
     final destination = _selectedPlace;
+
     if (origin == null || destination == null) return;
+
     final uri = Uri.parse(
       'https://www.google.com/maps/dir/?api=1'
-      '&origin=${origin.latitude},${origin.longitude}'
-      '&destination=${destination.latitude},${destination.longitude}'
-      '&travelmode=${googleTravelModeFor(destination.category)}',
+          '&origin=${origin.latitude},${origin.longitude}'
+          '&destination=${destination.latitude},${destination.longitude}'
+          '&travelmode=${googleTravelModeFor(destination.category)}',
     );
     final ok = await launchUrl(uri, mode: LaunchMode.externalApplication);
+
     if (!ok && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('No se pudo abrir Google Maps.')),
@@ -173,7 +190,9 @@ class _MapScreenState extends State<MapScreen> {
     final suggestion = await Navigator.of(context).push<PlaceSuggestion>(
       MaterialPageRoute(builder: (_) => const LocationPickerScreen()),
     );
+
     if (suggestion == null || !mounted) return;
+
     setState(() {
       _filters = _filters.copyWith(
         center: suggestion.position,
@@ -184,12 +203,14 @@ class _MapScreenState extends State<MapScreen> {
       _routeOrigin = null;
       _placesFuture = _fetchPlaces();
     });
+
     _mapController.move(suggestion.position, _focusedZoom);
   }
 
   Future<void> _centerOnUser() async {
     await locationService.refresh();
     if (!mounted) return;
+
     setState(() {
       _filters = _filters.withoutCenter();
       _selectedPlace = null;
@@ -197,6 +218,7 @@ class _MapScreenState extends State<MapScreen> {
       _routeOrigin = null;
       _placesFuture = _fetchPlaces();
     });
+
     _mapController.move(locationService.position.value, _focusedZoom);
   }
 
@@ -268,24 +290,20 @@ class _MapScreenState extends State<MapScreen> {
                 final places = snapshot.data ?? const <ParkingPlace>[];
                 final selected = _selectedPlace;
                 final activeCenter = _activeCenter;
-                // ApiCancelledException la disparamos al recargar: es ruido,
-                // no un fallo que mostrar al usuario.
+
                 final hasError =
                     snapshot.hasError &&
-                    snapshot.error is! ApiCancelledException;
+                        snapshot.error is! ApiCancelledException;
+
                 return Stack(
                   children: [
                     FlutterMap(
                       mapController: _mapController,
                       options: MapOptions(
-                        // Sin centro explícito tratamos la pantalla como
-                        // "seguir al usuario": misma vista que el botón de
-                        // localización (centrada en el último fix con zoom
-                        // focused), aunque `widget.initialFocused` sea false.
                         initialCenter:
-                            _filters.center ?? locationService.position.value,
+                        _filters.center ?? locationService.position.value,
                         initialZoom: (widget.initialFocused ||
-                                _filters.center == null)
+                            _filters.center == null)
                             ? _focusedZoom
                             : _initialZoom,
                         minZoom: _minZoom,
@@ -297,7 +315,7 @@ class _MapScreenState extends State<MapScreen> {
                       children: [
                         TileLayer(
                           urlTemplate:
-                              'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                          'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
                           userAgentPackageName: 'com.aparcaceres.mobile',
                           maxZoom: 19,
                         ),
@@ -342,9 +360,6 @@ class _MapScreenState extends State<MapScreen> {
                         onZoomOut: _zoomOut,
                       ),
                     ),
-                    // El banner solo tiene sentido cuando intentamos seguir
-                    // al usuario y resulta que está fuera del bbox: con un
-                    // centro elegido a mano la posición real da igual.
                     if (_filters.center == null &&
                         locationService.isOutsideCaceres)
                       Positioned(
@@ -363,7 +378,7 @@ class _MapScreenState extends State<MapScreen> {
                         child: Center(
                           child: _RouteLoadingPill(
                             label:
-                                'Calculando ruta '
+                            'Calculando ruta '
                                 '${routingLabelFor(selected.category)}…',
                           ),
                         ),
@@ -379,7 +394,7 @@ class _MapScreenState extends State<MapScreen> {
                           child: ApiErrorState(
                             error: snapshot.error!,
                             onRetry: () => setState(
-                              () => _placesFuture = _fetchPlaces(),
+                                  () => _placesFuture = _fetchPlaces(),
                             ),
                           ),
                         ),
@@ -401,28 +416,28 @@ class _MapScreenState extends State<MapScreen> {
                           ),
                           selected == null
                               ? MapResultsSheet(
-                                  resultCount: places.length,
-                                  radiusMeters: _filters.radiusMeters,
-                                  onTap: () => Navigator.of(context).push(
-                                    MaterialPageRoute(
-                                      builder: (_) => ParkingResultsScreen(
-                                        filters: _filters,
-                                      ),
-                                    ),
-                                  ),
-                                )
-                              : ParkingPreviewSheet(
-                                  place: selected,
-                                  distanceMeters: const Distance()(
-                                    activeCenter,
-                                    selected.position,
-                                  ),
-                                  onOpenDetail: () => _openDetail(selected),
-                                  onClose: _clearSelection,
-                                  onOpenInMaps: _routeOrigin == null
-                                      ? null
-                                      : _launchGoogleMaps,
+                            resultCount: places.length,
+                            radiusMeters: _filters.radiusMeters,
+                            onTap: () => Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) => ParkingResultsScreen(
+                                  filters: _filters,
                                 ),
+                              ),
+                            ),
+                          )
+                              : ParkingPreviewSheet(
+                            place: selected,
+                            distanceMeters: const Distance()(
+                              activeCenter,
+                              selected.position,
+                            ),
+                            onOpenDetail: () => _openDetail(selected),
+                            onClose: _clearSelection,
+                            onOpenInMaps: _routeOrigin == null
+                                ? null
+                                : _launchGoogleMaps,
+                          ),
                         ],
                       ),
                     ),
@@ -440,17 +455,17 @@ class _MapScreenState extends State<MapScreen> {
     return places
         .where(
           (place) =>
-              place.geometryType == ParkingGeometryType.polygon &&
-              place.polygonRings.isNotEmpty,
-        )
+      place.geometryType == ParkingGeometryType.polygon &&
+          place.polygonRings.isNotEmpty,
+    )
         .map(
           (place) => Polygon(
-            points: place.polygonRings.first,
-            color: place.category.color.withValues(alpha: 0.18),
-            borderColor: place.category.color,
-            borderStrokeWidth: 2,
-          ),
-        )
+        points: place.polygonRings.first,
+        color: place.category.color.withValues(alpha: 0.18),
+        borderColor: place.category.color,
+        borderStrokeWidth: 2,
+      ),
+    )
         .toList();
   }
 
@@ -458,16 +473,16 @@ class _MapScreenState extends State<MapScreen> {
     return places
         .where(
           (place) =>
-              place.geometryType == ParkingGeometryType.lineString &&
-              place.linePoints.length >= 2,
-        )
+      place.geometryType == ParkingGeometryType.lineString &&
+          place.linePoints.length >= 2,
+    )
         .map(
           (place) => Polyline(
-            points: place.linePoints,
-            color: place.category.color,
-            strokeWidth: 4,
-          ),
-        )
+        points: place.linePoints,
+        color: place.category.color,
+        strokeWidth: 4,
+      ),
+    )
         .toList();
   }
 
@@ -497,6 +512,7 @@ class _MapScreenState extends State<MapScreen> {
     }
 
     final placeIds = <String>{};
+
     for (final place in places) {
       placeIds.add(place.id);
       markers.add(
@@ -517,6 +533,7 @@ class _MapScreenState extends State<MapScreen> {
     }
 
     final selected = _selectedPlace;
+
     if (selected != null && !placeIds.contains(selected.id)) {
       markers.add(
         Marker(
@@ -586,7 +603,8 @@ class _MapLegend extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final categories = places.map((p) => p.category).toSet().take(5).toList();
+    final categories = places.map((place) => place.category).toSet().take(5).toList();
+
     if (categories.isEmpty && centerLabel == null) {
       return const SizedBox.shrink();
     }
@@ -700,10 +718,6 @@ class _OsmAttribution extends StatelessWidget {
   }
 }
 
-/// Banner que aparece cuando el `LocationService` confirma que el dispositivo
-/// está fuera del bbox de Cáceres. La app no tiene datos para esa zona, así
-/// que ofrecemos abrir el picker (que sí permite buscar calles dentro de
-/// Cáceres aunque el usuario esté en otra ciudad).
 class _OutsideCaceresBanner extends StatelessWidget {
   const _OutsideCaceresBanner({required this.onPickLocation});
 
@@ -745,7 +759,7 @@ class _OutsideCaceresBanner extends StatelessWidget {
                   ),
                   Text(
                     'AparCáceres solo cubre la ciudad. Busca un punto para'
-                    ' verlo en el mapa.',
+                        ' verlo en el mapa.',
                     style: TextStyle(
                       fontSize: 11,
                       color: AppColors.textSecondary,

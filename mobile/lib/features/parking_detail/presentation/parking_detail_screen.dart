@@ -14,6 +14,10 @@ import '../../routing/data/route_request.dart';
 import 'widgets/detail_header_image.dart';
 import 'widgets/detail_info_row.dart';
 
+/// Pantalla de detalle de un aparcamiento.
+///
+/// Presenta imagen, metadatos principales, estado de favorito y acción para
+/// iniciar una ruta hacia la plaza seleccionada.
 class ParkingDetailScreen extends StatelessWidget {
   const ParkingDetailScreen({super.key, required this.place});
 
@@ -37,6 +41,7 @@ class ParkingDetailScreen extends StatelessWidget {
             listenable: favoritesStore,
             builder: (context, _) {
               final isFavorite = favoritesStore.contains(place.id);
+
               return AppTopBar(
                 leading: IconButton(
                   onPressed: () => Navigator.of(context).maybePop(),
@@ -132,8 +137,7 @@ class ParkingDetailScreen extends StatelessWidget {
                             child: SecondaryButton(
                               label: AppStrings.detailNavigate,
                               icon: Icons.send_outlined,
-                              onPressed: () =>
-                                  routeRequest.requestRoute(place),
+                              onPressed: () => routeRequest.requestRoute(place),
                             ),
                           ),
                           const SizedBox(width: AppSpacing.md),
@@ -142,7 +146,8 @@ class ParkingDetailScreen extends StatelessWidget {
                               listenable: favoritesStore,
                               builder: (context, _) {
                                 final isFavorite =
-                                    favoritesStore.contains(place.id);
+                                favoritesStore.contains(place.id);
+
                                 return PrimaryButton(
                                   label: isFavorite
                                       ? AppStrings.detailSaved
@@ -175,7 +180,9 @@ String? _joinParts(List<String?> parts) {
       .where((part) => part != null && part.trim().isNotEmpty)
       .cast<String>()
       .toList();
+
   if (clean.isEmpty) return null;
+
   return clean.join(' ');
 }
 

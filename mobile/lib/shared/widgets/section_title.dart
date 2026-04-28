@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../theme/app_colors.dart';
 
+/// Título reutilizable para secciones de contenido.
 class SectionTitle extends StatelessWidget {
   const SectionTitle(this.text, {super.key});
 

@@ -2,6 +2,10 @@ import 'package:flutter/material.dart';
 
 import 'app_colors.dart';
 
+/// Estilos tipográficos reutilizables de la aplicación.
+///
+/// Define variantes semánticas sobre una misma familia para mantener jerarquía
+/// visual coherente entre pantallas y componentes.
 class AppTextStyles {
   const AppTextStyles._();
 

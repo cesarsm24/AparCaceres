@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../../theme/app_colors.dart';
 import '../../../../theme/app_spacing.dart';
 
+/// Chip visual para representar un servicio o atributo del aparcamiento.
 class ServiceChip extends StatelessWidget {
   const ServiceChip({super.key, required this.icon});
 

@@ -9,9 +9,14 @@ import '../../../theme/app_spacing.dart';
 import '../data/nominatim_client.dart';
 import '../domain/place_suggestion.dart';
 
+/// Pantalla de selección manual de ubicación.
+///
+/// Consulta Nominatim con debounce y devuelve una `PlaceSuggestion` al cerrar
+/// la pantalla. El cliente puede inyectarse para pruebas; si no se inyecta,
+/// la pantalla es responsable de cerrar la instancia creada internamente.
 class LocationPickerScreen extends StatefulWidget {
   const LocationPickerScreen({super.key, NominatimClient? client})
-    : _client = client;
+      : _client = client;
 
   final NominatimClient? _client;
 
@@ -53,7 +58,9 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
   void _onChanged(String value) {
     setState(() => _query = value);
     _timer?.cancel();
+
     final trimmed = value.trim();
+
     if (trimmed.isEmpty) {
       setState(() {
         _results = const <PlaceSuggestion>[];
@@ -62,6 +69,7 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
       });
       return;
     }
+
     _timer = Timer(_debounce, () => _search(trimmed));
   }
 
@@ -70,15 +78,19 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
       _loading = true;
       _error = null;
     });
+
     try {
       final results = await _client.search(query);
+
       if (!mounted || _query.trim() != query) return;
+
       setState(() {
         _results = results;
         _loading = false;
       });
     } catch (e) {
       if (!mounted) return;
+
       setState(() {
         _error = e;
         _loading = false;
@@ -119,18 +131,23 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
 
   Widget _buildBody() {
     final trimmed = _query.trim();
+
     if (trimmed.isEmpty) {
       return const _StatusMessage(AppStrings.locationPickerEmpty);
     }
+
     if (_loading && _results.isEmpty) {
       return const Center(child: CircularProgressIndicator());
     }
+
     if (_error != null) {
       return const _StatusMessage(AppStrings.locationPickerError);
     }
+
     if (_results.isEmpty) {
       return const _StatusMessage(AppStrings.locationPickerNoResults);
     }
+
     return ListView.separated(
       padding: const EdgeInsets.fromLTRB(
         AppSpacing.horizontalPadding,
@@ -140,8 +157,10 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
       ),
       itemCount: _results.length,
       separatorBuilder: (_, _) => const SizedBox(height: AppSpacing.sm),
-      itemBuilder: (_, i) =>
-          _SuggestionTile(suggestion: _results[i], onTap: () => _select(_results[i])),
+      itemBuilder: (_, i) => _SuggestionTile(
+        suggestion: _results[i],
+        onTap: () => _select(_results[i]),
+      ),
     );
   }
 }
@@ -166,6 +185,7 @@ class _PickerHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final topPadding = MediaQuery.of(context).padding.top;
+
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.light.copyWith(
         statusBarColor: AppColors.primary,
@@ -220,13 +240,13 @@ class _PickerHeader extends StatelessWidget {
                     ),
                     suffixIcon: hasText
                         ? IconButton(
-                            onPressed: onClear,
-                            icon: const Icon(
-                              Icons.close,
-                              color: AppColors.textSecondary,
-                              size: 20,
-                            ),
-                          )
+                      onPressed: onClear,
+                      icon: const Icon(
+                        Icons.close,
+                        color: AppColors.textSecondary,
+                        size: 20,
+                      ),
+                    )
                         : null,
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(AppSpacing.radiusMd),

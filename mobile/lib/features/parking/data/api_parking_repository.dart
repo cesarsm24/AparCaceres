@@ -5,25 +5,25 @@ import '../domain/parking_place.dart';
 import '../domain/parking_query.dart';
 import '../domain/parking_repository.dart';
 
-/// Adapta la API HTTP de FastAPI al contrato `ParkingRepository` que consume
-/// la UI. La traducción wire ↔ dominio vive en `parking_place.dart`; aquí
-/// solo se construyen las URLs y se manejan los códigos de respuesta.
+/// Repositorio de aparcamientos respaldado por la API HTTP.
+///
+/// Construye las consultas contra FastAPI y delega la transformación del wire
+/// al modelo de dominio `ParkingPlace`.
 class ApiParkingRepository implements ParkingRepository {
   ApiParkingRepository({required ApiClient client}) : _client = client;
 
   final ApiClient _client;
 
-  /// Si `query.center` es nulo cae a `/parkings` (listado global con filtros);
-  /// con centro usa `/parkings/nearby` para que el backend ordene por
-  /// distancia con RediSearch geo.
+  /// Devuelve aparcamientos filtrados, usando búsqueda geográfica cuando hay centro.
   @override
   Future<List<ParkingPlace>> getNearby(
-    ParkingQuery query, {
-    CancelToken? cancelToken,
-  }) async {
+      ParkingQuery query, {
+        CancelToken? cancelToken,
+      }) async {
     final filters = _filterParams(query);
     final Map<String, dynamic> params;
     final String path;
+
     if (query.center == null) {
       path = '/parkings';
       params = filters;
@@ -36,11 +36,13 @@ class ApiParkingRepository implements ParkingRepository {
         ...filters,
       };
     }
+
     final json = await _client.getJson(
       path,
       query: params,
       cancelToken: cancelToken,
     );
+
     return parseListResponse<ParkingPlace>(json, ParkingPlace.fromJson);
   }
 
@@ -48,13 +50,13 @@ class ApiParkingRepository implements ParkingRepository {
   Future<ParkingPlace?> getById(String id) async {
     try {
       final json = await _client.getJson('/parkings/$id');
+
       if (json is! Map<String, dynamic>) {
         throw ApiException('Unexpected place shape: ${json.runtimeType}');
       }
+
       return ParkingPlace.fromJson(json);
     } on ApiException catch (e) {
-      // 404 es un caso esperado (id desconocido o caducado): la UI lo
-      // distingue de un fallo de red mostrando "no encontrado".
       if (e.statusCode == 404) return null;
       rethrow;
     }
@@ -63,9 +65,11 @@ class ApiParkingRepository implements ParkingRepository {
   @override
   Future<List<ParkingCategory>> getCategories() async {
     final json = await _client.getJson('/parkings/categories');
+
     if (json is! List) {
       throw ApiException('Unexpected categories shape: ${json.runtimeType}');
     }
+
     return json
         .map((value) => parkingCategoryFromWire(value as String?))
         .toSet()
@@ -73,19 +77,18 @@ class ApiParkingRepository implements ParkingRepository {
       ..sort((a, b) => a.index.compareTo(b.index));
   }
 
-  /// `GET /users/me/favorites` devuelve directamente la lista de
-  /// `ParkingPlaceOut` ordenada por fecha de adición descendente. La sesión
-  /// JWT la inyecta `ApiClient.tokenProvider` (ver `core/providers.dart`),
-  /// por eso `requiresAuth: true`.
+  /// Devuelve los favoritos del usuario autenticado, ordenados por adición reciente.
   @override
   Future<List<ParkingPlace>> getFavorites() async {
     final json = await _client.getJson(
       '/users/me/favorites',
       requiresAuth: true,
     );
+
     if (json is! List) {
       throw ApiException('Unexpected favorites shape: ${json.runtimeType}');
     }
+
     return [
       for (final item in json)
         if (item is Map<String, dynamic>) ParkingPlace.fromJson(item),
@@ -94,18 +97,25 @@ class ApiParkingRepository implements ParkingRepository {
 
   Map<String, dynamic> _filterParams(ParkingQuery query) {
     final params = <String, dynamic>{};
+
     if (query.vehicleTypes.isNotEmpty) {
-      params['vehicleType'] = query.vehicleTypes.map((v) => v.wire).toList();
+      params['vehicleType'] = query.vehicleTypes.map((type) => type.wire).toList();
     }
+
     if (query.categories.isNotEmpty) {
-      params['category'] = query.categories.map((c) => c.wire).toList();
+      params['category'] = query.categories.map((category) => category.wire).toList();
     }
+
     if (query.regulations.isNotEmpty) {
-      params['regulation'] = query.regulations.map((r) => r.wire).toList();
+      params['regulation'] = query.regulations
+          .map((regulation) => regulation.wire)
+          .toList();
     }
+
     if (query.minSpaces > 0) {
       params['minSpaces'] = query.minSpaces.toString();
     }
+
     return params;
   }
 }

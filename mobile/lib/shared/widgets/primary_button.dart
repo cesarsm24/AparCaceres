@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
 
+/// Botón principal de acción.
+///
+/// Usa el estilo global de `ElevatedButton` y permite incluir un icono cuando
+/// la acción necesita apoyo visual.
 class PrimaryButton extends StatelessWidget {
   const PrimaryButton({
     super.key,
@@ -21,6 +25,7 @@ class PrimaryButton extends StatelessWidget {
         label: Text(label, textAlign: TextAlign.center),
       );
     }
+
     return ElevatedButton(
       onPressed: onPressed,
       child: SizedBox(

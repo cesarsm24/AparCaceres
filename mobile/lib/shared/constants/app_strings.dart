@@ -1,3 +1,7 @@
+/// Textos estáticos reutilizados por la interfaz.
+///
+/// Centraliza literales visibles para mantener consistencia entre pantallas y
+/// facilitar una futura extracción a internacionalización.
 class AppStrings {
   const AppStrings._();
 

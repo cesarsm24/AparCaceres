@@ -14,6 +14,10 @@ import '../../parking_detail/presentation/parking_detail_screen.dart';
 import '../data/parking_search.dart';
 import 'widgets/search_result_tile.dart';
 
+/// Pantalla de búsqueda textual de aparcamientos.
+///
+/// Carga el catálogo una vez, filtra en memoria con búsqueda sin tildes y
+/// permite abrir el detalle de cualquier resultado.
 class SearchScreen extends StatefulWidget {
   const SearchScreen({super.key});
 
@@ -24,13 +28,15 @@ class SearchScreen extends StatefulWidget {
 class _SearchScreenState extends State<SearchScreen> {
   final TextEditingController _controller = TextEditingController();
   final FocusNode _focusNode = FocusNode();
+
   late Future<List<ParkingPlace>> _placesFuture;
   String _query = '';
 
   @override
   void initState() {
     super.initState();
-    _placesFuture = parkingRepository.getNearby(const ParkingQuery());
+    _placesFuture = _loadPlaces();
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) _focusNode.requestFocus();
     });
@@ -41,6 +47,10 @@ class _SearchScreenState extends State<SearchScreen> {
     _controller.dispose();
     _focusNode.dispose();
     super.dispose();
+  }
+
+  Future<List<ParkingPlace>> _loadPlaces() {
+    return parkingRepository.getNearby(const ParkingQuery());
   }
 
   void _clear() {
@@ -70,25 +80,29 @@ class _SearchScreenState extends State<SearchScreen> {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Center(child: CircularProgressIndicator());
                 }
+
                 if (snapshot.hasError) {
                   return ApiErrorState(
                     error: snapshot.error!,
                     onRetry: () => setState(
-                      () => _placesFuture = parkingRepository.getNearby(
-                        const ParkingQuery(),
-                      ),
+                          () => _placesFuture = _loadPlaces(),
                     ),
                   );
                 }
+
                 final places = snapshot.data ?? const <ParkingPlace>[];
                 final trimmed = _query.trim();
+
                 if (trimmed.isEmpty) {
                   return const _StatusMessage(AppStrings.searchEmpty);
                 }
+
                 final results = searchParking(places, trimmed);
+
                 if (results.isEmpty) {
                   return const _StatusMessage(AppStrings.searchNoResults);
                 }
+
                 return ListView.separated(
                   padding: const EdgeInsets.fromLTRB(
                     AppSpacing.horizontalPadding,
@@ -98,13 +112,14 @@ class _SearchScreenState extends State<SearchScreen> {
                   ),
                   itemCount: results.length,
                   separatorBuilder: (_, _) =>
-                      const SizedBox(height: AppSpacing.sm),
+                  const SizedBox(height: AppSpacing.sm),
                   itemBuilder: (_, i) {
                     final place = results[i];
                     final distanceMeters = const Distance()(
                       locationService.position.value,
                       place.position,
                     );
+
                     return SearchResultTile(
                       place: place,
                       distanceMeters: distanceMeters,
@@ -145,6 +160,7 @@ class _SearchHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final topPadding = MediaQuery.of(context).padding.top;
+
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.light.copyWith(
         statusBarColor: AppColors.primary,
@@ -199,13 +215,13 @@ class _SearchHeader extends StatelessWidget {
                     ),
                     suffixIcon: hasText
                         ? IconButton(
-                            onPressed: onClear,
-                            icon: const Icon(
-                              Icons.close,
-                              color: AppColors.textSecondary,
-                              size: 20,
-                            ),
-                          )
+                      onPressed: onClear,
+                      icon: const Icon(
+                        Icons.close,
+                        color: AppColors.textSecondary,
+                        size: 20,
+                      ),
+                    )
                         : null,
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(AppSpacing.radiusMd),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../shared/constants/app_strings.dart';
 
+/// Elemento estático de la pantalla de ajustes.
 class SettingItem {
   const SettingItem({required this.icon, required this.label, this.value});
 
@@ -10,6 +11,7 @@ class SettingItem {
   final String? value;
 }
 
+/// Ajustes visibles en la pantalla de configuración.
 const List<SettingItem> kSettings = [
   SettingItem(
     icon: Icons.wb_sunny_outlined,

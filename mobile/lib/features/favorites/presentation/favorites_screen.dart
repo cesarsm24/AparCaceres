@@ -13,6 +13,10 @@ import '../../parking/domain/parking_place.dart';
 import '../../parking_detail/presentation/parking_detail_screen.dart';
 import 'widgets/favorite_tile.dart';
 
+/// Pantalla de favoritos del usuario.
+///
+/// Obtiene la lista persistida en backend, la mantiene sincronizada con el
+/// estado local de favoritos y permite abrir el detalle de cada aparcamiento.
 class FavoritesScreen extends StatefulWidget {
   const FavoritesScreen({super.key});
 
@@ -35,20 +39,20 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
                 return FutureBuilder<List<ParkingPlace>>(
                   future: parkingRepository.getFavorites(),
                   builder: (context, snapshot) {
-                    if (snapshot.connectionState ==
-                        ConnectionState.waiting) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
                       return const Center(child: CircularProgressIndicator());
                     }
+
                     if (snapshot.hasError) {
                       return ApiErrorState(
                         error: snapshot.error!,
-                        // setState fuerza el rebuild que reconstruye la
-                        // future dentro del ListenableBuilder.
+                        // Reconstruye la future generada dentro del ListenableBuilder.
                         onRetry: () => setState(() {}),
                       );
                     }
-                    final favorites =
-                        snapshot.data ?? const <ParkingPlace>[];
+
+                    final favorites = snapshot.data ?? const <ParkingPlace>[];
+
                     if (favorites.isEmpty) {
                       return const Center(
                         child: Text(
@@ -57,6 +61,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
                         ),
                       );
                     }
+
                     return ListView.separated(
                       padding: const EdgeInsets.fromLTRB(
                         AppSpacing.horizontalPadding,
@@ -66,9 +71,10 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
                       ),
                       itemCount: favorites.length,
                       separatorBuilder: (_, _) =>
-                          const SizedBox(height: AppSpacing.md),
+                      const SizedBox(height: AppSpacing.md),
                       itemBuilder: (_, i) {
                         final place = favorites[i];
+
                         return FavoriteTile(
                           place: place,
                           distanceMeters: const Distance()(
@@ -77,12 +83,10 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
                           ),
                           onTap: () => Navigator.of(context).push(
                             MaterialPageRoute(
-                              builder: (_) =>
-                                  ParkingDetailScreen(place: place),
+                              builder: (_) => ParkingDetailScreen(place: place),
                             ),
                           ),
-                          onToggleFavorite: () =>
-                              favoritesStore.toggle(place.id),
+                          onToggleFavorite: () => favoritesStore.toggle(place.id),
                         );
                       },
                     );

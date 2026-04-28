@@ -5,17 +5,10 @@ import '../../theme/app_colors.dart';
 import '../../theme/app_spacing.dart';
 import 'secondary_button.dart';
 
-/// Pantalla compacta de fallo cuando una llamada al backend revienta. Mapea
-/// la jerarquía de [ApiException] a copy en español:
-///   - [ApiTimeoutException] / [ApiUnavailableException]: el problema es la
-///     red o el servidor; el usuario solo puede reintentar.
-///   - Resto de [ApiException]: lo más probable es un 4xx que no debería
-///     ocurrir desde la app, pero mostramos el detalle para no esconder bugs.
-///   - Otros (no [ApiException]): mensaje genérico para no filtrar el
-///     `toString()` de excepciones que la UI no entiende.
+/// Estado visual reutilizable para errores de carga desde la API.
 ///
-/// Se diseña pequeño a propósito (icono + dos líneas + botón) para que encaje
-/// como un `Center` dentro de cualquier área de contenido.
+/// Traduce la jerarquía de `ApiException` a mensajes orientados a la acción y
+/// mantiene un formato compacto para integrarse dentro de cualquier pantalla.
 class ApiErrorState extends StatelessWidget {
   const ApiErrorState({super.key, required this.error, required this.onRetry});
 
@@ -25,6 +18,7 @@ class ApiErrorState extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final copy = _copyFor(error);
+
     return Padding(
       padding: const EdgeInsets.all(AppSpacing.xl),
       child: Center(
@@ -74,15 +68,17 @@ class ApiErrorState extends StatelessWidget {
         body: 'Comprueba tu red y vuelve a intentarlo.',
       );
     }
+
     if (error is ApiUnavailableException) {
       return const _ErrorCopy(
         icon: Icons.cloud_off_rounded,
         title: 'Servicio no disponible',
         body:
-            'No hemos podido contactar con el servidor de aparcamientos. '
+        'No hemos podido contactar con el servidor de aparcamientos. '
             'Inténtalo de nuevo en unos segundos.',
       );
     }
+
     if (error is ApiException) {
       return _ErrorCopy(
         icon: Icons.error_outline,
@@ -90,6 +86,7 @@ class ApiErrorState extends StatelessWidget {
         body: error.message,
       );
     }
+
     return const _ErrorCopy(
       icon: Icons.error_outline,
       title: 'Algo ha fallado',

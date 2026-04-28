@@ -3,6 +3,10 @@ import 'package:flutter/material.dart';
 import '../../../../theme/app_colors.dart';
 import '../../../../theme/app_spacing.dart';
 
+/// Controles flotantes de interacción con el mapa.
+///
+/// Agrupa acciones de localización y zoom con un estilo compacto adecuado para
+/// superponerse al lienzo del mapa.
 class MapControls extends StatelessWidget {
   const MapControls({
     super.key,

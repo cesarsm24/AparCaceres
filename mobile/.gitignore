@@ -1,4 +1,4 @@
-# Miscellaneous
+# Miscelánea
 *.class
 *.log
 *.pyc
@@ -12,18 +12,18 @@
 .swiftpm/
 migrate_working_dir/
 
-# IntelliJ related
+# Relacionado con IntelliJ
 *.iml
 *.ipr
 *.iws
 .idea/
 
-# The .vscode folder contains launch configuration and tasks you configure in
-# VS Code which you may wish to be included in version control, so this line
-# is commented out by default.
+# La carpeta .vscode contiene configuración de ejecución y tareas que puedes
+# querer incluir en control de versiones, así que esta línea queda comentada
+# por defecto.
 #.vscode/
 
-# Flutter/Dart/Pub related
+# Flutter / Dart / Pub
 **/doc/api/
 **/ios/Flutter/.last_build_id
 .dart_tool/
@@ -33,13 +33,13 @@ migrate_working_dir/
 /build/
 /coverage/
 
-# Symbolication related
+# Simbolicación
 app.*.symbols
 
-# Obfuscation related
+# Ofuscación
 app.*.map.json
 
-# Android Studio will place build artifacts here
+# Artefactos de compilación de Android Studio
 /android/app/debug
 /android/app/profile
 /android/app/release

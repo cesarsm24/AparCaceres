@@ -1,8 +1,15 @@
 import '../../parking/domain/parking_place.dart';
 
+/// Busca aparcamientos por texto en campos visibles de la UI.
+///
+/// La comparación es case-insensitive y accent-insensitive para que búsquedas
+/// como `caceres`, `politecnica` o `dalia` funcionen aunque los datos lleven
+/// mayúsculas o tildes.
 List<ParkingPlace> searchParking(List<ParkingPlace> places, String query) {
   final normalized = _normalize(query);
+
   if (normalized.isEmpty) return const <ParkingPlace>[];
+
   return places.where((place) => _matches(place, normalized)).toList();
 }
 
@@ -14,10 +21,12 @@ bool _matches(ParkingPlace place, String normalizedQuery) {
     place.district,
     place.neighborhood,
   ];
+
   for (final field in haystacks) {
     if (field == null || field.isEmpty) continue;
     if (_normalize(field).contains(normalizedQuery)) return true;
   }
+
   return false;
 }
 
@@ -47,10 +56,13 @@ String _normalize(String value) {
     'ñ': 'n',
     'ç': 'c',
   };
+
   final buffer = StringBuffer();
+
   for (final rune in lower.runes) {
     final ch = String.fromCharCode(rune);
     buffer.write(accents[ch] ?? ch);
   }
+
   return buffer.toString();
 }

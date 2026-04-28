@@ -7,6 +7,10 @@ import '../../../parking/domain/parking_place.dart';
 import '../../../parking/presentation/parking_ui.dart';
 import '../../../parking/presentation/widgets/parking_thumbnail.dart';
 
+/// Elemento de lista para un aparcamiento favorito.
+///
+/// Muestra información resumida, distancia estimada y acción para retirar el
+/// aparcamiento de favoritos.
 class FavoriteTile extends StatelessWidget {
   const FavoriteTile({
     super.key,
@@ -25,6 +29,7 @@ class FavoriteTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final color = place.category.color;
     final spacesLabel = formatSpaces(place.totalSpaces);
+
     return AppCard(
       onTap: onTap,
       padding: const EdgeInsets.all(AppSpacing.sm),

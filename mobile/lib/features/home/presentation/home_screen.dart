@@ -20,6 +20,11 @@ import 'widgets/location_actions.dart';
 import 'widgets/quick_access_row.dart';
 import 'widgets/suggestion_tile.dart';
 
+/// Pantalla principal de descubrimiento.
+///
+/// Presenta accesos rápidos, selección de ubicación y sugerencias cercanas al
+/// punto activo. La apertura del mapa se delega para conservar una navegación
+/// única en la pantalla contenedora.
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key, required this.onOpenMap});
 
@@ -40,9 +45,7 @@ class _HomeScreenState extends State<HomeScreen> {
     _suggestionsFuture = _fetchSuggestions();
   }
 
-  /// Construye la future fuera de `build()` para que recargar la pantalla
-  /// (cambio de tab, foco, etc.) no dispare una request nueva en cada
-  /// frame. Se reconstruye explícitamente al reintentar.
+  /// Crea la consulta de sugerencias solo cuando se solicita una recarga.
   Future<List<ParkingPlace>> _fetchSuggestions() {
     return parkingRepository.getNearby(
       ParkingQuery(
@@ -56,7 +59,9 @@ class _HomeScreenState extends State<HomeScreen> {
     final suggestion = await Navigator.of(context).push<PlaceSuggestion>(
       MaterialPageRoute(builder: (_) => const LocationPickerScreen()),
     );
+
     if (suggestion == null) return;
+
     widget.onOpenMap(
       MapFilters.atLocation(suggestion.position, label: suggestion.shortName),
     );
@@ -83,6 +88,7 @@ class _HomeScreenState extends State<HomeScreen> {
               builder: (context, snapshot) {
                 final places = snapshot.data ?? const <ParkingPlace>[];
                 final suggestions = places.take(4).toList();
+
                 return ListView(
                   padding: const EdgeInsets.fromLTRB(
                     AppSpacing.horizontalPadding,
@@ -115,30 +121,29 @@ class _HomeScreenState extends State<HomeScreen> {
                       ApiErrorState(
                         error: snapshot.error!,
                         onRetry: () => setState(
-                          () => _suggestionsFuture = _fetchSuggestions(),
+                              () => _suggestionsFuture = _fetchSuggestions(),
                         ),
                       )
                     else if (suggestions.isEmpty)
-                      const _EmptyState()
-                    else
-                      ...suggestions.map(
-                        (place) => Padding(
-                          padding: const EdgeInsets.only(bottom: AppSpacing.md),
-                          child: SuggestionTile(
-                            place: place,
-                            distanceMeters: const Distance()(
-                              locationService.position.value,
-                              place.position,
-                            ),
-                            onTap: () => Navigator.of(context).push(
-                              MaterialPageRoute(
-                                builder: (_) =>
-                                    ParkingDetailScreen(place: place),
+                        const _EmptyState()
+                      else
+                        ...suggestions.map(
+                              (place) => Padding(
+                            padding: const EdgeInsets.only(bottom: AppSpacing.md),
+                            child: SuggestionTile(
+                              place: place,
+                              distanceMeters: const Distance()(
+                                locationService.position.value,
+                                place.position,
+                              ),
+                              onTap: () => Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder: (_) => ParkingDetailScreen(place: place),
+                                ),
                               ),
                             ),
                           ),
                         ),
-                      ),
                   ],
                 );
               },

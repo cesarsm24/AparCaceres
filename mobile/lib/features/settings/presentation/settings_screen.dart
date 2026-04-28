@@ -6,6 +6,9 @@ import '../../../theme/app_spacing.dart';
 import '../data/settings_items.dart';
 import 'widgets/settings_tile.dart';
 
+/// Pantalla de ajustes de la aplicación.
+///
+/// Muestra la configuración disponible como una lista de elementos estáticos.
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
 
@@ -26,7 +29,7 @@ class SettingsScreen extends StatelessWidget {
               ),
               itemCount: kSettings.length,
               separatorBuilder: (_, _) =>
-                  const SizedBox(height: AppSpacing.sm),
+              const SizedBox(height: AppSpacing.sm),
               itemBuilder: (_, i) => SettingsTile(item: kSettings[i]),
             ),
           ),

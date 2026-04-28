@@ -4,6 +4,10 @@ import 'package:flutter/services.dart';
 import '../../theme/app_colors.dart';
 import '../constants/app_strings.dart';
 
+/// Barra superior común de la aplicación.
+///
+/// Respeta el área segura del sistema, aplica el estilo de estado coherente
+/// con el color primario y permite inyectar acciones laterales opcionales.
 class AppTopBar extends StatelessWidget {
   const AppTopBar({
     super.key,
@@ -19,6 +23,7 @@ class AppTopBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final topPadding = MediaQuery.of(context).padding.top;
+
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.light.copyWith(
         statusBarColor: AppColors.primary,

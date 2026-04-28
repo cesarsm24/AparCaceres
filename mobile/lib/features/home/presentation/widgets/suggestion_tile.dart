@@ -7,6 +7,10 @@ import '../../../parking/domain/parking_place.dart';
 import '../../../parking/presentation/parking_ui.dart';
 import '../../../parking/presentation/widgets/parking_thumbnail.dart';
 
+/// Elemento de sugerencia de aparcamiento cercano.
+///
+/// Muestra una vista resumida con miniatura, distancia, categoría y plazas
+/// conocidas para facilitar la navegación al detalle.
 class SuggestionTile extends StatelessWidget {
   const SuggestionTile({
     super.key,
@@ -23,6 +27,7 @@ class SuggestionTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final color = place.category.color;
     final spacesLabel = formatSpaces(place.totalSpaces);
+
     return AppCard(
       onTap: onTap,
       padding: const EdgeInsets.all(AppSpacing.sm),

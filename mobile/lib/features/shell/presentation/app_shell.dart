@@ -9,6 +9,10 @@ import '../../map/presentation/widgets/filters_drawer.dart';
 import '../../routing/data/route_request.dart';
 import '../../settings/presentation/settings_screen.dart';
 
+/// Contenedor principal con navegación por pestañas.
+///
+/// Cada pestaña mantiene su propio `Navigator`, de forma que los detalles y
+/// flujos internos no se mezclan entre secciones.
 class AppShell extends StatefulWidget {
   const AppShell({super.key});
 
@@ -54,19 +58,22 @@ class _AppShellState extends State<AppShell> {
 
   void _onRouteRequested() {
     if (routeRequest.request == null) return;
+
     _navKeys[_index].currentState?.popUntil((route) => route.isFirst);
     _mapNav.currentState?.popUntil((route) => route.isFirst);
+
     if (_index != 1) {
       setState(() => _index = 1);
     }
   }
 
-  void _onDestinationSelected(int i) {
-    if (i == _index) {
-      _navKeys[i].currentState?.popUntil((route) => route.isFirst);
+  void _onDestinationSelected(int index) {
+    if (index == _index) {
+      _navKeys[index].currentState?.popUntil((route) => route.isFirst);
       return;
     }
-    setState(() => _index = i);
+
+    setState(() => _index = index);
   }
 
   @override

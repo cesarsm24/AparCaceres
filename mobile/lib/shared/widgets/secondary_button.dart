@@ -3,6 +3,10 @@ import 'package:flutter/material.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_spacing.dart';
 
+/// Botón secundario para acciones no predominantes.
+///
+/// Mantiene un estilo outlined consistente y admite icono opcional cuando la
+/// acción necesita apoyo visual.
 class SecondaryButton extends StatelessWidget {
   const SecondaryButton({
     super.key,
@@ -36,6 +40,7 @@ class SecondaryButton extends StatelessWidget {
         label: Text(label),
       );
     }
+
     return OutlinedButton(
       onPressed: onPressed,
       style: style,

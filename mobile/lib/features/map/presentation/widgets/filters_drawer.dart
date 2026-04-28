@@ -11,6 +11,10 @@ import '../../../parking/domain/parking_place.dart';
 import '../../../parking/domain/parking_query.dart';
 import '../../../parking/presentation/parking_ui.dart';
 
+/// Estado de filtros aplicado a la vista de mapa.
+///
+/// Mantiene los criterios seleccionados por el usuario y genera la consulta de
+/// aparcamientos usando el centro explícito o, en su defecto, la posición activa.
 class MapFilters {
   MapFilters({
     this.radiusMeters = 1000,
@@ -21,8 +25,8 @@ class MapFilters {
     this.center,
     this.centerLabel,
   }) : vehicleTypes = vehicleTypes ?? ParkingVehicleType.values.toSet(),
-       categories = categories ?? ParkingCategory.values.toSet(),
-       regulations = regulations ?? ParkingRegulation.values.toSet();
+        categories = categories ?? ParkingCategory.values.toSet(),
+        regulations = regulations ?? ParkingRegulation.values.toSet();
 
   final int radiusMeters;
   final Set<ParkingVehicleType> vehicleTypes;
@@ -90,6 +94,10 @@ class MapFilters {
   }
 }
 
+/// Drawer lateral para edición de filtros del mapa.
+///
+/// Trabaja sobre una copia local de los filtros iniciales y solo comunica el
+/// estado definitivo cuando se pulsa la acción de aplicar.
 class FiltersDrawer extends StatefulWidget {
   const FiltersDrawer({
     super.key,
@@ -125,18 +133,21 @@ class _FiltersDrawerState extends State<FiltersDrawer> {
   void _toggleVehicle(ParkingVehicleType value) {
     final next = Set<ParkingVehicleType>.of(_filters.vehicleTypes);
     next.contains(value) ? next.remove(value) : next.add(value);
+
     setState(() => _filters = _filters.copyWith(vehicleTypes: next));
   }
 
   void _toggleCategory(ParkingCategory value) {
     final next = Set<ParkingCategory>.of(_filters.categories);
     next.contains(value) ? next.remove(value) : next.add(value);
+
     setState(() => _filters = _filters.copyWith(categories: next));
   }
 
   void _toggleRegulation(ParkingRegulation value) {
     final next = Set<ParkingRegulation>.of(_filters.regulations);
     next.contains(value) ? next.remove(value) : next.add(value);
+
     setState(() => _filters = _filters.copyWith(regulations: next));
   }
 
@@ -157,8 +168,8 @@ class _FiltersDrawerState extends State<FiltersDrawer> {
                 children: [
                   _RadiusSection(
                     value: _filters.radiusMeters,
-                    onChanged: (v) => setState(
-                      () => _filters = _filters.copyWith(radiusMeters: v),
+                    onChanged: (value) => setState(
+                          () => _filters = _filters.copyWith(radiusMeters: value),
                     ),
                   ),
                   const SizedBox(height: AppSpacing.lg),
@@ -166,8 +177,8 @@ class _FiltersDrawerState extends State<FiltersDrawer> {
                     title: AppStrings.filtersVehicle,
                     values: ParkingVehicleType.values,
                     selected: _filters.vehicleTypes,
-                    labelOf: (v) => v.label,
-                    iconOf: (v) => v.icon,
+                    labelOf: (value) => value.label,
+                    iconOf: (value) => value.icon,
                     colorOf: (_) => AppColors.primary,
                     onToggle: _toggleVehicle,
                   ),
@@ -176,9 +187,9 @@ class _FiltersDrawerState extends State<FiltersDrawer> {
                     title: AppStrings.filtersCategory,
                     values: ParkingCategory.values,
                     selected: _filters.categories,
-                    labelOf: (v) => v.label,
-                    iconOf: (v) => v.icon,
-                    colorOf: (v) => v.color,
+                    labelOf: (value) => value.label,
+                    iconOf: (value) => value.icon,
+                    colorOf: (value) => value.color,
                     onToggle: _toggleCategory,
                   ),
                   const SizedBox(height: AppSpacing.lg),
@@ -186,16 +197,16 @@ class _FiltersDrawerState extends State<FiltersDrawer> {
                     title: AppStrings.filtersRegulation,
                     values: ParkingRegulation.values,
                     selected: _filters.regulations,
-                    labelOf: (v) => v.label,
+                    labelOf: (value) => value.label,
                     iconOf: (_) => Icons.label_outline,
-                    colorOf: (v) => v.color,
+                    colorOf: (value) => value.color,
                     onToggle: _toggleRegulation,
                   ),
                   const SizedBox(height: AppSpacing.lg),
                   _SpacesSection(
                     value: _filters.minSpaces,
-                    onChanged: (v) => setState(
-                      () => _filters = _filters.copyWith(minSpaces: v),
+                    onChanged: (value) => setState(
+                          () => _filters = _filters.copyWith(minSpaces: value),
                     ),
                   ),
                 ],
@@ -324,13 +335,13 @@ class _RadiusSection extends StatelessWidget {
           spacing: AppSpacing.sm,
           children: _presets
               .map(
-                (m) => _FilterChip(
-                  label: m >= 1000 ? '${m ~/ 1000} km' : '$m m',
-                  selected: value == m,
-                  color: AppColors.primary,
-                  onTap: () => onChanged(m),
-                ),
-              )
+                (meters) => _FilterChip(
+              label: meters >= 1000 ? '${meters ~/ 1000} km' : '$meters m',
+              selected: value == meters,
+              color: AppColors.primary,
+              onTap: () => onChanged(meters),
+            ),
+          )
               .toList(),
         ),
         const SizedBox(height: AppSpacing.sm),
@@ -343,7 +354,7 @@ class _RadiusSection extends StatelessWidget {
               ? '${(value / 1000).toStringAsFixed(1)} km'
               : '$value m',
           activeColor: AppColors.primary,
-          onChanged: (v) => onChanged(v.round()),
+          onChanged: (value) => onChanged(value.round()),
         ),
       ],
     );
@@ -381,13 +392,13 @@ class _MultiChipSection<T> extends StatelessWidget {
           children: values
               .map(
                 (value) => _FilterChip(
-                  label: labelOf(value),
-                  icon: iconOf(value),
-                  selected: selected.contains(value),
-                  color: colorOf(value),
-                  onTap: () => onToggle(value),
-                ),
-              )
+              label: labelOf(value),
+              icon: iconOf(value),
+              selected: selected.contains(value),
+              color: colorOf(value),
+              onTap: () => onToggle(value),
+            ),
+          )
               .toList(),
         ),
       ],
@@ -416,10 +427,10 @@ class _FilterChip extends StatelessWidget {
       avatar: icon == null
           ? null
           : Icon(
-              icon,
-              size: 16,
-              color: selected ? AppColors.textOnPrimary : color,
-            ),
+        icon,
+        size: 16,
+        color: selected ? AppColors.textOnPrimary : color,
+      ),
       label: Text(label),
       selected: selected,
       showCheckmark: false,
@@ -469,7 +480,7 @@ class _SpacesSection extends StatelessWidget {
           value: value.toDouble(),
           label: value == 0 ? 'Todas' : '$value+',
           activeColor: AppColors.primary,
-          onChanged: (v) => onChanged(v.round()),
+          onChanged: (value) => onChanged(value.round()),
         ),
       ],
     );

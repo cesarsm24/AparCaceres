@@ -1,3 +1,4 @@
+/// Rutas de assets empaquetados con la aplicación.
 class AppAssets {
   const AppAssets._();
 

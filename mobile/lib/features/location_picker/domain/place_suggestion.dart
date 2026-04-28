@@ -1,5 +1,9 @@
 import 'package:latlong2/latlong.dart';
 
+/// Sugerencia de ubicación seleccionable por el usuario.
+///
+/// Representa un resultado normalizado del servicio de geocodificación con
+/// identificador externo, nombre completo, etiqueta corta y coordenadas.
 class PlaceSuggestion {
   const PlaceSuggestion({
     required this.id,

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../../shared/constants/app_strings.dart';
 import '../../../../theme/app_colors.dart';
 
+/// Vista placeholder para pestañas todavía no implementadas.
 class PlaceholderTab extends StatelessWidget {
   const PlaceholderTab({super.key, required this.label, required this.icon});
 

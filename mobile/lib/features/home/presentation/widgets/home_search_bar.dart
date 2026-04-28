@@ -4,6 +4,10 @@ import '../../../../shared/constants/app_strings.dart';
 import '../../../../theme/app_colors.dart';
 import '../../../../theme/app_spacing.dart';
 
+/// Campo de búsqueda de la pantalla principal.
+///
+/// Funciona como disparador de navegación hacia el selector de ubicación, por
+/// lo que se renderiza en modo solo lectura.
 class HomeSearchBar extends StatelessWidget {
   const HomeSearchBar({super.key, this.onTap});
 

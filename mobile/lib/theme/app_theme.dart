@@ -4,6 +4,10 @@ import 'app_colors.dart';
 import 'app_spacing.dart';
 import 'app_text_styles.dart';
 
+/// Tema visual principal de la aplicación.
+///
+/// Centraliza la configuración de Material, esquema de color, tipografía y
+/// estilo base de botones para evitar divergencias entre pantallas.
 class AppTheme {
   const AppTheme._();
 

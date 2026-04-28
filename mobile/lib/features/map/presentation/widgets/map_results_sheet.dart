@@ -9,6 +9,7 @@ import '../../../parking/domain/parking_place.dart';
 import '../../../parking/presentation/parking_ui.dart';
 import '../../../parking/presentation/widgets/parking_thumbnail.dart';
 
+/// Hoja inferior con el resumen de resultados visibles en el mapa.
 class MapResultsSheet extends StatelessWidget {
   const MapResultsSheet({
     super.key,
@@ -63,6 +64,7 @@ class MapResultsSheet extends StatelessWidget {
   }
 }
 
+/// Hoja inferior de previsualización de un aparcamiento seleccionado.
 class ParkingPreviewSheet extends StatelessWidget {
   const ParkingPreviewSheet({
     super.key,
@@ -83,6 +85,7 @@ class ParkingPreviewSheet extends StatelessWidget {
   Widget build(BuildContext context) {
     final color = place.category.color;
     final spacesLabel = formatSpaces(place.totalSpaces);
+
     return _SheetShell(
       child: Column(
         mainAxisSize: MainAxisSize.min,

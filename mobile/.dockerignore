@@ -1,12 +1,21 @@
-.dart_tool
-.idea
-build
-android
-ios
-linux
-macos
-windows
+# Caché y metadatos de Flutter / Dart
+.dart_tool/
 .flutter-plugins
 .flutter-plugins-dependencies
 .metadata
+
+# Configuración del IDE
+.idea/
+
+# Salidas de compilación
+build/
+
+# Plataformas generadas por Flutter
+android/
+ios/
+linux/
+macos/
+windows/
+
+# Archivos del sistema
 .DS_Store

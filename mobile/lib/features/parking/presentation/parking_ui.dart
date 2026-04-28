@@ -3,13 +3,14 @@ import 'package:flutter/material.dart';
 import '../../../theme/app_colors.dart';
 import '../domain/parking_place.dart';
 
+/// Presentación visual de las categorías de aparcamiento.
 extension ParkingCategoryUi on ParkingCategory {
   String get label {
     return switch (this) {
       ParkingCategory.parking => 'Aparcamiento',
       ParkingCategory.paidParking => 'Parking de pago',
-      ParkingCategory.streetLine => 'En linea',
-      ParkingCategory.streetBattery => 'En bateria',
+      ParkingCategory.streetLine => 'En línea',
+      ParkingCategory.streetBattery => 'En batería',
       ParkingCategory.blueZone => 'Zona azul',
       ParkingCategory.accessible => 'PMR',
       ParkingCategory.motorbike => 'Motos',
@@ -47,6 +48,7 @@ extension ParkingCategoryUi on ParkingCategory {
   }
 }
 
+/// Presentación visual de los tipos de vehículo.
 extension ParkingVehicleUi on ParkingVehicleType {
   String get label {
     return switch (this) {
@@ -65,6 +67,7 @@ extension ParkingVehicleUi on ParkingVehicleType {
   }
 }
 
+/// Presentación visual de los regímenes de aparcamiento.
 extension ParkingRegulationUi on ParkingRegulation {
   String get label {
     return switch (this) {
@@ -91,11 +94,13 @@ String formatDistance(double meters) {
   if (meters >= 1000) {
     return 'A ${(meters / 1000).toStringAsFixed(1)} km';
   }
+
   return 'A ${meters.round()} m';
 }
 
 String? formatSpaces(int? spaces) {
   if (spaces == null) return null;
   if (spaces == 1) return '1 plaza registrada';
+
   return '$spaces plazas registradas';
 }

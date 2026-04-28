@@ -4,6 +4,10 @@ import '../../../../theme/app_colors.dart';
 import '../../../parking/domain/parking_place.dart';
 import '../../../parking/presentation/parking_ui.dart';
 
+/// Marcador de aparcamiento para el mapa.
+///
+/// Usa el color y el icono de la categoría para identificar el tipo de plaza;
+/// el estado seleccionado aumenta tamaño y borde para destacar el elemento.
 class ParkingMapMarker extends StatelessWidget {
   const ParkingMapMarker({
     super.key,
@@ -17,6 +21,7 @@ class ParkingMapMarker extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = category.color;
+
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -71,6 +76,7 @@ class _MarkerTipPainter extends CustomPainter {
       ..lineTo(size.width / 2, size.height)
       ..lineTo(size.width, 0)
       ..close();
+
     canvas.drawPath(path, paint);
   }
 
@@ -79,6 +85,7 @@ class _MarkerTipPainter extends CustomPainter {
       oldDelegate.color != color;
 }
 
+/// Marcador de la posición activa del usuario.
 class UserLocationMarker extends StatelessWidget {
   const UserLocationMarker({super.key});
 
@@ -103,6 +110,7 @@ class UserLocationMarker extends StatelessWidget {
   }
 }
 
+/// Marcador del destino manual elegido en el selector de ubicación.
 class DestinationPinMarker extends StatelessWidget {
   const DestinationPinMarker({super.key});
 

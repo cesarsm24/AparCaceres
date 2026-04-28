@@ -4,12 +4,18 @@ import 'package:latlong2/latlong.dart';
 
 import '../../parking/data/parking_constants.dart';
 
+/// Servicio de ubicación activa de la aplicación.
+///
+/// Mantiene una posición observable con fallback dentro de Cáceres y solo
+/// sustituye ese valor cuando obtiene un fix real autorizado y válido para el
+/// ámbito geográfico cubierto por la app.
 class LocationService {
   LocationService();
 
   final ValueNotifier<LatLng> position = ValueNotifier<LatLng>(
     kMockUserLocation,
   );
+
   bool _granted = false;
   bool _serviceEnabled = false;
   bool _outsideCaceres = false;
@@ -18,14 +24,10 @@ class LocationService {
   bool get serviceEnabled => _serviceEnabled;
   bool get hasRealFix => _granted && _serviceEnabled;
 
-  /// `true` cuando la última `refresh()` consiguió un fix válido pero quedó
-  /// fuera del bbox de Cáceres. La UI lo usa para decirle al usuario que la
-  /// app solo cubre la ciudad y ofrecer un picker manual.
+  /// Indica que el último fix real quedó fuera del área cubierta por la app.
   bool get isOutsideCaceres => _outsideCaceres;
 
-  /// Requests permission (if needed) and tries to get a first fix.
-  /// Returns true if a real position was stored, false on any failure
-  /// (in which case the value falls back to [kMockUserLocation]).
+  /// Solicita permisos si es necesario e intenta obtener una primera posición real.
   Future<bool> ensurePosition() async {
     _serviceEnabled = await Geolocator.isLocationServiceEnabled();
     if (!_serviceEnabled) return false;
@@ -34,6 +36,7 @@ class LocationService {
     if (permission == LocationPermission.denied) {
       permission = await Geolocator.requestPermission();
     }
+
     if (permission == LocationPermission.denied ||
         permission == LocationPermission.deniedForever) {
       _granted = false;
@@ -44,12 +47,13 @@ class LocationService {
     return refresh();
   }
 
-  /// Re-fetches the device position. Requires permission to have already
-  /// been granted; otherwise no-op and returns false. Fixes outside the
-  /// Cáceres bounding box are discarded and the fallback is kept para evitar
-  /// que posiciones no válidas contaminen la UI.
+  /// Actualiza la posición si existe permiso y el fix pertenece a Cáceres.
+  ///
+  /// Los fixes fuera del área cubierta se descartan para no desplazar la UI a
+  /// zonas sin catálogo; la posición anterior se conserva como fallback.
   Future<bool> refresh() async {
     if (!_granted) return false;
+
     try {
       final pos = await Geolocator.getCurrentPosition(
         locationSettings: const LocationSettings(
@@ -58,14 +62,15 @@ class LocationService {
         ),
       );
       final fix = LatLng(pos.latitude, pos.longitude);
+
       if (!_isWithinCaceres(fix)) {
-        // Se conserva la posición previa y se marca el flag para ofrecer el
-        // selector manual de ubicación.
         _outsideCaceres = true;
         return false;
       }
+
       _outsideCaceres = false;
       position.value = fix;
+
       return true;
     } catch (_) {
       return false;

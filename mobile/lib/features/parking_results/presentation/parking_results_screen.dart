@@ -14,6 +14,10 @@ import '../../parking_detail/presentation/parking_detail_screen.dart';
 import 'widgets/parking_result_tile.dart';
 import 'widgets/results_header.dart';
 
+/// Pantalla de listado de resultados para los filtros activos del mapa.
+///
+/// Permite revisar todos los aparcamientos encontrados, cambiar el criterio de
+/// ordenación y abrir el detalle de cualquier elemento.
 class ParkingResultsScreen extends StatefulWidget {
   const ParkingResultsScreen({super.key, required this.filters});
 
@@ -37,12 +41,16 @@ class _ParkingResultsScreenState extends State<ParkingResultsScreen> {
     switch (_sort) {
       case ResultsSortMode.distance:
         return places;
+
       case ResultsSortMode.name:
         final sorted = [...places]
-          ..sort((a, b) => a.displayName.toLowerCase().compareTo(
-            b.displayName.toLowerCase(),
-          ));
+          ..sort(
+                (a, b) => a.displayName.toLowerCase().compareTo(
+              b.displayName.toLowerCase(),
+            ),
+          );
         return sorted;
+
       case ResultsSortMode.spaces:
         final sorted = [...places]
           ..sort((a, b) {
@@ -54,8 +62,14 @@ class _ParkingResultsScreenState extends State<ParkingResultsScreen> {
     }
   }
 
+  Future<List<ParkingPlace>> _reloadPlaces() {
+    return parkingRepository.getNearby(widget.filters.toQuery());
+  }
+
   @override
   Widget build(BuildContext context) {
+    final origin = widget.filters.center ?? locationService.position.value;
+
     return Scaffold(
       backgroundColor: AppColors.pageBackground,
       body: Column(
@@ -77,19 +91,20 @@ class _ParkingResultsScreenState extends State<ParkingResultsScreen> {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Center(child: CircularProgressIndicator());
                 }
+
                 if (snapshot.hasError) {
                   return ApiErrorState(
                     error: snapshot.error!,
                     onRetry: () => setState(
-                      () => _placesFuture = parkingRepository.getNearby(
-                        widget.filters.toQuery(),
-                      ),
+                          () => _placesFuture = _reloadPlaces(),
                     ),
                   );
                 }
+
                 final places = _sortPlaces(
                   snapshot.data ?? const <ParkingPlace>[],
                 );
+
                 return Column(
                   children: [
                     ResultsHeader(
@@ -101,36 +116,34 @@ class _ParkingResultsScreenState extends State<ParkingResultsScreen> {
                       child: places.isEmpty
                           ? const _EmptyState()
                           : ListView.separated(
-                              padding: const EdgeInsets.fromLTRB(
-                                AppSpacing.horizontalPadding,
-                                AppSpacing.xs,
-                                AppSpacing.horizontalPadding,
-                                AppSpacing.lg,
+                        padding: const EdgeInsets.fromLTRB(
+                          AppSpacing.horizontalPadding,
+                          AppSpacing.xs,
+                          AppSpacing.horizontalPadding,
+                          AppSpacing.lg,
+                        ),
+                        itemCount: places.length,
+                        separatorBuilder: (_, _) =>
+                        const SizedBox(height: AppSpacing.md),
+                        itemBuilder: (_, i) {
+                          final place = places[i];
+                          final distanceMeters = const Distance()(
+                            origin,
+                            place.position,
+                          );
+
+                          return ParkingResultTile(
+                            place: place,
+                            distanceMeters: distanceMeters,
+                            onTap: () => Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) =>
+                                    ParkingDetailScreen(place: place),
                               ),
-                              itemCount: places.length,
-                              separatorBuilder: (_, _) =>
-                                  const SizedBox(height: AppSpacing.md),
-                              itemBuilder: (_, i) {
-                                final place = places[i];
-                                final origin =
-                                    widget.filters.center ??
-                                    locationService.position.value;
-                                final distanceMeters = const Distance()(
-                                  origin,
-                                  place.position,
-                                );
-                                return ParkingResultTile(
-                                  place: place,
-                                  distanceMeters: distanceMeters,
-                                  onTap: () => Navigator.of(context).push(
-                                    MaterialPageRoute(
-                                      builder: (_) =>
-                                          ParkingDetailScreen(place: place),
-                                    ),
-                                  ),
-                                );
-                              },
                             ),
+                          );
+                        },
+                      ),
                     ),
                   ],
                 );

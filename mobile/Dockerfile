@@ -1,8 +1,7 @@
 # syntax=docker/dockerfile:1.7
-# ============================================================
-# Imagen del frontend Flutter web de AparCáceres.
-# Build multi-stage: compila el bundle web y lo sirve con nginx.
-# ============================================================
+# Imagen runtime del frontend Flutter web de AparCáceres.
+# Usa build multi-stage para compilar el bundle web y servir únicamente los
+# artefactos estáticos finales con nginx.
 
 FROM ghcr.io/cirruslabs/flutter:stable AS build
 
@@ -10,7 +9,6 @@ WORKDIR /app
 
 ARG API_BASE_URL=http://localhost:8000
 
-# Dependencias primero para aprovechar la caché de capa.
 COPY pubspec.yaml pubspec.lock ./
 RUN flutter pub get
 
@@ -27,4 +25,3 @@ EXPOSE 80
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
   CMD wget -qO- http://127.0.0.1/ >/dev/null 2>&1 || exit 1
-

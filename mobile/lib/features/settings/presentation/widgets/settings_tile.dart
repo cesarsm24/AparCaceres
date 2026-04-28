@@ -5,6 +5,9 @@ import '../../../../theme/app_colors.dart';
 import '../../../../theme/app_spacing.dart';
 import '../../data/settings_items.dart';
 
+/// Fila de ajuste reutilizable.
+///
+/// Muestra icono, etiqueta, valor opcional y chevron de navegación.
 class SettingsTile extends StatelessWidget {
   const SettingsTile({super.key, required this.item, this.onTap});
 

@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
 
+/// Paleta de color compartida por la aplicación.
+///
+/// Agrupa los colores semánticos usados por temas y widgets para evitar
+/// literales dispersos en la interfaz.
 class AppColors {
   const AppColors._();
 

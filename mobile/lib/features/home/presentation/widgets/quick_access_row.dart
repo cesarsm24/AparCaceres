@@ -5,6 +5,7 @@ import '../../../../theme/app_spacing.dart';
 import '../../../parking/domain/parking_place.dart';
 import 'quick_access_card.dart';
 
+/// Fila de accesos rápidos a filtros habituales del mapa.
 class QuickAccessRow extends StatelessWidget {
   const QuickAccessRow({
     super.key,

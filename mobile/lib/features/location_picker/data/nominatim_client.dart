@@ -5,9 +5,13 @@ import 'package:latlong2/latlong.dart';
 
 import '../domain/place_suggestion.dart';
 
+/// Cliente de búsqueda de direcciones mediante Nominatim.
+///
+/// Restringe las consultas a España y al área aproximada de Cáceres para que
+/// el selector de ubicación solo proponga resultados útiles para el catálogo.
 class NominatimClient {
   NominatimClient({http.Client? client, this.userAgent = _defaultUserAgent})
-    : _client = client ?? http.Client();
+      : _client = client ?? http.Client();
 
   static const String _defaultUserAgent = 'AparCaceres/1.0 (mobile app)';
   static const String _host = 'nominatim.openstreetmap.org';
@@ -16,6 +20,7 @@ class NominatimClient {
   final http.Client _client;
   final String userAgent;
 
+  /// Busca lugares dentro del área configurada y devuelve sugerencias normalizadas.
   Future<List<PlaceSuggestion>> search(String query, {int limit = 8}) async {
     final trimmed = query.trim();
     if (trimmed.isEmpty) return const <PlaceSuggestion>[];
@@ -44,9 +49,10 @@ class NominatimClient {
     }
 
     final decoded = jsonDecode(response.body) as List<dynamic>;
+
     return decoded
         .map((item) => _parse(item as Map<String, dynamic>))
-        .where((s) => s != null)
+        .where((suggestion) => suggestion != null)
         .cast<PlaceSuggestion>()
         .toList();
   }
@@ -54,6 +60,7 @@ class NominatimClient {
   PlaceSuggestion? _parse(Map<String, dynamic> json) {
     final lat = double.tryParse('${json['lat']}');
     final lon = double.tryParse('${json['lon']}');
+
     if (lat == null || lon == null) return null;
 
     final displayName = (json['display_name'] as String?) ?? '';
@@ -72,6 +79,7 @@ class NominatimClient {
     final name = json['name'] as String?;
     if (name != null && name.trim().isNotEmpty) return name;
     if (address == null) return null;
+
     for (final key in const [
       'road',
       'pedestrian',
@@ -85,12 +93,14 @@ class NominatimClient {
       final value = address[key] as String?;
       if (value != null && value.trim().isNotEmpty) return value;
     }
+
     return null;
   }
 
   void close() => _client.close();
 }
 
+/// Error devuelto por el servicio de geocodificación.
 class NominatimException implements Exception {
   const NominatimException(this.message, this.statusCode);
 

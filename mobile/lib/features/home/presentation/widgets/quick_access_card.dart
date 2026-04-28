@@ -4,6 +4,10 @@ import '../../../../shared/widgets/app_card.dart';
 import '../../../../theme/app_colors.dart';
 import '../../../../theme/app_spacing.dart';
 
+/// Tarjeta de acceso rápido para filtros frecuentes.
+///
+/// Presenta una acción compacta con icono y etiqueta, pensada para su uso en
+/// filas de navegación o filtrado inicial.
 class QuickAccessCard extends StatelessWidget {
   const QuickAccessCard({
     super.key,

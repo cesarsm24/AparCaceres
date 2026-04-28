@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 
 import '../../../../shared/constants/app_assets.dart';
 
+/// Bloque de marca de la pantalla de bienvenida.
+///
+/// Renderiza el logotipo principal con tamaño configurable.
 class WelcomeBranding extends StatelessWidget {
   const WelcomeBranding({super.key, this.size = 300});
 

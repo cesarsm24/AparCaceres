@@ -5,6 +5,10 @@ import '../../../../theme/app_spacing.dart';
 import '../../domain/parking_place.dart';
 import '../parking_ui.dart';
 
+/// Miniatura visual de un aparcamiento.
+///
+/// Muestra la imagen remota cuando existe y cae a un placeholder semántico
+/// basado en la categoría si la URL falta o falla al cargar.
 class ParkingThumbnail extends StatelessWidget {
   const ParkingThumbnail({
     super.key,
@@ -20,6 +24,7 @@ class ParkingThumbnail extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final imageUrl = place.imageUrl;
+
     return ClipRRect(
       borderRadius: BorderRadius.circular(borderRadius),
       child: Container(
@@ -29,10 +34,10 @@ class ParkingThumbnail extends StatelessWidget {
         child: imageUrl == null || imageUrl.isEmpty
             ? _Placeholder(place: place)
             : Image.network(
-                imageUrl,
-                fit: BoxFit.cover,
-                errorBuilder: (_, _, _) => _Placeholder(place: place),
-              ),
+          imageUrl,
+          fit: BoxFit.cover,
+          errorBuilder: (_, _, _) => _Placeholder(place: place),
+        ),
       ),
     );
   }

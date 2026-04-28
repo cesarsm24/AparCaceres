@@ -20,9 +20,7 @@ enum ParkingRegulation { free, paid, blueZone, loading, reserved }
 
 enum ParkingGeometryType { point, polygon, lineString }
 
-/// Serialización al vocabulario wire del backend. Se mantiene aquí para que
-/// quede al lado de los `_*FromWire` y cualquier cambio en el contrato se
-/// vea en un único archivo.
+/// Valor wire de categoría esperado por el backend.
 extension ParkingCategoryWire on ParkingCategory {
   String get wire => switch (this) {
     ParkingCategory.parking => 'parking',
@@ -37,6 +35,7 @@ extension ParkingCategoryWire on ParkingCategory {
   };
 }
 
+/// Valor wire de vehículo esperado por el backend.
 extension ParkingVehicleTypeWire on ParkingVehicleType {
   String get wire => switch (this) {
     ParkingVehicleType.car => 'car',
@@ -45,6 +44,7 @@ extension ParkingVehicleTypeWire on ParkingVehicleType {
   };
 }
 
+/// Valor wire de regulación esperado por el backend.
 extension ParkingRegulationWire on ParkingRegulation {
   String get wire => switch (this) {
     ParkingRegulation.free => 'free',
@@ -55,10 +55,7 @@ extension ParkingRegulationWire on ParkingRegulation {
   };
 }
 
-/// Decodifica un valor wire del backend en su `ParkingCategory`. Reutiliza el
-/// mismo switch que `ParkingPlace.fromJson` para que el contrato quede en un
-/// único sitio. Devuelve `ParkingCategory.parking` ante valores desconocidos
-/// para no romper la UI si el backend introduce categorías nuevas.
+/// Decodifica una categoría wire con fallback seguro.
 ParkingCategory parkingCategoryFromWire(String? value) => switch (value) {
   'paid_parking' => ParkingCategory.paidParking,
   'street_line' => ParkingCategory.streetLine,
@@ -71,6 +68,10 @@ ParkingCategory parkingCategoryFromWire(String? value) => switch (value) {
   _ => ParkingCategory.parking,
 };
 
+/// Modelo de dominio de un aparcamiento.
+///
+/// Mantiene el contrato de lectura compartido con el backend y normaliza las
+/// geometrías GeoJSON al formato que consume la UI.
 class ParkingPlace {
   const ParkingPlace({
     required this.id,
@@ -120,9 +121,11 @@ class ParkingPlace {
 
   String get displayName {
     if (name.trim().isNotEmpty) return name;
+
     final street = streetName?.trim();
     if (street != null && street.isNotEmpty) return street;
-    return 'Ubicacion sin nombre';
+
+    return 'Ubicación sin nombre';
   }
 
   String get addressLabel {
@@ -130,8 +133,10 @@ class ParkingPlace {
       if (streetType != null && streetType!.trim().isNotEmpty) streetType,
       if (streetName != null && streetName!.trim().isNotEmpty) streetName,
     ];
+
     if (parts.isNotEmpty) return parts.join(' ');
-    return neighborhood ?? district ?? 'Caceres';
+
+    return neighborhood ?? district ?? 'Cáceres';
   }
 
   factory ParkingPlace.fromJson(Map<String, dynamic> json) {
@@ -171,17 +176,7 @@ class ParkingPlace {
   }
 
   static ParkingCategory _categoryFromWire(String? value) {
-    return switch (value) {
-      'paid_parking' => ParkingCategory.paidParking,
-      'street_line' => ParkingCategory.streetLine,
-      'street_battery' => ParkingCategory.streetBattery,
-      'blue_zone' => ParkingCategory.blueZone,
-      'accessible' => ParkingCategory.accessible,
-      'motorbike' => ParkingCategory.motorbike,
-      'bicycle' => ParkingCategory.bicycle,
-      'loading' => ParkingCategory.loading,
-      _ => ParkingCategory.parking,
-    };
+    return parkingCategoryFromWire(value);
   }
 
   static ParkingVehicleType _vehicleTypeFromWire(String? value) {
@@ -213,6 +208,7 @@ class ParkingPlace {
   static double _toDouble(Object? value) {
     if (value is num) return value.toDouble();
     if (value is String) return double.parse(value);
+
     throw FormatException('Invalid coordinate value: $value');
   }
 
@@ -221,11 +217,13 @@ class ParkingPlace {
     if (value is int) return value;
     if (value is num) return value.round();
     if (value is String) return int.tryParse(value);
+
     return null;
   }
 
   static List<List<LatLng>> _parsePolygon(Object? coordinates) {
     if (coordinates is! List) return const [];
+
     return coordinates
         .map(_parseLineString)
         .where((ring) => ring.length >= 3)
@@ -234,11 +232,13 @@ class ParkingPlace {
 
   static List<LatLng> _parseLineString(Object? coordinates) {
     if (coordinates is! List) return const [];
+
     return coordinates.map(_parseCoordinate).whereType<LatLng>().toList();
   }
 
   static LatLng? _parseCoordinate(Object? coordinate) {
     if (coordinate is! List || coordinate.length < 2) return null;
+
     return LatLng(_toDouble(coordinate[1]), _toDouble(coordinate[0]));
   }
 }

@@ -5,6 +5,7 @@ import '../../../../theme/app_spacing.dart';
 import '../../domain/parking_place.dart';
 import '../parking_ui.dart';
 
+/// Etiqueta visual para el régimen de uso del aparcamiento.
 class RegulationBadge extends StatelessWidget {
   const RegulationBadge({super.key, required this.regulation});
 
