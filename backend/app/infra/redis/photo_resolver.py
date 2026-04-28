@@ -1,9 +1,10 @@
 """Resolución de fotos embebidas en fichas municipales.
 
-Extrae URLs de imagen desde fichas HTML del SIG municipal para aparcamientos
-que no incluyen `URL_FOTO` en el GeoJSON. Los resultados se cachean en Redis
-por id de aparcamiento, incluyendo resultados negativos, para evitar scraping
-repetido en importaciones sucesivas.
+Esta capa extrae URLs de imagen desde fichas HTML del SIG municipal para los
+aparcamientos que no incluyen `URL_FOTO` en el GeoJSON. El resultado se cachea
+en Redis por id de aparcamiento, incluyendo resultados negativos, para evitar
+scraping repetido en importaciones sucesivas y mantener estable el coste del
+importador.
 """
 
 from __future__ import annotations
@@ -41,7 +42,12 @@ _USER_AGENT = "AparCaceres-importer/1.0 (+https://github.com/cesarsm24/AparCacer
 
 
 def extract_photo_url(html: str, *, base_url: str = _SIG_BASE) -> Optional[str]:
-    """Extrae la primera URL de foto válida encontrada en una ficha HTML."""
+    """Extrae la primera URL de foto válida encontrada en una ficha HTML.
+
+    La búsqueda prioriza atributos `src` y `href` que apunten a recursos de
+    `fotosOriginales`, porque son las rutas que publica el SIG para imágenes de
+    aparcamiento.
+    """
     if not html:
         return None
 
@@ -54,7 +60,11 @@ def extract_photo_url(html: str, *, base_url: str = _SIG_BASE) -> Optional[str]:
 
 
 def _normalize_sig_photo_url(raw_url: str, *, base_url: str = _SIG_BASE) -> Optional[str]:
-    """Normaliza variantes de URL del SIG y valida que apunten a una imagen."""
+    """Normaliza variantes de URL del SIG y valida que apunten a una imagen.
+
+    Corrige variantes relativas, escapes de HTML y formas degeneradas del
+    esquema antes de aceptar la URL como imagen pública del SIG.
+    """
     if not raw_url:
         return None
 
@@ -84,7 +94,11 @@ class _ResolveTask:
 
 
 async def _fetch_ficha(client: httpx.AsyncClient, url: str) -> Optional[str]:
-    """Descarga una ficha HTML sin propagar errores de red al importador."""
+    """Descarga una ficha HTML sin propagar errores de red al importador.
+
+    La función convierte fallos de red o respuestas no exitosas en `None` para
+    que la resolución de fotos no interrumpa la importación del catálogo.
+    """
     try:
         response = await client.get(url, follow_redirects=True)
     except httpx.HTTPError as exc:
@@ -99,7 +113,11 @@ async def _fetch_ficha(client: httpx.AsyncClient, url: str) -> Optional[str]:
 
 
 def _looks_like_image_url(url: str) -> bool:
-    """Comprueba si una URL apunta a una imagen publicada por el SIG."""
+    """Comprueba si una URL apunta a una imagen publicada por el SIG.
+
+    Se aplica una validación conservadora para evitar cachear enlaces que no
+    correspondan a imágenes servidas por el dominio municipal.
+    """
     lower = url.lower()
     return lower.startswith(("http://", "https://")) and "/fotosoriginales/" in lower and (
         lower.endswith((".jpg", ".jpeg", ".png", ".gif", ".webp"))
@@ -110,7 +128,11 @@ async def resolve_photo_url(
     client: httpx.AsyncClient,
     ficha_url: str,
 ) -> Optional[str]:
-    """Resuelve la primera foto embebida en una ficha municipal."""
+    """Resuelve la primera foto embebida en una ficha municipal.
+
+    Obtiene la ficha, extrae la primera URL válida y devuelve `None` si la
+    página no está disponible o no contiene una imagen utilizable.
+    """
     html = await _fetch_ficha(client, ficha_url)
     if html is None:
         return None
@@ -122,7 +144,11 @@ async def resolve_photo_url_from_candidates(
     client: httpx.AsyncClient,
     candidate_urls: Sequence[str],
 ) -> Optional[str]:
-    """Devuelve la primera imagen válida entre varias URLs candidatas."""
+    """Devuelve la primera imagen válida entre varias URLs candidatas.
+
+    Permite mezclar URLs ya resueltas con fichas HTML. Si una candidata ya es
+    una imagen válida, se devuelve sin realizar otra petición HTTP.
+    """
     for candidate in candidate_urls:
         if not candidate:
             continue
@@ -148,7 +174,8 @@ async def resolve_many(
     """Resuelve fotos en paralelo y devuelve solo resultados positivos.
 
     La caché distingue entre ausencia de entrada y resultado negativo ya
-    comprobado mediante un sentinel vacío persistido en Redis.
+    comprobado mediante un sentinel vacío persistido en Redis. Así se evita
+    repetir peticiones a fichas que ya se sabe que no contienen imagen.
     """
     pending: list[_ResolveTask] = []
     resolved: dict[str, str] = {}
@@ -193,7 +220,7 @@ async def resolve_many(
 
     # El SIG puede presentar certificados no incluidos en el bundle del runtime.
     # Solo se hacen lecturas públicas sin credenciales, por lo que se prioriza
-    # disponibilidad del import sobre verificación estricta de TLS.
+    # la disponibilidad del import sobre la verificación estricta de TLS.
     async with httpx.AsyncClient(
         timeout=timeout_obj,
         headers=headers,

@@ -1,9 +1,9 @@
 """Configuración central del servicio.
 
-Define rutas, claves Redis y parámetros de ejecución leídos desde variables de
-entorno o desde `backend/.env`. La configuración falla al arrancar en
-producción cuando faltan secretos u opciones críticas, evitando despliegues con
-valores inseguros o de ejemplo.
+Agrupa rutas, claves Redis y parámetros de ejecución leídos desde variables
+de entorno o desde `backend/.env`. La capa valida al arrancar los valores que
+no pueden quedar implícitos en producción y expone el resto como constantes
+compartidas por routers, importador y cliente Redis.
 """
 
 from __future__ import annotations
@@ -52,7 +52,11 @@ CORS_ALLOW_ALL = CORS_ORIGINS == ["*"]
 
 
 def _looks_like_example_value(value: str) -> bool:
-    """Detecta valores de plantilla que no deben usarse como secretos reales."""
+    """Detecta valores de plantilla que no deben usarse como secretos reales.
+
+    Evita que un `.env` copiado del ejemplo llegue a producción sin reemplazar
+    los marcadores angulares.
+    """
     return value.startswith("<") and value.endswith(">")
 
 

@@ -1,12 +1,14 @@
 """Clientes Redis compartidos del servicio.
 
-Proporciona un cliente asíncrono para handlers FastAPI y un cliente síncrono
-para operaciones pesadas ejecutadas fuera del event loop. Ambos clientes usan
-la misma configuración de conexión y se registran en el estado de la aplicación
-durante el ciclo de vida.
+Esta capa centraliza la conexión a Redis Stack para todo el backend. Expone
+un cliente asíncrono para handlers HTTP y un cliente síncrono para flujos
+pesados ejecutados fuera del event loop, como la importación del catálogo y
+la construcción de consultas RediSearch.
 
-El arranque no falla si Redis aún no está disponible; los endpoints devolverán
-503 cuando intenten usar el cliente.
+El `lifespan` crea ambos clientes al arrancar, intenta verificar la
+disponibilidad del servidor y prepara el índice de búsqueda si RediSearch
+responde. La ausencia inicial de Redis no aborta el arranque: los handlers
+devuelven 503 cuando necesitan el cliente y la dependencia no está operativa.
 """
 
 from __future__ import annotations
@@ -25,7 +27,11 @@ logger = logging.getLogger(__name__)
 
 
 def _build_async_pool() -> aioredis.ConnectionPool:
-    """Construye el pool Redis asíncrono usado por los handlers."""
+    """Construye el pool Redis asíncrono usado por los handlers HTTP.
+
+    El pool comparte parámetros con el cliente síncrono para mantener el
+    mismo contrato de conectividad frente al mismo servidor Redis.
+    """
     return aioredis.ConnectionPool(
         host=REDIS_HOST,
         port=REDIS_PORT,
@@ -41,7 +47,11 @@ def _build_async_pool() -> aioredis.ConnectionPool:
 
 
 def _build_sync_client() -> redis.Redis:
-    """Construye el cliente Redis síncrono usado por flujos en thread."""
+    """Construye el cliente Redis síncrono usado por flujos en thread.
+
+    Se usa con `asyncio.to_thread` para operaciones bloqueantes que no se
+    benefician de una API asíncrona propia.
+    """
     return redis.Redis(
         host=REDIS_HOST,
         port=REDIS_PORT,
@@ -59,9 +69,10 @@ def _build_sync_client() -> redis.Redis:
 async def lifespan(app: FastAPI):
     """Registra clientes Redis durante el ciclo de vida de la aplicación.
 
-    La disponibilidad inicial se comprueba para registrar el estado y crear el
-    índice de búsqueda si RediSearch está operativo. La falta de conexión no
-    impide arrancar el servicio.
+    El arranque valida la conectividad, registra el estado del backend y
+    garantiza el índice principal de RediSearch cuando el módulo está
+    disponible. Si Redis todavía no responde, la aplicación sigue en pie y
+    las rutas devolverán 503 al intentar acceder a la dependencia.
     """
     pool = _build_async_pool()
     client = aioredis.Redis(connection_pool=pool)
@@ -99,15 +110,27 @@ async def lifespan(app: FastAPI):
 
 
 def get_redis(request: Request) -> aioredis.Redis:
-    """Devuelve el cliente Redis asíncrono de la aplicación."""
+    """Devuelve el cliente Redis asíncrono de la aplicación.
+
+    Lo usan los handlers que realizan operaciones directas y cortas sobre
+    Redis sin necesidad de saltar a un hilo adicional.
+    """
     return request.app.state.redis
 
 
 def get_redis_sync(request: Request) -> redis.Redis:
-    """Devuelve el cliente Redis síncrono de la aplicación."""
+    """Devuelve el cliente Redis síncrono de la aplicación.
+
+    Lo usan los handlers que delegan en `asyncio.to_thread` para mantener el
+    event loop libre mientras se ejecutan consultas o importaciones pesadas.
+    """
     return request.app.state.redis_sync
 
 
 def raise_redis_503(exc: Exception) -> HTTPException:
-    """Convierte un fallo de Redis en una respuesta HTTP 503."""
+    """Convierte un fallo de Redis en una respuesta HTTP 503.
+
+    Mantiene homogéneo el contrato de error cuando la infraestructura de
+    persistencia o búsqueda no está disponible.
+    """
     return HTTPException(status_code=503, detail=f"Redis no disponible: {exc}")

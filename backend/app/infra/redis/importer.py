@@ -1,12 +1,13 @@
 """Importación de datasets GeoJSON municipales a Redis.
 
-Normaliza features heterogéneos del portal municipal al contrato público
-`ParkingPlaceOut`, persiste cada aparcamiento como hash Redis y mantiene el
-índice RediSearch asociado.
+Esta capa transforma features heterogéneos del portal municipal al contrato
+público `ParkingPlaceOut`, deriva identificadores estables, aplana cada
+aparcamiento en un hash Redis y mantiene el índice RediSearch asociado.
 
-La importación usa doble buffer: construye una nueva generación bajo el prefijo
-de staging y, al finalizar, sustituye el catálogo activo. Esto reduce la ventana
-en la que las lecturas pueden observar un catálogo incompleto.
+El flujo utiliza doble buffer: primero construye una generación de staging
+bajo un prefijo temporal y, solo cuando la escritura ha terminado, sustituye
+el catálogo activo. De este modo se reduce la ventana en la que una lectura
+podría observar un conjunto parcial de datos.
 """
 
 from __future__ import annotations
@@ -156,7 +157,12 @@ _HASH_FIELDS: tuple[str, ...] = (
 
 @dataclass(frozen=True)
 class SourceProfile:
-    """Defaults e identificadores asociados a un fichero GeoJSON de origen."""
+    """Perfil de normalización asociado a un fichero GeoJSON de origen.
+
+    Agrupa el nombre del fichero, el prefijo de ids corto, los valores por
+    defecto para categoría, vehículo y regulación, y el nombre de dataset que
+    se expone en el contrato público.
+    """
 
     filename: str
     short_id_prefix: str
@@ -272,7 +278,12 @@ _GENERIC_PROFILE = SourceProfile(
 
 
 def profile_for(filename: str) -> SourceProfile:
-    """Devuelve el perfil registrado o uno genérico trazable por nombre de fichero."""
+    """Devuelve el perfil registrado o uno genérico trazable por nombre de fichero.
+
+    Los ficheros conocidos usan reglas de normalización específicas. Los
+    desconocidos caen a un perfil genérico que conserva trazabilidad por stem
+    de fichero sin bloquear la importación.
+    """
     profile = SOURCE_REGISTRY.get(filename)
     if profile is not None:
         return profile
@@ -398,9 +409,10 @@ def derive_stable_id(
 ) -> Optional[str]:
     """Deriva un identificador estable y namespaced para un feature.
 
-    La prioridad es `mslink`, claves municipales explícitas y, como último
-    recurso, un hash de geometría y propiedades relevantes. El namespace evita
-    colisiones entre datasets municipales que reutilizan identificadores.
+    La prioridad es `mslink`, después las claves municipales explícitas y, como
+    último recurso, un hash de geometría y propiedades relevantes. El namespace
+    evita colisiones entre datasets distintos que reutilizan identificadores
+    locales.
     """
     namespace = _namespace_for(source)
 
@@ -513,8 +525,10 @@ def feature_to_place(
 ) -> Optional[ParkingPlaceOut]:
     """Convierte un feature GeoJSON al contrato `ParkingPlaceOut`.
 
-    Devuelve `None` si la geometría no es soportada, no puede derivarse un id
-    estable o no existe un punto representativo válido.
+    El proceso valida la geometría, colapsa componentes Multi* cuando existen,
+    calcula un punto representativo para indexación geoespacial, clasifica las
+    URLs municipales y completa los valores faltantes con el perfil de origen.
+    Devuelve `None` si el feature no puede normalizarse con garantías mínimas.
     """
     geometry = feature.get("geometry") or {}
     properties = feature.get("properties") or {}
@@ -639,7 +653,9 @@ def place_to_redis_mapping(place: ParkingPlaceOut) -> dict[str, str]:
     """Aplana un aparcamiento a un mapping apto para `HSET`.
 
     Redis almacena los campos como cadenas. Los valores ausentes se omiten para
-    que la reconstrucción conserve `null` en el contrato público.
+    que la reconstrucción conserve `null` en el contrato público. Además, los
+    campos derivados `location` y `searchText` se materializan aquí para que el
+    índice RediSearch pueda consultar sin recomputar el contrato completo.
     """
     dumped = place.model_dump(mode="json")
     out: dict[str, str] = {}
@@ -662,7 +678,12 @@ def place_to_redis_mapping(place: ParkingPlaceOut) -> dict[str, str]:
 
 
 def place_from_redis_hash(data: dict[str, str]) -> ParkingPlaceOut:
-    """Reconstruye un aparcamiento desde un hash Redis."""
+    """Reconstruye un aparcamiento desde un hash Redis.
+
+    Es la operación inversa de `place_to_redis_mapping`: recupera los tipos
+    compuestos que Redis almacena serializados y delega la validación final en
+    `ParkingPlaceOut`.
+    """
     payload: dict[str, Any] = dict(data)
 
     if "coordinates" in payload:
@@ -678,7 +699,13 @@ def run_import_sources(
     sources: Iterable[tuple[Iterable[dict], Optional[SourceProfile]]],
     rdb: redis.Redis,
 ) -> dict[str, Any]:
-    """Importa varios conjuntos de features con su perfil de origen."""
+    """Importa varios conjuntos de features con su perfil de origen.
+
+    Esta función es la entrada pública para importar un lote ya agrupado por
+    dataset. Conserva la asociación entre features y perfil para que la
+    normalización y la generación de ids puedan aplicar reglas específicas por
+    origen.
+    """
     paired: list[tuple[dict, Optional[SourceProfile]]] = []
 
     for features, profile in sources:
@@ -692,7 +719,12 @@ def _run_import_paired(
     features_with_profile: Iterator[tuple[dict, Optional[SourceProfile]]],
     rdb: redis.Redis,
 ) -> dict[str, Any]:
-    """Ejecuta la importación completa con staging, swap e invalidación de caché."""
+    """Ejecuta la importación completa con staging, swap e invalidación de caché.
+
+    Normaliza primero todas las features, después resuelve duplicados de ids,
+    opcionalmente completa fotos, reconstruye el índice de staging y, por
+    último, intercambia la generación activa con un renombrado controlado.
+    """
     pairs = list(features_with_profile)
 
     imported = 0
@@ -845,7 +877,11 @@ def _run_import_paired(
 
 
 def _unlink_or_delete(pipe, *keys: str) -> None:
-    """Encola borrado no bloqueante y degrada a `DELETE` si no existe `UNLINK`."""
+    """Encola borrado no bloqueante y degrada a `DELETE` si no existe `UNLINK`.
+
+    Se usa para limpiar generaciones antiguas sin bloquear el servidor cuando
+    el cliente Redis soporta la operación moderna.
+    """
     if not keys:
         return
 
@@ -856,7 +892,11 @@ def _unlink_or_delete(pipe, *keys: str) -> None:
 
 
 def _rename(pipe, src: str, dst: str) -> None:
-    """Encola un renombrado compatible con clientes Redis de test."""
+    """Encola un renombrado compatible con clientes Redis de test.
+
+    Algunos dobles de prueba exponen solo la API mínima. Esta envoltura mantiene
+    el contrato de producción sin introducir dependencias al backend real.
+    """
     if hasattr(pipe, "rename"):
         pipe.rename(src, dst)
     else:
@@ -864,7 +904,11 @@ def _rename(pipe, src: str, dst: str) -> None:
 
 
 def discover_geojson_files(data_dir: Path) -> list[Path]:
-    """Lista ficheros GeoJSON importables en orden estable."""
+    """Lista ficheros GeoJSON importables en orden estable.
+
+    El orden determinista evita cambios espurios en importaciones y facilita la
+    comparación de resultados entre ejecuciones.
+    """
     if not data_dir.exists() or not data_dir.is_dir():
         return []
 
@@ -872,7 +916,11 @@ def discover_geojson_files(data_dir: Path) -> list[Path]:
 
 
 def _load_features(path: Path) -> list[dict]:
-    """Lee las features de un GeoJSON, o una lista vacía si no existen."""
+    """Lee las features de un GeoJSON, o una lista vacía si no existen.
+
+    El importador solo necesita la colección `features`; el resto del documento
+    se ignora porque no forma parte del contrato público.
+    """
     with path.open("r", encoding="utf-8") as fp:
         data = json.load(fp)
 
@@ -887,7 +935,8 @@ def run_import_dir(data_dir: Path, rdb: redis.Redis) -> dict[str, Any]:
     """Importa todos los GeoJSON de un directorio.
 
     Los ficheros ilegibles se registran y no interrumpen el resto de la
-    importación. Los errores de Redis se propagan a la capa HTTP.
+    importación. Los errores de Redis se propagan a la capa HTTP porque la
+    persistencia es una dependencia operativa y no un detalle local de parsing.
     """
     files = discover_geojson_files(data_dir)
     if not files:
