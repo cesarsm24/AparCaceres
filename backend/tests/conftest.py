@@ -117,6 +117,11 @@ class FakeRedis:
         self.strings[key] = str(value)
         return True
 
+    def set(self, key: str, value: str, ex: int | None = None) -> bool:
+        # `ex` se ignora: estos tests no inspeccionan TTLs.
+        self.strings[key] = str(value)
+        return True
+
     def get(self, key: str) -> str | None:
         return self.strings.get(key)
 
@@ -242,6 +247,10 @@ class FakePipeline:
         self._cmds.append(("delete", keys))
         return self
 
+    def set(self, key: str, value: str, ex: int | None = None) -> "FakePipeline":
+        self._cmds.append(("set", key, value, ex))
+        return self
+
     def hset(self, key: str, mapping: dict | None = None) -> "FakePipeline":
         self._cmds.append(("hset", key, mapping))
         return self
@@ -259,6 +268,8 @@ class FakePipeline:
         for cmd in self._cmds:
             if cmd[0] == "delete":
                 results.append(self.parent.delete(*cmd[1]))
+            elif cmd[0] == "set":
+                results.append(self.parent.set(cmd[1], cmd[2], ex=cmd[3]))
             elif cmd[0] == "hset":
                 results.append(self.parent.hset(cmd[1], mapping=cmd[2]))
             elif cmd[0] == "hgetall":

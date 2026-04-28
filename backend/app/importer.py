@@ -23,6 +23,7 @@ buffer: construye la nueva generación bajo `parking_v2:*` con su propio
 
 from __future__ import annotations
 
+import asyncio
 import hashlib
 import json
 import logging
@@ -33,8 +34,10 @@ from typing import Any, Iterable, Iterator, Optional
 
 import redis
 
+from . import photo_resolver
 from .config import (
     CACHE_VERSION_KEY,
+    FETCH_PHOTOS,
     PARKING_KEY_PREFIX,
     SEARCH_INDEX_NAME,
     STAGING_INDEX_NAME,
@@ -898,6 +901,44 @@ def _run_import_paired(
     if len(final_ids) != len(set(final_ids)):
         raise ValueError("ids duplicados tras desambiguar la importación")
 
+    photos_resolved = 0
+    if FETCH_PHOTOS:
+        # Solo escrapeamos las fichas de los places que NO han traído `imageUrl`
+        # explícito en el GeoJSON. Para esos, preferimos `urlFicha`
+        # (`fichatoponimia.php`) sobre `urlVia` (`fichacalle.php`) porque la
+        # primera trae la foto del propio toponímico/aparcamiento; la segunda
+        # cae a la foto de la calle como mejor esfuerzo.
+        ficha_tasks: list[tuple[str, str]] = []
+        for place in valid_places:
+            if place.imageUrl:
+                continue
+            ficha = place.urlFicha or place.urlVia
+            if ficha:
+                ficha_tasks.append((place.id, ficha))
+
+        if ficha_tasks:
+            try:
+                resolved_urls = asyncio.run(
+                    photo_resolver.resolve_many(ficha_tasks, rdb)
+                )
+            except Exception:
+                # Cualquier fallo del scraping no debe abortar el import: los
+                # places quedan sin foto y el resumen lo refleja como 0
+                # resoluciones.
+                logger.exception("Resolución de fotos falló; continuando sin fotos")
+                resolved_urls = {}
+
+            if resolved_urls:
+                updated: list[ParkingPlaceOut] = []
+                for place in valid_places:
+                    new_url = resolved_urls.get(place.id)
+                    if new_url and not place.imageUrl:
+                        updated.append(place.model_copy(update={"imageUrl": new_url}))
+                        photos_resolved += 1
+                    else:
+                        updated.append(place)
+                valid_places = updated
+
     # ---------- Doble buffer ----------
     # Construimos la nueva generación bajo el prefijo de staging mientras el
     # catálogo activo (`parking:*`) sigue sirviendo lecturas. Una vez completo
@@ -971,6 +1012,7 @@ def _run_import_paired(
         "skipped": skipped,
         "search_index": SEARCH_INDEX_NAME,
         "ids_disambiguated": disambiguated,
+        "photos_resolved": photos_resolved,
         "cache_version": new_version,
         "sources": [
             {

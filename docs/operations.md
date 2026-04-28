@@ -227,6 +227,16 @@ METRICS_ENABLED=true
 CACHE_NEARBY_TTL=60
 DEFAULT_PARKING_LIMIT=100
 MAX_PARKING_LIMIT=500
+
+# Resolución de fotos durante el import. Cuando true, el importador
+# descarga las fichas SIG (fichatoponimia.php / fichacalle.php) de los
+# places sin URL_FOTO explícito, extrae la <img> de /fotosOriginales/
+# y persiste la URL resuelta. Cachea por id en parking_photo:{id}
+# (TTL 90 días por defecto) para que un re-import no rescraperar.
+FETCH_PHOTOS=true
+PHOTO_FETCH_CONCURRENCY=20
+PHOTO_FETCH_TIMEOUT_SECONDS=5.0
+PHOTO_CACHE_TTL_SECONDS=7776000
 ```
 
 Los secretos (`IMPORT_TOKEN`, `FAVORITES_SECRET`) deben generarse con
