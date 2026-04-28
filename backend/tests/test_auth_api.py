@@ -82,18 +82,6 @@ def test_token_signed_with_other_key_rejected(seeded_client):
     assert response.status_code == 401
 
 
-def test_dev_fallback_secret_logs_warning(monkeypatch, caplog):
+def test_resolve_secret_none_when_missing(monkeypatch):
     monkeypatch.delenv("FAVORITES_SECRET", raising=False)
-    monkeypatch.setenv("APP_ENV", "development")
-
-    with caplog.at_level("WARNING", logger=auth_module.logger.name):
-        secret = auth_module._resolve_secret()
-
-    assert secret == "dev-only-secret-do-not-use-in-prod"
-    assert any("FAVORITES_SECRET" in rec.message for rec in caplog.records)
-
-
-def test_resolve_secret_none_in_production_without_env(monkeypatch):
-    monkeypatch.delenv("FAVORITES_SECRET", raising=False)
-    monkeypatch.setenv("APP_ENV", "production")
     assert auth_module._resolve_secret() is None

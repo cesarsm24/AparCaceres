@@ -59,6 +59,7 @@ services:
       REDIS_HOST: redis
       REDIS_PORT: "6379"
       REDIS_DB: "0"
+      FAVORITES_SECRET: ${FAVORITES_SECRET:?set FAVORITES_SECRET in .env}
       LOG_LEVEL: INFO
       CACHE_NEARBY_TTL: "60"
       DEFAULT_PARKING_LIMIT: "100"

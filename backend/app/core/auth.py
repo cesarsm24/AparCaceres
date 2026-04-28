@@ -24,10 +24,8 @@ Decisiones:
   re-firmar). Cuando haya una capa de identidad real (OAuth/OIDC) se
   delegará la verificación previa allí y este endpoint quedará para
   intercambios server-to-server.
-- En desarrollo, si `FAVORITES_SECRET` está vacío y `APP_ENV=development`,
-  se usa una clave por defecto y se loggea un warning para que sea visible.
-  En cualquier otro caso, la falta de secreto provoca 503 al intentar emitir
-  o validar un token (fail-closed).
+- Si `FAVORITES_SECRET` no está definido, emitir o validar tokens provoca 503
+  (fail-closed). La clave debe configurarse explícitamente en cada entorno.
 
 Validaciones adicionales sobre el `sub`:
 - mismas reglas de chars seguros que el `X-User-Id` previo (no `:*?[]` ni
@@ -55,23 +53,12 @@ _FORBIDDEN_SUB_CHARS = frozenset(":*?[] \t\n\r")
 _SUB_MAX_LEN = 128
 _JWT_ALGORITHM = "HS256"
 _DEFAULT_TTL_DAYS = 30
-_DEV_FALLBACK_SECRET = "dev-only-secret-do-not-use-in-prod"
 
 
 def _resolve_secret() -> Optional[str]:
-    """Devuelve la clave de firma. None si no hay y no estamos en dev."""
+    """Devuelve la clave de firma. None si no está configurada."""
     raw = (os.getenv("FAVORITES_SECRET") or "").strip()
-    if raw:
-        return raw
-    env = (os.getenv("APP_ENV") or "production").strip().lower()
-    if env in {"dev", "development", "local"}:
-        logger.warning(
-            "FAVORITES_SECRET vacío en entorno %s; usando clave por defecto. "
-            "NUNCA usar este fallback en producción.",
-            env,
-        )
-        return _DEV_FALLBACK_SECRET
-    return None
+    return raw or None
 
 
 def _validate_sub(sub: str) -> str:

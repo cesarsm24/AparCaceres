@@ -101,6 +101,10 @@ docker compose down       # parar; conserva el volumen redis-data
 docker compose down -v    # parar y BORRAR los datos persistentes
 ```
 
+Antes de levantar el stack con Docker, definir `FAVORITES_SECRET` en el
+entorno o en `backend/.env` para que la autenticación de favoritos quede
+operativa.
+
 ### CORS
 
 El cliente nativo Android/iOS no envía cabecera `Origin`, por lo que CORS no
