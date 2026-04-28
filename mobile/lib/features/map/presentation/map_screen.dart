@@ -59,6 +59,7 @@ class _MapScreenState extends State<MapScreen> {
   late final Future<List<ParkingCategory>> _availableCategoriesFuture;
   CancelToken? _placesCancelToken;
   bool _mapReady = false;
+  bool _pendingNearbyRefresh = false;
   ParkingPlace? _selectedPlace;
   RoutePath? _route;
   LatLng? _routeOrigin;
@@ -100,9 +101,14 @@ class _MapScreenState extends State<MapScreen> {
       return Future.value(const <ParkingPlace>[]);
     }
 
+    final query = _filters.toQuery();
+    if (_filters.searchMode == MapSearchMode.nearby) {
+      return parkingRepository.getNearby(query, cancelToken: token);
+    }
+
     final bounds = _mapController.camera.visibleBounds;
     return parkingRepository.getInBounds(
-      _filters.toQuery(),
+      query,
       minLat: bounds.southWest.latitude,
       minLng: bounds.southWest.longitude,
       maxLat: bounds.northEast.latitude,
@@ -126,10 +132,25 @@ class _MapScreenState extends State<MapScreen> {
   void _handleMapEvent(MapEvent event) {
     if (event is! MapEventMoveEnd || !mounted || !_mapReady) return;
 
+    final viewport = _mapController.camera.visibleBounds;
+    final programmaticMove = event.source == MapEventSource.mapController;
+
     setState(() {
-      _filters = _filters.copyWith(
-        viewportBounds: _mapController.camera.visibleBounds,
-      );
+      _filters = _filters.copyWith(viewportBounds: viewport);
+      if (_routeOrigin != null && _selectedPlace != null) {
+        return;
+      }
+      if (_pendingNearbyRefresh) {
+        _placesFuture = _fetchPlaces();
+        _pendingNearbyRefresh = false;
+        return;
+      }
+      if (_filters.searchMode == MapSearchMode.nearby && programmaticMove) {
+        return;
+      }
+      if (_filters.searchMode == MapSearchMode.nearby) {
+        _filters = _filters.copyWith(searchMode: MapSearchMode.viewport);
+      }
       _placesFuture = _fetchPlaces();
     });
   }
@@ -232,13 +253,16 @@ class _MapScreenState extends State<MapScreen> {
       _filters = _filters.copyWith(
         center: suggestion.position,
         centerLabel: suggestion.shortName,
+        searchMode: MapSearchMode.nearby,
       );
       _selectedPlace = null;
       _route = null;
       _routeOrigin = null;
+      _pendingNearbyRefresh = true;
     });
 
     _mapController.move(suggestion.position, _focusedZoom);
+    _refreshPendingNearbyAfterMove();
   }
 
   Future<void> _centerOnUser() async {
@@ -250,9 +274,26 @@ class _MapScreenState extends State<MapScreen> {
       _selectedPlace = null;
       _route = null;
       _routeOrigin = null;
+      _filters = _filters.copyWith(searchMode: MapSearchMode.nearby);
+      _pendingNearbyRefresh = true;
     });
 
     _mapController.move(locationService.position.value, _focusedZoom);
+    _refreshPendingNearbyAfterMove();
+  }
+
+  void _refreshPendingNearbyAfterMove() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_mapReady || !_pendingNearbyRefresh) return;
+
+      setState(() {
+        _filters = _filters.copyWith(
+          viewportBounds: _mapController.camera.visibleBounds,
+        );
+        _placesFuture = _fetchPlaces();
+        _pendingNearbyRefresh = false;
+      });
+    });
   }
 
   void _zoomIn() {
@@ -278,6 +319,7 @@ class _MapScreenState extends State<MapScreen> {
       _selectedPlace = null;
       _route = null;
       _routeOrigin = null;
+      _placesFuture = _fetchPlaces();
     });
   }
 
@@ -342,6 +384,7 @@ class _MapScreenState extends State<MapScreen> {
                 final places = snapshot.data ?? const <ParkingPlace>[];
                 final selected = _selectedPlace;
                 final activeCenter = _activeCenter;
+                final routeActive = _routeOrigin != null && selected != null;
 
                 final hasError =
                     snapshot.hasError &&
@@ -373,8 +416,10 @@ class _MapScreenState extends State<MapScreen> {
                           userAgentPackageName: 'com.aparcaceres.mobile',
                           maxZoom: 19,
                         ),
-                        PolygonLayer(polygons: _buildPolygons(places)),
-                        PolylineLayer(polylines: _buildLines(places)),
+                        if (!routeActive) ...[
+                          PolygonLayer(polygons: _buildPolygons(places)),
+                          PolylineLayer(polylines: _buildLines(places)),
+                        ],
                         if (_route != null &&
                             _routeOrigin != null &&
                             selected != null)
@@ -393,7 +438,12 @@ class _MapScreenState extends State<MapScreen> {
                               ),
                             ],
                           ),
-                        MarkerLayer(markers: _buildMarkers(places)),
+                          MarkerLayer(
+                          markers: _buildMarkers(
+                            places,
+                            routeActive: routeActive,
+                          ),
+                        ),
                       ],
                     ),
                     Positioned(
@@ -437,9 +487,10 @@ class _MapScreenState extends State<MapScreen> {
                           ),
                         ),
                       ),
-                    if (snapshot.connectionState == ConnectionState.waiting)
+                    if (snapshot.connectionState == ConnectionState.waiting &&
+                        !routeActive)
                       const Center(child: CircularProgressIndicator()),
-                    if (hasError && selected == null)
+                    if (hasError && selected == null && !routeActive)
                       Positioned.fill(
                         child: ColoredBox(
                           color: AppColors.pageBackground.withValues(
@@ -540,9 +591,34 @@ class _MapScreenState extends State<MapScreen> {
         .toList();
   }
 
-  List<Marker> _buildMarkers(List<ParkingPlace> places) {
+  List<Marker> _buildMarkers(
+    List<ParkingPlace> places, {
+    required bool routeActive,
+  }) {
     final markers = <Marker>[];
     final pickedCenter = _filters.center;
+
+    if (routeActive && _routeOrigin != null && _selectedPlace != null) {
+      markers.add(
+        Marker(
+          point: _routeOrigin!,
+          width: 36,
+          height: 44,
+          alignment: Alignment.topCenter,
+          child: const RouteOriginMarker(),
+        ),
+      );
+      markers.add(
+        Marker(
+          point: _selectedPlace!.position,
+          width: 36,
+          height: 44,
+          alignment: Alignment.topCenter,
+          child: const RouteDestinationMarker(),
+        ),
+      );
+      return markers;
+    }
 
     if (pickedCenter == null) {
       markers.add(

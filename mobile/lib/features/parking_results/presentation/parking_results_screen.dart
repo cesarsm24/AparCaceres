@@ -72,6 +72,10 @@ class _ParkingResultsScreenState extends State<ParkingResultsScreen> {
     final query = widget.filters.toQuery();
     final bounds = widget.filters.viewportBounds;
 
+    if (widget.filters.searchMode == MapSearchMode.nearby) {
+      return parkingRepository.getNearby(query);
+    }
+
     if (bounds != null) {
       return parkingRepository.getInBounds(
         query,

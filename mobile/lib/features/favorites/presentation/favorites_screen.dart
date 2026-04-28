@@ -25,6 +25,29 @@ class FavoritesScreen extends StatefulWidget {
 }
 
 class _FavoritesScreenState extends State<FavoritesScreen> {
+  late Future<List<ParkingPlace>> _favoritesFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _favoritesFuture = parkingRepository.getFavorites();
+    favoritesStore.addListener(_reloadFavorites);
+  }
+
+  @override
+  void dispose() {
+    favoritesStore.removeListener(_reloadFavorites);
+    super.dispose();
+  }
+
+  void _reloadFavorites() {
+    if (!mounted) return;
+
+    setState(() {
+      _favoritesFuture = parkingRepository.getFavorites();
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -33,62 +56,56 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
         children: [
           const AppTopBar(),
           Expanded(
-            child: ListenableBuilder(
-              listenable: favoritesStore,
-              builder: (context, _) {
-                return FutureBuilder<List<ParkingPlace>>(
-                  future: parkingRepository.getFavorites(),
-                  builder: (context, snapshot) {
-                    if (snapshot.connectionState == ConnectionState.waiting) {
-                      return const Center(child: CircularProgressIndicator());
-                    }
+            child: FutureBuilder<List<ParkingPlace>>(
+              future: _favoritesFuture,
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
 
-                    if (snapshot.hasError) {
-                      return ApiErrorState(
-                        error: snapshot.error!,
-                        // Reconstruye la future generada dentro del ListenableBuilder.
-                        onRetry: () => setState(() {}),
-                      );
-                    }
+                if (snapshot.hasError) {
+                  return ApiErrorState(
+                    error: snapshot.error!,
+                    onRetry: _reloadFavorites,
+                  );
+                }
 
-                    final favorites = snapshot.data ?? const <ParkingPlace>[];
+                final favorites = snapshot.data ?? const <ParkingPlace>[];
 
-                    if (favorites.isEmpty) {
-                      return const Center(
-                        child: Text(
-                          AppStrings.favoritesEmpty,
-                          style: TextStyle(color: AppColors.textSecondary),
-                        ),
-                      );
-                    }
+                if (favorites.isEmpty) {
+                  return const Center(
+                    child: Text(
+                      AppStrings.favoritesEmpty,
+                      style: TextStyle(color: AppColors.textSecondary),
+                    ),
+                  );
+                }
 
-                    return ListView.separated(
-                      padding: const EdgeInsets.fromLTRB(
-                        AppSpacing.horizontalPadding,
-                        AppSpacing.md,
-                        AppSpacing.horizontalPadding,
-                        AppSpacing.lg,
+                return ListView.separated(
+                  padding: const EdgeInsets.fromLTRB(
+                    AppSpacing.horizontalPadding,
+                    AppSpacing.md,
+                    AppSpacing.horizontalPadding,
+                    AppSpacing.lg,
+                  ),
+                  itemCount: favorites.length,
+                  separatorBuilder: (_, _) =>
+                  const SizedBox(height: AppSpacing.md),
+                  itemBuilder: (_, i) {
+                    final place = favorites[i];
+
+                    return FavoriteTile(
+                      place: place,
+                      distanceMeters: const Distance()(
+                        locationService.position.value,
+                        place.position,
                       ),
-                      itemCount: favorites.length,
-                      separatorBuilder: (_, _) =>
-                      const SizedBox(height: AppSpacing.md),
-                      itemBuilder: (_, i) {
-                        final place = favorites[i];
-
-                        return FavoriteTile(
-                          place: place,
-                          distanceMeters: const Distance()(
-                            locationService.position.value,
-                            place.position,
-                          ),
-                          onTap: () => Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (_) => ParkingDetailScreen(place: place),
-                            ),
-                          ),
-                          onToggleFavorite: () => favoritesStore.toggle(place.id),
-                        );
-                      },
+                      onTap: () => Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => ParkingDetailScreen(place: place),
+                        ),
+                      ),
+                      onToggleFavorite: () => favoritesStore.toggle(place.id),
                     );
                   },
                 );

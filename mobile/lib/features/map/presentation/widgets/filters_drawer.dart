@@ -27,6 +27,7 @@ class MapFilters {
     this.center,
     this.centerLabel,
     this.viewportBounds,
+    this.searchMode = MapSearchMode.viewport,
   }) : vehicleTypes = vehicleTypes ?? ParkingVehicleType.values.toSet(),
         categories = categories ?? ParkingCategory.values.toSet(),
         regulations = regulations ?? ParkingRegulation.values.toSet();
@@ -39,6 +40,7 @@ class MapFilters {
   final LatLng? center;
   final String? centerLabel;
   final LatLngBounds? viewportBounds;
+  final MapSearchMode searchMode;
 
   ParkingQuery toQuery() {
     return ParkingQuery(
@@ -60,6 +62,7 @@ class MapFilters {
     LatLng? center,
     String? centerLabel,
     LatLngBounds? viewportBounds,
+    MapSearchMode? searchMode,
   }) {
     return MapFilters(
       radiusMeters: radiusMeters ?? this.radiusMeters,
@@ -70,6 +73,7 @@ class MapFilters {
       center: center ?? this.center,
       centerLabel: centerLabel ?? this.centerLabel,
       viewportBounds: viewportBounds ?? this.viewportBounds,
+      searchMode: searchMode ?? this.searchMode,
     );
   }
 
@@ -97,8 +101,15 @@ class MapFilters {
       regulations: regulations,
       minSpaces: minSpaces,
       viewportBounds: viewportBounds,
+      searchMode: searchMode,
     );
   }
+}
+
+/// Estrategia de consulta usada por la vista de mapa.
+enum MapSearchMode {
+  viewport,
+  nearby,
 }
 
 /// Drawer lateral para edición de filtros del mapa.

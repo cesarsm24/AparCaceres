@@ -79,6 +79,7 @@ class ServerFavoritesStore extends FavoritesStore {
         '/users/me/favorites/$id',
         requiresAuth: true,
       );
+      notifyListeners();
     } catch (_) {
       _ids.remove(id);
       notifyListeners();
@@ -91,6 +92,7 @@ class ServerFavoritesStore extends FavoritesStore {
         '/users/me/favorites/$id',
         requiresAuth: true,
       );
+      notifyListeners();
     } catch (_) {
       _ids.add(id);
       notifyListeners();

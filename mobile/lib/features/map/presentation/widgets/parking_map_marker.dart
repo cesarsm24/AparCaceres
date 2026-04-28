@@ -151,3 +151,76 @@ class DestinationPinMarker extends StatelessWidget {
     );
   }
 }
+
+/// Marcador de origen de una ruta calculada.
+class RouteOriginMarker extends StatelessWidget {
+  const RouteOriginMarker({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return const _RouteEndpointMarker(
+      color: AppColors.accent,
+      icon: Icons.my_location,
+    );
+  }
+}
+
+/// Marcador de destino de una ruta calculada.
+class RouteDestinationMarker extends StatelessWidget {
+  const RouteDestinationMarker({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return const _RouteEndpointMarker(
+      color: AppColors.primary,
+      icon: Icons.place,
+    );
+  }
+}
+
+class _RouteEndpointMarker extends StatelessWidget {
+  const _RouteEndpointMarker({
+    required this.color,
+    required this.icon,
+  });
+
+  final Color color;
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 30,
+          height: 30,
+          decoration: BoxDecoration(
+            color: color,
+            shape: BoxShape.circle,
+            border: Border.all(color: AppColors.textOnPrimary, width: 2),
+            boxShadow: const [
+              BoxShadow(
+                color: Color(0x33000000),
+                blurRadius: 4,
+                offset: Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Icon(
+            icon,
+            color: AppColors.textOnPrimary,
+            size: 18,
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.only(top: 1),
+          child: CustomPaint(
+            size: const Size(8, 7),
+            painter: _MarkerTipPainter(color),
+          ),
+        ),
+      ],
+    );
+  }
+}
