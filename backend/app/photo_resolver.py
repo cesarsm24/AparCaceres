@@ -165,8 +165,19 @@ async def resolve_many(
     timeout_obj = httpx.Timeout(timeout)
     headers = {"User-Agent": _USER_AGENT, "Accept": "text/html"}
 
+    # `verify=False`: el SIG sirve su cert por FNMT-RCM (CA del gobierno
+    # español), que no está incluida en el bundle por defecto de `certifi`.
+    # Con verificación activa el redirect 301 → HTTPS truena con
+    # `CERTIFICATE_VERIFY_FAILED` y todas las fichas caen al sentinel
+    # negativo. Estamos haciendo GET de páginas públicas sin credenciales:
+    # un MITM como mucho podría devolvernos URLs de imagen falsas, que el
+    # cliente móvil renderizaría con un 404 inocuo. El trade-off vale la
+    # pena para no depender del bundle de CA del runtime.
     async with httpx.AsyncClient(
-        timeout=timeout_obj, headers=headers, base_url=_SIG_BASE
+        timeout=timeout_obj,
+        headers=headers,
+        base_url=_SIG_BASE,
+        verify=False,
     ) as client:
         async def _worker(task: _ResolveTask) -> tuple[str, Optional[str]]:
             async with semaphore:
