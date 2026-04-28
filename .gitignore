@@ -38,6 +38,7 @@ informe.md
 mobile/.dart_tool/
 mobile/.flutter-plugins
 mobile/.flutter-plugins-dependencies
+mobile/.metadata
 mobile/.packages
 mobile/.pub-cache/
 mobile/.pub/
