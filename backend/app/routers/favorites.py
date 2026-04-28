@@ -117,7 +117,7 @@ _FAVORITES_LIST_EXAMPLE = [
     },
     {
         "id": "aparcamientos:1903",
-        "name": "Escuela Politecnica",
+        "name": "Escuela Politécnica",
         "category": "parking",
         "vehicleType": "car",
         "regulation": "free",

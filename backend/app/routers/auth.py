@@ -1,14 +1,9 @@
-"""Endpoint de emisión de tokens de sesión.
+"""Endpoint para emitir tokens de sesión firmados.
 
-`POST /auth/session` recibe `{"sub": "<id-cliente>"}` y devuelve un JWT que
-el cliente debe guardar y enviar como `Authorization: Bearer <token>` (o
-`X-Session-Token`) en las llamadas a favoritos.
-
-En esta fase la emisión confía en lo que envía el cliente: el modelo es
-equivalente al `X-User-Id` opaco previo, pero ahora el cliente NO PUEDE
-forjar la identidad de otro usuario sin la clave secreta. Cuando se integre
-una capa de identidad real (OAuth/OIDC) este endpoint exigirá un assertion
-externo previo.
+Expone `POST /auth/session`, que recibe un identificador opaco de cliente y
+devuelve un JWT utilizado por los endpoints protegidos. La emisión asume que
+la identidad recibida ya es válida; la verificación externa queda delegada a
+una futura capa de identidad.
 """
 
 from __future__ import annotations
@@ -22,17 +17,21 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 
 
 class SessionRequest(BaseModel):
+    """Datos necesarios para emitir una sesión."""
+
     sub: str = Field(
         ...,
         max_length=128,
-        description="Identificador opaco del cliente (device id, email, etc.).",
+        description="Identificador opaco del cliente.",
     )
 
 
 class SessionResponse(BaseModel):
-    token: str = Field(..., description="JWT a usar en `Authorization: Bearer`.")
+    """Respuesta pública de emisión de sesión."""
+
+    token: str = Field(..., description="JWT usado como token Bearer.")
     sub: str
-    expiresAt: str = Field(..., description="ISO 8601 UTC de expiración.")
+    expiresAt: str = Field(..., description="Fecha de expiración en ISO 8601 UTC.")
     tokenType: str = Field(default="Bearer")
 
 
@@ -47,19 +46,24 @@ _SESSION_RESPONSE_EXAMPLE = {
 @router.post(
     "/session",
     response_model=SessionResponse,
-    summary="Emite un token de sesión firmado para el sub indicado",
+    summary="Emite un token de sesión firmado",
     description=(
-        "Devuelve un JWT firmado con HS256 que el cliente envía en "
-        "`Authorization: Bearer <token>` (o `X-Session-Token`) para acceder a "
-        "los endpoints de favoritos. TTL por defecto: 30 días."
+        "Devuelve un JWT firmado para acceder a los endpoints protegidos. "
+        "El token debe enviarse en `Authorization: Bearer <token>` o "
+        "`X-Session-Token`."
     ),
     responses={
         200: {"content": {"application/json": {"example": _SESSION_RESPONSE_EXAMPLE}}},
         400: {"description": "`sub` vacío o con caracteres inválidos."},
-        503: {"description": "Auth no configurada (falta `FAVORITES_SECRET`)."},
+        503: {"description": "Autenticación no configurada."},
     },
 )
 def create_session(payload: SessionRequest) -> SessionResponse:
+    """Emite una sesión para el identificador recibido.
+
+    La normalización final del identificador se mantiene alineada con
+    `issue_token`, que valida el contrato de autenticación.
+    """
     token, expires = issue_token(payload.sub)
     return SessionResponse(
         token=token,

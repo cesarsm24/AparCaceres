@@ -161,7 +161,7 @@ def _build_nearby_cache_key(
 
 _PLACE_POINT_EXAMPLE = {
     "id": "aparcamientos:1903",
-    "name": "Escuela Politecnica",
+    "name": "Escuela Politécnica",
     "category": "parking",
     "vehicleType": "car",
     "regulation": "free",

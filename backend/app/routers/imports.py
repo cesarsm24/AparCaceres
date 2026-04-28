@@ -34,6 +34,7 @@ _IMPORT_RESPONSE_EXAMPLE = {
     "skipped": 0,
     "search_index": "idx:parkings_search",
     "ids_disambiguated": 11,
+    "photos_resolved": 0,
     "cache_version": 7,
     "files_processed": 10,
     "files_skipped": [],
