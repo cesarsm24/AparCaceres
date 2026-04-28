@@ -1,9 +1,7 @@
-"""Tests de los ejemplos OpenAPI publicados por los routers.
+"""Tests de ejemplos OpenAPI publicados por los routers.
 
-Validan que los ejemplos:
-- sigan siendo válidos para los modelos Pydantic,
-- contengan las claves que devuelve realmente cada endpoint,
-- queden expuestos en el schema OpenAPI de la aplicación.
+Validan que los ejemplos sean compatibles con sus modelos de respuesta y que
+el esquema OpenAPI exponga los mismos payloads documentados en los routers.
 """
 
 from __future__ import annotations
@@ -38,10 +36,13 @@ from main import app
 
 
 def _drop_nones(value):
+    """Elimina valores nulos para comparar con el schema generado por FastAPI."""
     if isinstance(value, dict):
-        return {k: _drop_nones(v) for k, v in value.items() if v is not None}
+        return {key: _drop_nones(item) for key, item in value.items() if item is not None}
+
     if isinstance(value, list):
         return [_drop_nones(item) for item in value]
+
     return value
 
 
@@ -55,6 +56,7 @@ def test_example_payloads_validate_against_response_models():
     FavoriteAdded.model_validate(_FAVORITE_ADDED_EXAMPLE)
     FavoriteRemoved.model_validate(_FAVORITE_REMOVED_EXAMPLE)
     SessionResponse.model_validate(_SESSION_RESPONSE_EXAMPLE)
+
     for item in _FAVORITES_LIST_EXAMPLE:
         ParkingPlaceOut.model_validate(item)
 
@@ -146,4 +148,7 @@ def test_openapi_schema_exposes_the_same_examples():
 
 
 def test_categories_example_contains_known_enum_values():
-    assert all(category in {item.value for item in ParkingCategory} for category in _CATEGORIES_EXAMPLE)
+    assert all(
+        category in {item.value for item in ParkingCategory}
+        for category in _CATEGORIES_EXAMPLE
+    )

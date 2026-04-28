@@ -1,11 +1,7 @@
-"""Tests del middleware `RequestIdMiddleware` y del logger JSON.
+"""Tests de correlación de peticiones y logging JSON.
 
-Mantenemos los tests aislados del `main.py` real (que arranca lifespan +
-métricas + CORS) montando una app mínima con el middleware y un endpoint
-trivial. Nos centramos en el comportamiento contractual:
-- si el cliente envía `X-Request-ID`, se respeta.
-- si no, se genera uno (hex de 32 chars).
-- el `JsonFormatter` emite líneas JSON con `request_id` poblado.
+Verifican que el middleware propaga o genera `X-Request-ID` y que el formatter
+estructura registros con identificador de petición y campos extra.
 """
 
 from __future__ import annotations
@@ -41,18 +37,23 @@ def app_with_middleware() -> TestClient:
 
 def test_generates_request_id_when_absent(app_with_middleware):
     response = app_with_middleware.get("/ping")
+
     assert response.status_code == 200
-    rid = response.headers[REQUEST_ID_HEADER]
-    assert re.fullmatch(r"[0-9a-f]{32}", rid)
-    # Lo expuesto por el endpoint debe coincidir con la cabecera de respuesta.
-    assert response.json()["request_id"] == rid
+
+    request_id = response.headers[REQUEST_ID_HEADER]
+
+    assert re.fullmatch(r"[0-9a-f]{32}", request_id)
+    assert response.json()["request_id"] == request_id
 
 
 def test_respects_incoming_request_id(app_with_middleware):
     incoming = "trace-abc-123"
+
     response = app_with_middleware.get(
-        "/ping", headers={REQUEST_ID_HEADER: incoming}
+        "/ping",
+        headers={REQUEST_ID_HEADER: incoming},
     )
+
     assert response.headers[REQUEST_ID_HEADER] == incoming
     assert response.json()["request_id"] == incoming
 
@@ -60,6 +61,7 @@ def test_respects_incoming_request_id(app_with_middleware):
 def test_request_id_resets_between_requests(app_with_middleware):
     first = app_with_middleware.get("/ping").headers[REQUEST_ID_HEADER]
     second = app_with_middleware.get("/ping").headers[REQUEST_ID_HEADER]
+
     assert first != second
 
 
@@ -83,17 +85,18 @@ def test_json_formatter_emits_request_id_and_extras():
         _request_id_ctx.reset(token)
 
     payload = json.loads(line)
+
     assert payload["level"] == "INFO"
     assert payload["logger"] == "testlog"
     assert payload["message"] == "hello world"
     assert payload["request_id"] == "rid-xyz"
-    # Cualquier extra del LogRecord se vuelca al JSON.
     assert payload["user_id"] == "u-42"
 
 
 def test_configure_logging_is_idempotent():
-    """Llamadas repetidas no deben duplicar handlers."""
     configure_logging("INFO")
     initial_count = len(logging.getLogger().handlers)
+
     configure_logging("INFO")
+
     assert len(logging.getLogger().handlers) == initial_count

@@ -1,4 +1,8 @@
-"""Regresiones contra los GeoJSON reales incluidos en `backend/data`."""
+"""Regresiones contra los GeoJSON reales incluidos en el repositorio.
+
+Validan que los conteos por dataset, la unicidad de ids y el tratamiento de
+geometrías especiales permanecen estables al importar los datos reales.
+"""
 
 from __future__ import annotations
 
@@ -30,7 +34,9 @@ def test_real_geojson_import_counts_and_ids_are_stable(fake_redis):
     assert summary["ids_disambiguated"] == 11
 
     by_dataset = {row["sourceDataset"]: row for row in summary["sources"]}
+
     assert set(by_dataset) == set(EXPECTED_DATASET_COUNTS)
+
     for dataset, expected_count in EXPECTED_DATASET_COUNTS.items():
         assert by_dataset[dataset]["imported"] == expected_count
         assert by_dataset[dataset]["skipped"] == 0
@@ -40,12 +46,14 @@ def test_real_geojson_import_counts_and_ids_are_stable(fake_redis):
         for key, data in fake_redis.hashes.items()
         if key.startswith(PARKING_KEY_PREFIX)
     ]
+
     assert len(ids) == 7314
     assert len(ids) == len(set(ids))
 
 
 def test_real_geojson_import_includes_carga_descarga_multipolygons(fake_redis):
     run_import_dir(DATA_DIR, fake_redis)
+
     carga = [
         data
         for data in fake_redis.hashes.values()

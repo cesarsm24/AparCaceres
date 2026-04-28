@@ -1,38 +1,19 @@
-"""Fixtures compartidos para los tests.
+"""Fixtures y dobles de Redis compartidos por la suite de tests.
 
-`fake_redis` es una implementación minimalista en memoria del subset de la
-API de `redis-py` que usan el importador y los routers (`scan_iter`, `delete`,
-`exists`, `hset`, `pipeline`, `hgetall`, `setex`, `get`, `zadd`, `zrem`,
-`zrevrange`, `zscore`, `ping`).
-
-Mantenerla aquí (en lugar de añadir `fakeredis` como dependencia) tiene dos
-ventajas:
-- los tests no dependen de un paquete extra,
-- el comportamiento queda explícito y auditable cuando algún test falla.
-
-`api_client` arma un `FastAPI` minimal (sin lifespan) con el `FakeRedis`
-inyectado en `app.state.redis`, y devuelve un `TestClient` listo para hacer
-requests contra los endpoints reales.
-
-Rate limiting: forzamos `RATE_LIMIT_ENABLED=false` antes de cualquier import
-de la app para que el limiter de slowapi sea inerte en la suite. Los tests
-dedicados al rate limit lo reactivan localmente.
+Define una implementación en memoria del subconjunto de Redis usado por la
+aplicación y adaptadores síncronos/asíncronos para inyectarla en FastAPI. Esto
+permite probar routers e importador sin depender de Redis Stack en CI.
 """
 
 from __future__ import annotations
 
 import os
 
-# Debe ejecutarse ANTES de importar la app (incluye `app.core.rate_limit`).
 os.environ.setdefault("RATE_LIMIT_ENABLED", "false")
 os.environ.setdefault("RATE_LIMIT_STORAGE_URI", "memory://")
 os.environ.setdefault("METRICS_ENABLED", "false")
-# Valores explícitos para que la configuración de producción no quede
-# ambigua durante la suite.
 os.environ.setdefault("CORS_ORIGINS", "http://localhost:5000")
 os.environ.setdefault("IMPORT_TOKEN", "test-import-token")
-# Clave de firma fija para los tokens de favoritos. Cualquier valor sirve;
-# solo importa que sea estable durante la suite.
 os.environ.setdefault("FAVORITES_SECRET", "test-secret-do-not-leak")
 
 from typing import Iterator  # noqa: E402
@@ -44,24 +25,13 @@ from redis.exceptions import ResponseError  # noqa: E402
 
 
 class FakeRedis:
-    """Subset de `redis.Redis(decode_responses=True)` en memoria.
-
-    Modela cinco tipos de claves:
-    - `strings`: para `SET`/`SETEX`/`GET` (caché `cache:nearby:*`).
-    - `hashes`: para `HSET`/`HGETALL` (`parking:{id}`).
-    - `zsets`: sorted sets para `ZADD`/`ZREM`/`ZREVRANGE`/`ZSCORE` (favoritos
-      por usuario `user:{id}:favorites`). `{member: score}`.
-    - `search_indices`: metadatos mínimos de RediSearch para `FT.CREATE`,
-      `FT.DROPINDEX`, `FT.INFO`, `FT.SEARCH` y `FT.AGGREGATE`.
-    """
+    """Implementación en memoria del subconjunto de `redis-py` usado en tests."""
 
     def __init__(self) -> None:
         self.strings: dict[str, str] = {}
         self.hashes: dict[str, dict[str, str]] = {}
         self.zsets: dict[str, dict[str, float]] = {}
         self.search_indices: set[str] = set()
-
-    # ---------- API directa (no pipeline) ----------
 
     def ping(self) -> bool:
         return True
@@ -72,34 +42,39 @@ class FakeRedis:
     def hset(self, key: str, mapping: dict | None = None) -> int:
         if not mapping:
             return 0
+
         bucket = self.hashes.setdefault(key, {})
         added = 0
+
         for k, v in mapping.items():
             sk = str(k)
             if sk not in bucket:
                 added += 1
             bucket[sk] = str(v)
+
         return added
 
     def delete(self, *keys: str) -> int:
-        n = 0
-        for k in keys:
+        removed = 0
+
+        for key in keys:
             for store in (self.hashes, self.strings, self.zsets):
-                if k in store:
-                    del store[k]
-                    n += 1
-        return n
+                if key in store:
+                    del store[key]
+                    removed += 1
+
+        return removed
 
     def exists(self, *keys: str) -> int:
-        # Como el real: cuenta cuántas de las claves pasadas existen (en
-        # cualquier tipo). Suficiente para los chequeos de "parking:{id}".
-        n = 0
-        for k in keys:
+        found = 0
+
+        for key in keys:
             for store in (self.hashes, self.strings, self.zsets):
-                if k in store:
-                    n += 1
+                if key in store:
+                    found += 1
                     break
-        return n
+
+        return found
 
     def scan_iter(self, match: str | None = None) -> Iterator[str]:
         all_keys = (
@@ -107,27 +82,27 @@ class FakeRedis:
             + list(self.strings.keys())
             + list(self.zsets.keys())
         )
+
         if match is None:
             yield from all_keys
             return
-        # Solo soportamos el patrón `prefijo*` (lo único que usa el importador).
+
         if match.endswith("*"):
             prefix = match[:-1]
-            for k in all_keys:
-                if k.startswith(prefix):
-                    yield k
+            for key in all_keys:
+                if key.startswith(prefix):
+                    yield key
             return
-        for k in all_keys:
-            if k == match:
-                yield k
+
+        for key in all_keys:
+            if key == match:
+                yield key
 
     def setex(self, key: str, ttl: int, value: str) -> bool:
-        # No simulamos expiración (no hace falta en estos tests).
         self.strings[key] = str(value)
         return True
 
     def set(self, key: str, value: str, ex: int | None = None) -> bool:
-        # `ex` se ignora: estos tests no inspeccionan TTLs.
         self.strings[key] = str(value)
         return True
 
@@ -135,14 +110,14 @@ class FakeRedis:
         return self.strings.get(key)
 
     def incr(self, key: str, amount: int = 1) -> int:
-        """Subset de `INCR` / `INCRBY`: inicializa a 0 si no existe."""
+        """Incrementa un valor entero inicializado implícitamente a cero."""
         current = int(self.strings.get(key, "0") or "0")
         new_value = current + int(amount)
         self.strings[key] = str(new_value)
         return new_value
 
     def execute_command(self, *args):
-        """Subset mínimo de comandos RediSearch usados por la capa de búsqueda."""
+        """Ejecuta el subconjunto de comandos RediSearch requerido por los tests."""
         if not args:
             raise AssertionError("comando vacío")
 
@@ -164,93 +139,99 @@ class FakeRedis:
         zset = self.zsets.get(key)
         if zset is not None:
             return zset.get(member)
-        return None
 
-    # ---------- Sorted sets genéricos (favoritos) ----------
+        return None
 
     def zadd(self, key: str, mapping: dict[str, float]) -> int:
         bucket = self.zsets.setdefault(key, {})
         added = 0
+
         for member, score in mapping.items():
             if member not in bucket:
                 added += 1
             bucket[str(member)] = float(score)
+
         return added
 
     def zrem(self, key: str, *members: str) -> int:
         bucket = self.zsets.get(key)
         if not bucket:
             return 0
-        n = 0
-        for m in members:
-            if m in bucket:
-                del bucket[m]
-                n += 1
-        # Limpiamos la clave si queda vacía, igual que hace Redis con sorted sets.
+
+        removed = 0
+
+        for member in members:
+            if member in bucket:
+                del bucket[member]
+                removed += 1
+
         if not bucket:
             del self.zsets[key]
-        return n
+
+        return removed
 
     def zrevrange(self, key: str, start: int, end: int) -> list[str]:
-        """Subset de `ZREVRANGE`: miembros ordenados por score descendente.
+        """Devuelve miembros ordenados por score descendente.
 
-        Soporta `end == -1` (hasta el final). En empates de score Redis ordena
-        lexicográfico DESC; lo emulamos con dos `sorted` estables consecutivos
-        (primero por miembro DESC, luego por score DESC).
+        En empates se aplica orden lexicográfico descendente para emular Redis.
         """
         bucket = self.zsets.get(key, {})
         if not bucket:
             return []
-        # Estable: primero criterio secundario (miembro DESC), luego primario (score DESC).
-        items = sorted(bucket.items(), key=lambda kv: kv[0], reverse=True)
-        items = sorted(items, key=lambda kv: kv[1], reverse=True)
-        members = [m for m, _ in items]
+
+        items = sorted(bucket.items(), key=lambda item: item[0], reverse=True)
+        items = sorted(items, key=lambda item: item[1], reverse=True)
+        members = [member for member, _ in items]
+
         if end == -1:
             return members[start:]
+
         return members[start : end + 1]
 
     def zcard(self, key: str) -> int:
         return len(self.zsets.get(key, {}))
 
     def zremrangebyrank(self, key: str, start: int, stop: int) -> int:
-        """Subset de `ZREMRANGEBYRANK`: elimina por rango ascendente de score.
-
-        Soporta índices negativos como Redis (`-1` = último). Empates de
-        score: se ordena por miembro ASC para que el resultado sea determinista
-        en los tests. Si tras el borrado el sorted set queda vacío, eliminamos
-        la clave (igual que Redis).
-        """
+        """Elimina miembros por rango ascendente de score."""
         bucket = self.zsets.get(key)
         if not bucket:
             return 0
-        ordered = sorted(bucket.items(), key=lambda kv: (kv[1], kv[0]))
-        n = len(ordered)
-        # Normaliza índices negativos al estilo Redis.
-        s = start if start >= 0 else max(n + start, 0)
-        e = stop if stop >= 0 else n + stop
-        if s > e or s >= n:
+
+        ordered = sorted(bucket.items(), key=lambda item: (item[1], item[0]))
+        total = len(ordered)
+        normalized_start = start if start >= 0 else max(total + start, 0)
+        normalized_stop = stop if stop >= 0 else total + stop
+
+        if normalized_start > normalized_stop or normalized_start >= total:
             return 0
-        e = min(e, n - 1)
-        victims = [member for member, _ in ordered[s : e + 1]]
-        for m in victims:
-            bucket.pop(m, None)
+
+        normalized_stop = min(normalized_stop, total - 1)
+        victims = [
+            member
+            for member, _ in ordered[normalized_start : normalized_stop + 1]
+        ]
+
+        for member in victims:
+            bucket.pop(member, None)
+
         if not bucket:
             del self.zsets[key]
+
         return len(victims)
 
     def expire(self, key: str, seconds: int) -> bool:
-        """Subset de `EXPIRE`: aceptamos la llamada como no-op (no simulamos TTL)."""
         for store in (self.hashes, self.strings, self.zsets):
             if key in store:
                 return True
+
         return False
 
     def rename(self, src: str, dst: str) -> bool:
-        """Subset de RENAME: mueve la clave entre stores. Lanza KeyError si no existe."""
         for store in (self.hashes, self.strings, self.zsets):
             if src in store:
                 store[dst] = store.pop(src)
                 return True
+
         raise KeyError(f"no such key: {src}")
 
     def _ft_create(self, name: str, *_args):
@@ -261,6 +242,7 @@ class FakeRedis:
         name = str(name)
         if name not in self.search_indices:
             raise ResponseError("Unknown index name")
+
         self.search_indices.remove(name)
         return "OK"
 
@@ -289,12 +271,15 @@ class FakeRedis:
             out.append(f"parking:{place.id}")
             if not nocontent:
                 out.append(self._row_to_list(place.model_dump(mode="json")))
+
         return out
 
     def _ft_aggregate(self, name: str, query: str, *args):
         self._ensure_index(name)
+
         if any(str(arg).upper() == "GROUPBY" for arg in args):
             return self._ft_aggregate_facets(query, *args)
+
         return self._ft_aggregate_nearby(query, *args)
 
     def _ft_aggregate_facets(self, query: str, *args):
@@ -306,25 +291,30 @@ class FakeRedis:
             value = getattr(place, field, None)
             if value is None:
                 continue
+
             if hasattr(value, "value"):
                 value = value.value
+
             key = str(value)
             counts[key] = counts.get(key, 0) + 1
 
         rows = []
         for key in sorted(counts):
             rows.append([field, key, "count", counts[key]])
+
         return [len(places), *rows]
 
     def _ft_aggregate_nearby(self, query: str, *args):
         places = self._filtered_places(query)
         geo = self._extract_geo(query)
         offset, limit = self._extract_limit(args)
+
         if geo is None:
             rows = [self._row_to_list(place.model_dump(mode="json")) for place in places]
             return [len(places), *rows[offset : offset + limit]]
 
         lng, lat, radius = geo
+
         from app.infra.redis.search import _haversine_m
 
         distances = [
@@ -352,6 +342,7 @@ class FakeRedis:
             if key.startswith("parking:")
         ]
         params = self._parse_query(query)
+
         return _filter_places(
             places,
             ids=params["ids"],
@@ -392,13 +383,15 @@ class FakeRedis:
             "regulations": [],
             "datasets": [],
         }
+
         for match in tag_pattern.finditer(query):
             field = match.group("field")
             target = mapping.get(field)
             if target is None:
                 continue
+
             values = [value.replace("\\", "") for value in match.group("value").split("|")]
-            collected[target].extend(v for v in values if v)
+            collected[target].extend(value for value in values if value)
 
         if collected["ids"]:
             ids = collected["ids"]
@@ -454,6 +447,7 @@ class FakeRedis:
         )
         if not match:
             return None
+
         return (
             float(match.group("lng")),
             float(match.group("lat")),
@@ -465,12 +459,14 @@ class FakeRedis:
             if str(arg).upper() == "GROUPBY" and index + 2 < len(args):
                 field = str(args[index + 2])
                 return field.lstrip("@")
+
         raise AssertionError("GROUPBY no encontrado")
 
     def _extract_limit(self, args) -> tuple[int, int]:
         for index, arg in enumerate(args):
             if str(arg).upper() == "LIMIT" and index + 2 < len(args):
                 return int(args[index + 1]), int(args[index + 2])
+
         return 0, 100
 
     def _ensure_index(self, name: str) -> None:
@@ -479,23 +475,18 @@ class FakeRedis:
 
     def _row_to_list(self, data: dict) -> list:
         out: list = []
+
         for key, value in data.items():
             out.extend([str(key), str(value)])
-        return out
 
-    # ---------- Pipeline ----------
+        return out
 
     def pipeline(self) -> "FakePipeline":
         return FakePipeline(self)
 
 
 class FakePipeline:
-    """Pipeline que acumula comandos y los aplica al ejecutar.
-
-    No reordena ni optimiza: ejecuta en el orden recibido contra el `FakeRedis`
-    padre. Suficiente para verificar que el importador llama a las primitivas
-    correctas y en el orden esperado.
-    """
+    """Pipeline en memoria que ejecuta comandos acumulados en orden."""
 
     def __init__(self, parent: FakeRedis) -> None:
         self.parent = parent
@@ -523,6 +514,7 @@ class FakePipeline:
 
     def execute(self) -> list:
         results = []
+
         for cmd in self._cmds:
             if cmd[0] == "delete":
                 results.append(self.parent.delete(*cmd[1]))
@@ -534,23 +526,13 @@ class FakePipeline:
                 results.append(self.parent.hgetall(cmd[1]))
             elif cmd[0] == "rename":
                 results.append(self.parent.rename(cmd[1], cmd[2]))
+
         self._cmds.clear()
         return results
 
 
-# ============================================================
-# Adaptador async sobre FakeRedis
-# ============================================================
-#
-# Los routers async esperan un cliente que se parezca a `redis.asyncio.Redis`:
-# coroutines en lugar de métodos síncronos y un `pipeline()` cuyo `execute()`
-# también sea coroutine.
-# `AsyncFakeRedis` envuelve un `FakeRedis` concreto y delega todo en él, así
-# los tests pueden seguir inspeccionando el estado a través del `FakeRedis`
-# síncrono compartido (`fake_redis.hashes`, etc.).
-
 class AsyncFakeRedis:
-    """Adaptador async mínimo: solo expone los comandos que usan los routers."""
+    """Adaptador asíncrono sobre `FakeRedis` para routers FastAPI."""
 
     def __init__(self, sync: FakeRedis) -> None:
         self._sync = sync
@@ -599,7 +581,7 @@ class AsyncFakeRedis:
 
 
 class AsyncFakePipeline:
-    """Pipeline async: delega en `FakePipeline` y expone `execute()` async."""
+    """Pipeline asíncrono que delega en `FakePipeline`."""
 
     def __init__(self, parent: FakeRedis) -> None:
         self._inner = FakePipeline(parent)
@@ -637,7 +619,7 @@ def fake_redis() -> FakeRedis:
 
 @pytest.fixture
 def auth_headers():
-    """Devuelve un helper `make(sub)` que produce las cabeceras Bearer."""
+    """Devuelve un helper para generar cabeceras Bearer válidas."""
     from app.core.auth import issue_token
 
     def make(sub: str) -> dict[str, str]:
@@ -647,20 +629,11 @@ def auth_headers():
     return make
 
 
-# ============================================================
-# Fixtures de FastAPI: TestClient con FakeRedis inyectado
-# ============================================================
-
 def _build_test_app(fake_redis: FakeRedis) -> FastAPI:
-    """Monta una app FastAPI mínima sin lifespan, lista para `TestClient`.
+    """Construye una app mínima con Redis falso inyectado.
 
-    Importamos los routers DENTRO de la función para que cada test arranque
-    desde un estado limpio y no haya efectos colaterales del orden de imports.
-
-    `app.state.redis` es el cliente "async" (AsyncFakeRedis) y
-    `app.state.redis_sync` es el síncrono (FakeRedis). Comparten almacenamiento,
-    así que las inspecciones directas (`fake_redis.hashes`) ven los cambios
-    hechos por cualquiera de los dos.
+    Los clientes síncrono y asíncrono comparten almacenamiento, por lo que las
+    inspecciones directas sobre `fake_redis` reflejan cambios hechos por routers.
     """
     from app.core.rate_limit import limiter
     from app.routers import auth, favorites, health, imports, parkings
@@ -668,42 +641,29 @@ def _build_test_app(fake_redis: FakeRedis) -> FastAPI:
     app = FastAPI()
     app.state.redis = AsyncFakeRedis(fake_redis)
     app.state.redis_sync = fake_redis
-    # slowapi exige `app.state.limiter`; con `enabled=False` (forzado en este
-    # fichero) los decoradores `@limiter.limit(...)` no aplican cupo alguno.
     app.state.limiter = limiter
+
     app.include_router(health.router)
     app.include_router(auth.router)
     app.include_router(imports.router)
     app.include_router(parkings.router)
     app.include_router(favorites.router)
+
     return app
 
 
 @pytest.fixture
 def api_client(fake_redis: FakeRedis) -> Iterator[TestClient]:
-    """`TestClient` contra una app vacía (sin datos en Redis).
-
-    Útil para probar respuestas con catálogo vacío o errores antes de seed.
-    """
+    """Cliente HTTP de test contra una aplicación sin datos iniciales."""
     app = _build_test_app(fake_redis)
     with TestClient(app) as client:
         yield client
 
 
-# ============================================================
-# Dataset sintético para los tests de API
-# ============================================================
-#
-# Mezcla los 3 tipos de geometría + variedad de category/regulation/vehicleType
-# y de campos opcionales (totalSpaces, accent-insensitive en `name`/`district`).
-# Cada feature está emparejado con su `SourceProfile` real para que los ids
-# resultantes sean namespaced (`{sourceDataset}:{mslink}`).
-
-# (filename del dataset en SOURCE_REGISTRY, feature)
 _API_FEATURES_WITH_SOURCE: list[tuple[str, dict]] = [
     (
         "aparcamientos.geojson",
-        {  # POINT, parking público gratuito, sin totalSpaces.
+        {
             "type": "Feature",
             "geometry": {"type": "Point", "coordinates": [-6.34204232, 39.47848638]},
             "properties": {
@@ -715,7 +675,7 @@ _API_FEATURES_WITH_SOURCE: list[tuple[str, dict]] = [
     ),
     (
         "parkings.geojson",
-        {  # POINT, paid_parking en el centro.
+        {
             "type": "Feature",
             "geometry": {"type": "Point", "coordinates": [-6.3743148782, 39.4757325603]},
             "properties": {
@@ -730,7 +690,7 @@ _API_FEATURES_WITH_SOURCE: list[tuple[str, dict]] = [
     ),
     (
         "aparcamientos_en_linea.geojson",
-        {  # POLYGON, street_line con totalSpaces.
+        {
             "type": "Feature",
             "geometry": {
                 "type": "Polygon",
@@ -757,7 +717,7 @@ _API_FEATURES_WITH_SOURCE: list[tuple[str, dict]] = [
     ),
     (
         "aparcamientos_en_linea.geojson",
-        {  # LINE_STRING.
+        {
             "type": "Feature",
             "geometry": {
                 "type": "LineString",
@@ -775,7 +735,7 @@ _API_FEATURES_WITH_SOURCE: list[tuple[str, dict]] = [
     ),
     (
         "zona_azul.geojson",
-        {  # POLYGON, blue_zone con muchas plazas.
+        {
             "type": "Feature",
             "geometry": {
                 "type": "Polygon",
@@ -799,7 +759,7 @@ _API_FEATURES_WITH_SOURCE: list[tuple[str, dict]] = [
     ),
     (
         "parking_motos_puntos.geojson",
-        {  # POINT, parking de motos.
+        {
             "type": "Feature",
             "geometry": {"type": "Point", "coordinates": [-6.38917, 39.46839]},
             "properties": {
@@ -812,7 +772,7 @@ _API_FEATURES_WITH_SOURCE: list[tuple[str, dict]] = [
     ),
     (
         "parking_bicis.geojson",
-        {  # POINT, parking de bicis.
+        {
             "type": "Feature",
             "geometry": {"type": "Point", "coordinates": [-6.3729966, 39.4707513]},
             "properties": {
@@ -829,8 +789,9 @@ _API_FEATURES_WITH_SOURCE: list[tuple[str, dict]] = [
 
 @pytest.fixture
 def api_features_with_source() -> list[tuple[str, dict]]:
-    """Devuelve copias frescas (los tests no comparten mutación entre sí)."""
+    """Devuelve copias independientes del dataset sintético."""
     import copy
+
     return copy.deepcopy(_API_FEATURES_WITH_SOURCE)
 
 
@@ -839,18 +800,13 @@ def seeded_client(
     fake_redis: FakeRedis,
     api_features_with_source: list[tuple[str, dict]],
 ) -> Iterator[TestClient]:
-    """`TestClient` con el dataset sintético ya importado en Redis.
-
-    Cada feature se empareja con su `SourceProfile` para que los ids sean
-    namespaced (`{sourceDataset}:{mslink}`), igual que en producción.
-    """
+    """Cliente HTTP de test con un catálogo sintético ya importado."""
     from app.infra.redis.importer import SOURCE_REGISTRY, run_import_sources
 
-    # Bucket por filename para conservar el agrupamiento por dataset que usa
-    # `run_import_sources`.
     buckets: dict[str, list[dict]] = {}
-    for filename, feat in api_features_with_source:
-        buckets.setdefault(filename, []).append(feat)
+
+    for filename, feature in api_features_with_source:
+        buckets.setdefault(filename, []).append(feature)
 
     sources = [
         (features, SOURCE_REGISTRY[filename])
