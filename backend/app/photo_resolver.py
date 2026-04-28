@@ -12,9 +12,9 @@ Este módulo:
     solo un regex que es trivial de testear y no carga DOM completo.
   - Expone `resolve_photo_url(client, ficha_url)` que descarga la ficha y
     aplica el extractor.
-  - Expone `resolve_many` para resolver una lista de pares (id, ficha_url)
-    en paralelo con un semáforo, usando una caché Redis por `place_id`
-    para que un reimport no rescraperar lo ya descubierto.
+  - Expone `resolve_many` para resolver una lista de pares (id, URLs
+    candidatas) en paralelo con un semáforo, usando una caché Redis por
+    `place_id` para que un reimport no rescraperar lo ya descubierto.
 
 Convención de la caché:
   parking_photo:{id} → "https://..." (URL resuelta) o "" (no hay foto).
@@ -26,9 +26,10 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import html as html_lib
 import re
 from dataclasses import dataclass
-from typing import Iterable, Optional
+from typing import Iterable, Optional, Sequence
 from urllib.parse import urljoin
 
 import httpx
@@ -50,13 +51,12 @@ logger = logging.getLogger(__name__)
 # y no hay" de "todavía no lo intentamos".
 _CACHE_NEGATIVE_SENTINEL = ""
 
-# Regex deliberadamente conservador: busca un `<img>` cuyo `src` apunte a
-# `/fotosOriginales/...` con una extensión de imagen. La barra inicial es la
-# pista clave (todas las URLs del SIG empiezan así); evita confundir con
-# imágenes de iconos en `../imagenes/`. Insensible a mayúsculas para tolerar
-# `JPG` y `jpg`.
-_PHOTO_RE = re.compile(
-    r'<img\b[^>]*\bsrc\s*=\s*"(?P<url>/fotosOriginales/[^"]+\.(?:jpe?g|png|gif|webp))"',
+# Regex deliberadamente acotado: buscamos valores de `src` o `href` que
+# contengan `fotosOriginales` y una extensión de imagen. El SIG mezcla
+# varios formatos en sus fichas: rutas relativas, URLs absolutas y, en
+# algunas páginas, backslashes escapadas (`https:\\sig...`).
+_PHOTO_ATTR_RE = re.compile(
+    r'\b(?:src|href)\s*=\s*(?P<q>["\'])(?P<url>[^"\']*fotosOriginales[^"\']*\.(?:jpe?g|png|gif|webp)[^"\']*)(?P=q)',
     re.IGNORECASE,
 )
 
@@ -78,17 +78,34 @@ def extract_photo_url(html: str, *, base_url: str = _SIG_BASE) -> Optional[str]:
     """
     if not html:
         return None
-    match = _PHOTO_RE.search(html)
-    if match is None:
+    for match in _PHOTO_ATTR_RE.finditer(html):
+        candidate = _normalize_sig_photo_url(match.group("url"), base_url=base_url)
+        if candidate is not None:
+            return candidate
+    return None
+
+
+def _normalize_sig_photo_url(raw_url: str, *, base_url: str = _SIG_BASE) -> Optional[str]:
+    """Normaliza URLs del SIG y devuelve solo las que apuntan a una foto válida."""
+    if not raw_url:
         return None
-    relative = match.group("url")
-    return urljoin(base_url, relative)
+    candidate = html_lib.unescape(raw_url).strip()
+    candidate = candidate.replace("\\", "/")
+    candidate = re.sub(r"^https:/+", "https://", candidate, flags=re.IGNORECASE)
+    candidate = re.sub(r"^http:/+", "http://", candidate, flags=re.IGNORECASE)
+    if candidate.startswith("//"):
+        candidate = "https:" + candidate
+    if candidate.startswith("/fotosOriginales/"):
+        candidate = urljoin(base_url, candidate)
+    if not _looks_like_image_url(candidate):
+        return None
+    return candidate
 
 
 @dataclass(frozen=True)
 class _ResolveTask:
     place_id: str
-    ficha_url: str
+    candidate_urls: tuple[str, ...]
 
 
 async def _fetch_ficha(client: httpx.AsyncClient, url: str) -> Optional[str]:
@@ -110,6 +127,14 @@ async def _fetch_ficha(client: httpx.AsyncClient, url: str) -> Optional[str]:
     return response.text
 
 
+def _looks_like_image_url(url: str) -> bool:
+    """Detecta URLs que ya apuntan directamente a una imagen del SIG."""
+    lower = url.lower()
+    return lower.startswith(("http://", "https://")) and "/fotosoriginales/" in lower and (
+        lower.endswith((".jpg", ".jpeg", ".png", ".gif", ".webp"))
+    )
+
+
 async def resolve_photo_url(
     client: httpx.AsyncClient,
     ficha_url: str,
@@ -121,15 +146,36 @@ async def resolve_photo_url(
     return extract_photo_url(html, base_url=str(client.base_url) or _SIG_BASE)
 
 
+async def resolve_photo_url_from_candidates(
+    client: httpx.AsyncClient,
+    candidate_urls: Sequence[str],
+) -> Optional[str]:
+    """Prueba varias URLs candidatas y devuelve la primera foto válida.
+
+    Algunas plazas traen tanto `URL_FICHA` como `URL_VIA`. En esos casos
+    preferimos probarlas todas antes de asumir que no hay foto: si la primera
+    ficha no embebe imagen, la segunda puede hacerlo.
+    """
+    for candidate in candidate_urls:
+        if not candidate:
+            continue
+        if _looks_like_image_url(candidate):
+            return candidate
+        photo = await resolve_photo_url(client, candidate)
+        if photo:
+            return photo
+    return None
+
+
 async def resolve_many(
-    tasks: Iterable[tuple[str, str]],
+    tasks: Iterable[tuple[str, str | Sequence[str]]],
     rdb: redis.Redis,
     *,
     concurrency: int = PHOTO_FETCH_CONCURRENCY,
     timeout: float = PHOTO_FETCH_TIMEOUT_SECONDS,
     cache_ttl: int = PHOTO_CACHE_TTL_SECONDS,
 ) -> dict[str, str]:
-    """Resuelve `(place_id, ficha_url)` en paralelo y devuelve `{id: imageUrl}`.
+    """Resuelve `(place_id, URLs candidatas)` en paralelo y devuelve `{id: imageUrl}`.
 
     Pasos:
       1. Lookup en `parking_photo:{id}`. Si hay HIT, lo devolvemos sin red.
@@ -143,8 +189,16 @@ async def resolve_many(
     pending: list[_ResolveTask] = []
     resolved: dict[str, str] = {}
 
-    for place_id, ficha_url in tasks:
-        if not place_id or not ficha_url:
+    for place_id, raw_candidates in tasks:
+        if not place_id or not raw_candidates:
+            continue
+        if isinstance(raw_candidates, str):
+            candidate_urls = (raw_candidates,)
+        else:
+            candidate_urls = tuple(
+                candidate for candidate in raw_candidates if candidate
+            )
+        if not candidate_urls:
             continue
         cache_key = f"{PHOTO_CACHE_KEY_PREFIX}{place_id}"
         try:
@@ -156,7 +210,9 @@ async def resolve_many(
             if decoded:
                 resolved[place_id] = decoded
             continue
-        pending.append(_ResolveTask(place_id=place_id, ficha_url=ficha_url))
+        pending.append(
+            _ResolveTask(place_id=place_id, candidate_urls=candidate_urls)
+        )
 
     if not pending:
         return resolved
@@ -181,7 +237,10 @@ async def resolve_many(
     ) as client:
         async def _worker(task: _ResolveTask) -> tuple[str, Optional[str]]:
             async with semaphore:
-                url = await resolve_photo_url(client, task.ficha_url)
+                url = await resolve_photo_url_from_candidates(
+                    client,
+                    task.candidate_urls,
+                )
                 return task.place_id, url
 
         results = await asyncio.gather(

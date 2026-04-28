@@ -25,7 +25,7 @@ from app.logging_config import RequestIdMiddleware, configure_logging
 from app.metrics import instrument_app
 from app.rate_limit import limiter
 from app.redis_client import lifespan
-from app.routers import auth, favorites, health, imports, parkings
+from app.routers import auth, favorites, health, imports, parkings, photos
 
 configure_logging(LOG_LEVEL)
 logger = logging.getLogger(__name__)
@@ -96,3 +96,4 @@ app.include_router(auth.router)
 app.include_router(imports.router)
 app.include_router(parkings.router)
 app.include_router(favorites.router)
+app.include_router(photos.router)

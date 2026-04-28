@@ -19,6 +19,7 @@ String routingLabelFor(ParkingCategory category) {
   return switch (category) {
     ParkingCategory.bicycle => 'en bici',
     ParkingCategory.motorbike => 'en moto',
+    ParkingCategory.accessible => 'PMR',
     _ => 'en coche',
   };
 }

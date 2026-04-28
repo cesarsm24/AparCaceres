@@ -42,6 +42,20 @@ class ApiConfig {
   /// app frente a navegadores u otras herramientas durante depuración.
   static const String userAgent = 'AparCaceres/1.0 (mobile)';
 
+  /// Reescribe URLs de imagen del SIG para pasar por el proxy del backend
+  /// **solo en Flutter web**. El SIG no manda `Access-Control-Allow-Origin`,
+  /// por lo que `Image.network` (que en web usa XHR) ve un CORS error y la
+  /// imagen no se pinta. En nativo (Android/iOS) `Image.network` no usa XHR
+  /// y por tanto no le aplica CORS, así que ahí mantenemos la URL directa
+  /// para no enrutar tráfico innecesario por nuestro backend.
+  static String? rewriteImageUrlForCurrentPlatform(String? rawUrl) {
+    if (rawUrl == null || rawUrl.isEmpty) return rawUrl;
+    if (!kIsWeb) return rawUrl;
+    if (!rawUrl.contains('sig.caceres.es')) return rawUrl;
+    final encoded = Uri.encodeQueryComponent(rawUrl);
+    return '$baseUrl/photo-proxy?u=$encoded';
+  }
+
   static String _stripTrailingSlash(String value) {
     if (value.endsWith('/')) return value.substring(0, value.length - 1);
     return value;

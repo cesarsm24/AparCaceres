@@ -74,12 +74,31 @@ _FICHA_SIN_FOTO = """
 
 
 # HTML deliberadamente roto: etiqueta sin cerrar y atributos con comillas
-# simples. El regex debe seguir encontrando la `<img>` con comillas dobles
-# que apunte a `/fotosOriginales/`, e ignorar las que usen comillas simples
-# (la ficha real del SIG siempre usa comillas dobles).
+# simples. El regex debe seguir encontrando la primera `<img>` válida que
+# apunte a `/fotosOriginales/`, aunque venga con comillas simples.
 _FICHA_MALFORMADA = """
 <html><body><img src='/fotosOriginales/TOPONIMIA/no_match.jpg'>
 <img src="/fotosOriginales/TOPONIMIA/buena.png" </body>
+"""
+
+
+# Algunas fichas del SIG ponen la foto en `href` en lugar de `src`, con URL
+# absoluta. El extractor debe verla igualmente.
+_FICHA_CON_HREF_ABSOLUTO = """
+<html><body>
+  <a href="https://sig.caceres.es/fotosOriginales/PARKING_MOTOS/3497_1.JPG">
+    <img src="" alt="Foto">
+  </a>
+</body></html>
+"""
+
+
+# Otras fichas serializan la URL con barras invertidas. Hay que normalizarlas
+# antes de validar la extensión y el host.
+_FICHA_CON_BACKSLASHES = r"""
+<html><body>
+  <img src="https:\\sig.caceres.es\fotosOriginales\MOVILIDAD\4143_2_1.JPG">
+</body></html>
 """
 
 
@@ -109,10 +128,10 @@ def test_extract_photo_url_html_vacio_devuelve_none():
     assert extract_photo_url("   \n\t  ") is None
 
 
-def test_extract_photo_url_ignora_comillas_simples():
-    # Solo aceptamos comillas dobles (la ficha real del SIG las usa).
+def test_extract_photo_url_soporta_comillas_simples():
+    # Algunas fichas viejas usan comillas simples; también deben funcionar.
     url = extract_photo_url(_FICHA_MALFORMADA)
-    assert url == "https://sig.caceres.es/fotosOriginales/TOPONIMIA/buena.png"
+    assert url == "https://sig.caceres.es/fotosOriginales/TOPONIMIA/no_match.jpg"
 
 
 def test_extract_photo_url_respeta_base_url_personalizada():
@@ -120,6 +139,16 @@ def test_extract_photo_url_respeta_base_url_personalizada():
         _FICHA_TOPONIMIA_CON_FOTO, base_url="https://otro.host.es"
     )
     assert url.startswith("https://otro.host.es/fotosOriginales/")
+
+
+def test_extract_photo_url_hace_match_en_href_absoluto():
+    url = extract_photo_url(_FICHA_CON_HREF_ABSOLUTO)
+    assert url == "https://sig.caceres.es/fotosOriginales/PARKING_MOTOS/3497_1.JPG"
+
+
+def test_extract_photo_url_normaliza_backslashes():
+    url = extract_photo_url(_FICHA_CON_BACKSLASHES)
+    assert url == "https://sig.caceres.es/fotosOriginales/MOVILIDAD/4143_2_1.JPG"
 
 
 # ============================================================
@@ -177,6 +206,46 @@ def test_resolve_many_resuelve_y_cachea(monkeypatch, fake_redis):
     # Persistido positivo en caché.
     assert fake_redis.get("parking_photo:aparcamientos:1903") == (
         "https://sig.caceres.es/fotosOriginales/TOPONIMIA/escuela_politecnica.jpg"
+    )
+
+
+def test_resolve_many_prueba_varias_urls_hasta_encontrar_foto(monkeypatch, fake_redis):
+    """Si la primera ficha no tiene foto, probamos la segunda candidata."""
+    transport = _build_mock_client({
+        "/serweb/fichasig/fichatoponimia.php?mslink=1": (
+            200, _FICHA_SIN_FOTO,
+        ),
+        "/serweb/fichasig/fichacalle.php?codigo=1": (
+            200, _FICHA_CALLE_CON_FOTO,
+        ),
+    })
+
+    import app.photo_resolver as pr
+    real_client_cls = pr.httpx.AsyncClient
+
+    def fake_client(*args, **kwargs):
+        kwargs["transport"] = transport
+        return real_client_cls(*args, **kwargs)
+
+    monkeypatch.setattr(pr.httpx, "AsyncClient", fake_client)
+
+    tasks = [
+        (
+            "aparcamientos:1",
+            [
+                "https://sig.caceres.es/serweb/fichasig/fichatoponimia.php?mslink=1",
+                "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=1",
+            ],
+        ),
+    ]
+    resolved = asyncio.run(resolve_many(tasks, fake_redis))
+
+    assert resolved == {
+        "aparcamientos:1":
+            "https://sig.caceres.es/fotosOriginales/CALLES/00123_a.JPG",
+    }
+    assert fake_redis.get("parking_photo:aparcamientos:1") == (
+        "https://sig.caceres.es/fotosOriginales/CALLES/00123_a.JPG"
     )
 
 

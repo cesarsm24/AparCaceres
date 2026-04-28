@@ -1,5 +1,7 @@
 import 'package:latlong2/latlong.dart';
 
+import '../../../core/config/api_config.dart';
+
 enum ParkingCategory {
   parking,
   paidParking,
@@ -159,7 +161,9 @@ class ParkingPlace {
       district: json['district'] as String?,
       neighborhood: json['neighborhood'] as String?,
       sourceDataset: json['sourceDataset'] as String?,
-      imageUrl: json['imageUrl'] as String?,
+      imageUrl: ApiConfig.rewriteImageUrlForCurrentPlatform(
+        json['imageUrl'] as String?,
+      ),
       urlFicha: json['urlFicha'] as String?,
       urlVia: json['urlVia'] as String?,
       management: json['management'] as String?,
