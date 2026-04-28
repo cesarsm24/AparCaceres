@@ -4,9 +4,7 @@ import 'parking_query.dart';
 
 abstract class ParkingRepository {
   /// `cancelToken` permite descartar la petición cuando el usuario cambia
-  /// filtros o centro antes de que llegue la respuesta. Solo lo usa la
-  /// implementación contra la API; el mock local lo ignora porque resuelve
-  /// inmediatamente desde un fixture en memoria.
+  /// filtros o centro antes de que llegue la respuesta.
   Future<List<ParkingPlace>> getNearby(
     ParkingQuery query, {
     CancelToken? cancelToken,

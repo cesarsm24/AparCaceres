@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../../shared/widgets/app_card.dart';
 import '../../../../theme/app_colors.dart';
 import '../../../../theme/app_spacing.dart';
-import '../../data/settings_mock_data.dart';
+import '../../data/settings_items.dart';
 
 class SettingsTile extends StatelessWidget {
   const SettingsTile({super.key, required this.item, this.onTap});

@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../shared/widgets/app_top_bar.dart';
 import '../../../theme/app_colors.dart';
 import '../../../theme/app_spacing.dart';
-import '../data/settings_mock_data.dart';
+import '../data/settings_items.dart';
 import 'widgets/settings_tile.dart';
 
 class SettingsScreen extends StatelessWidget {
