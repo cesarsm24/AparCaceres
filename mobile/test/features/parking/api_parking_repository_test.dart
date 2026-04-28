@@ -105,6 +105,39 @@ void main() {
     });
   });
 
+  group('ApiParkingRepository.getInBounds', () {
+    test('hits /parkings/in-bounds with bounds and filter params', () async {
+      Uri? captured;
+      final repo = _repo((http.Request req) async {
+        captured = req.url;
+        return http.Response(
+          jsonEncode({'items': [_samplePlace('c')], 'total': 1}),
+          200,
+        );
+      });
+
+      final places = await repo.getInBounds(
+        ParkingQuery(
+          categories: {ParkingCategory.parking},
+          minSpaces: 5,
+        ),
+        minLat: 39.46,
+        minLng: -6.39,
+        maxLat: 39.48,
+        maxLng: -6.36,
+      );
+
+      expect(places, hasLength(1));
+      expect(captured!.path, '/parkings/in-bounds');
+      expect(captured!.queryParameters['minLat'], '39.46');
+      expect(captured!.queryParameters['minLng'], '-6.39');
+      expect(captured!.queryParameters['maxLat'], '39.48');
+      expect(captured!.queryParameters['maxLng'], '-6.36');
+      expect(captured!.queryParameters['category'], 'parking');
+      expect(captured!.queryParameters['minSpaces'], '5');
+    });
+  });
+
   group('ApiParkingRepository.getById', () {
     test('returns the place on 200', () async {
       final repo = _repo(

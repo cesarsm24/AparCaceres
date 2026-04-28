@@ -14,20 +14,16 @@ class MapResultsSheet extends StatelessWidget {
   const MapResultsSheet({
     super.key,
     required this.resultCount,
-    required this.radiusMeters,
+    required this.summaryLabel,
     this.onTap,
   });
 
   final int resultCount;
-  final int radiusMeters;
+  final String summaryLabel;
   final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
-    final radiusLabel = radiusMeters >= 1000
-        ? '${(radiusMeters / 1000).toStringAsFixed(radiusMeters % 1000 == 0 ? 0 : 1)} km'
-        : '$radiusMeters m';
-
     return _SheetShell(
       onTap: onTap,
       child: Row(
@@ -48,7 +44,7 @@ class MapResultsSheet extends StatelessWidget {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  '${AppStrings.mapRadiusPrefix}: $radiusLabel · ${AppStrings.mapAllTypes}',
+                  summaryLabel,
                   style: const TextStyle(
                     fontSize: 13,
                     color: AppColors.textSecondary,

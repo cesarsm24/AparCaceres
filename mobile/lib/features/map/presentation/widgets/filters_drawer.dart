@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 
 import '../../../../shared/constants/app_strings.dart';
@@ -14,7 +15,8 @@ import '../../../parking/presentation/parking_ui.dart';
 /// Estado de filtros aplicado a la vista de mapa.
 ///
 /// Mantiene los criterios seleccionados por el usuario y genera la consulta de
-/// aparcamientos usando el centro explícito o, en su defecto, la posición activa.
+/// aparcamientos. También conserva el viewport visible para reutilizarlo en la
+/// pantalla de resultados abierta desde el mapa.
 class MapFilters {
   MapFilters({
     this.radiusMeters = 1000,
@@ -24,6 +26,7 @@ class MapFilters {
     this.minSpaces = 0,
     this.center,
     this.centerLabel,
+    this.viewportBounds,
   }) : vehicleTypes = vehicleTypes ?? ParkingVehicleType.values.toSet(),
         categories = categories ?? ParkingCategory.values.toSet(),
         regulations = regulations ?? ParkingRegulation.values.toSet();
@@ -35,6 +38,7 @@ class MapFilters {
   final int minSpaces;
   final LatLng? center;
   final String? centerLabel;
+  final LatLngBounds? viewportBounds;
 
   ParkingQuery toQuery() {
     return ParkingQuery(
@@ -55,6 +59,7 @@ class MapFilters {
     int? minSpaces,
     LatLng? center,
     String? centerLabel,
+    LatLngBounds? viewportBounds,
   }) {
     return MapFilters(
       radiusMeters: radiusMeters ?? this.radiusMeters,
@@ -64,6 +69,7 @@ class MapFilters {
       minSpaces: minSpaces ?? this.minSpaces,
       center: center ?? this.center,
       centerLabel: centerLabel ?? this.centerLabel,
+      viewportBounds: viewportBounds ?? this.viewportBounds,
     );
   }
 
@@ -90,6 +96,7 @@ class MapFilters {
       categories: categories,
       regulations: regulations,
       minSpaces: minSpaces,
+      viewportBounds: viewportBounds,
     );
   }
 }
@@ -102,10 +109,12 @@ class FiltersDrawer extends StatefulWidget {
   const FiltersDrawer({
     super.key,
     required this.initialFilters,
+    required this.availableCategories,
     required this.onApply,
   });
 
   final MapFilters initialFilters;
+  final List<ParkingCategory> availableCategories;
   final ValueChanged<MapFilters> onApply;
 
   @override
@@ -118,11 +127,20 @@ class _FiltersDrawerState extends State<FiltersDrawer> {
   @override
   void initState() {
     super.initState();
-    _filters = widget.initialFilters;
+    _filters = _sanitize(widget.initialFilters);
+  }
+
+  @override
+  void didUpdateWidget(covariant FiltersDrawer oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.availableCategories != widget.availableCategories ||
+        oldWidget.initialFilters != widget.initialFilters) {
+      _filters = _sanitize(widget.initialFilters);
+    }
   }
 
   void _reset() {
-    setState(() => _filters = MapFilters());
+    setState(() => _filters = _defaultFilters());
   }
 
   void _apply() {
@@ -138,6 +156,8 @@ class _FiltersDrawerState extends State<FiltersDrawer> {
   }
 
   void _toggleCategory(ParkingCategory value) {
+    if (!widget.availableCategories.contains(value)) return;
+
     final next = Set<ParkingCategory>.of(_filters.categories);
     next.contains(value) ? next.remove(value) : next.add(value);
 
@@ -185,7 +205,7 @@ class _FiltersDrawerState extends State<FiltersDrawer> {
                   const SizedBox(height: AppSpacing.lg),
                   _MultiChipSection<ParkingCategory>(
                     title: AppStrings.filtersCategory,
-                    values: ParkingCategory.values,
+                    values: widget.availableCategories,
                     selected: _filters.categories,
                     labelOf: (value) => value.label,
                     iconOf: (value) => value.icon,
@@ -216,6 +236,21 @@ class _FiltersDrawerState extends State<FiltersDrawer> {
           ],
         ),
       ),
+    );
+  }
+
+  MapFilters _defaultFilters() {
+    return MapFilters(
+      categories: widget.availableCategories.toSet(),
+    );
+  }
+
+  MapFilters _sanitize(MapFilters filters) {
+    final available = widget.availableCategories.toSet();
+    final categories = filters.categories.intersection(available);
+
+    return filters.copyWith(
+      categories: categories.isEmpty ? available : categories,
     );
   }
 }

@@ -28,8 +28,8 @@ import 'widgets/parking_map_marker.dart';
 
 /// Pantalla de mapa y exploración geográfica.
 ///
-/// Coordina consulta de aparcamientos cercanos, filtros, selección de marcador,
-/// cálculo de rutas y navegación a detalle o listado de resultados.
+/// Coordina consulta de aparcamientos visibles, filtros, selección de
+/// marcador, cálculo de rutas y navegación a detalle o listado de resultados.
 class MapScreen extends StatefulWidget {
   const MapScreen({
     super.key,
@@ -56,7 +56,9 @@ class _MapScreenState extends State<MapScreen> {
 
   late MapFilters _filters;
   late Future<List<ParkingPlace>> _placesFuture;
+  late final Future<List<ParkingCategory>> _availableCategoriesFuture;
   CancelToken? _placesCancelToken;
+  bool _mapReady = false;
   ParkingPlace? _selectedPlace;
   RoutePath? _route;
   LatLng? _routeOrigin;
@@ -69,6 +71,7 @@ class _MapScreenState extends State<MapScreen> {
   void initState() {
     super.initState();
     _filters = widget.initialFilters ?? MapFilters();
+    _availableCategoriesFuture = parkingRepository.getCategories();
     _placesFuture = _fetchPlaces();
     routeRequest.addListener(_onRouteRequested);
 
@@ -86,17 +89,49 @@ class _MapScreenState extends State<MapScreen> {
     super.dispose();
   }
 
-  /// Crea la consulta activa y cancela cualquier petición previa pendiente.
+  /// Consulta el viewport visible y cancela cualquier petición previa.
   Future<List<ParkingPlace>> _fetchPlaces() {
     _placesCancelToken?.cancel();
 
     final token = CancelToken();
     _placesCancelToken = token;
 
-    return parkingRepository.getNearby(
+    if (!_mapReady) {
+      return Future.value(const <ParkingPlace>[]);
+    }
+
+    final bounds = _mapController.camera.visibleBounds;
+    return parkingRepository.getInBounds(
       _filters.toQuery(),
+      minLat: bounds.southWest.latitude,
+      minLng: bounds.southWest.longitude,
+      maxLat: bounds.northEast.latitude,
+      maxLng: bounds.northEast.longitude,
       cancelToken: token,
     );
+  }
+
+  void _handleMapReady() {
+    if (!mounted) return;
+
+    setState(() {
+      _mapReady = true;
+      _filters = _filters.copyWith(
+        viewportBounds: _mapController.camera.visibleBounds,
+      );
+      _placesFuture = _fetchPlaces();
+    });
+  }
+
+  void _handleMapEvent(MapEvent event) {
+    if (event is! MapEventMoveEnd || !mounted || !_mapReady) return;
+
+    setState(() {
+      _filters = _filters.copyWith(
+        viewportBounds: _mapController.camera.visibleBounds,
+      );
+      _placesFuture = _fetchPlaces();
+    });
   }
 
   void _onRouteRequested() {
@@ -259,9 +294,28 @@ class _MapScreenState extends State<MapScreen> {
     return Scaffold(
       key: _scaffoldKey,
       backgroundColor: AppColors.pageBackground,
-      endDrawer: FiltersDrawer(
-        initialFilters: _filters,
-        onApply: _applyFilters,
+      endDrawer: FutureBuilder<List<ParkingCategory>>(
+        future: _availableCategoriesFuture,
+        builder: (context, snapshot) {
+          final categories = snapshot.data ?? ParkingCategory.values;
+
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return Drawer(
+              backgroundColor: AppColors.surface,
+              child: const SafeArea(
+                child: Center(
+                  child: CircularProgressIndicator(),
+                ),
+              ),
+            );
+          }
+
+          return FiltersDrawer(
+            initialFilters: _filters,
+            availableCategories: categories,
+            onApply: _applyFilters,
+          );
+        },
       ),
       body: Column(
         children: [
@@ -308,6 +362,8 @@ class _MapScreenState extends State<MapScreen> {
                             : _initialZoom,
                         minZoom: _minZoom,
                         maxZoom: _maxZoom,
+                        onMapReady: _handleMapReady,
+                        onMapEvent: _handleMapEvent,
                         interactionOptions: const InteractionOptions(
                           flags: InteractiveFlag.all & ~InteractiveFlag.rotate,
                         ),
@@ -416,15 +472,15 @@ class _MapScreenState extends State<MapScreen> {
                           ),
                           selected == null
                               ? MapResultsSheet(
-                            resultCount: places.length,
-                            radiusMeters: _filters.radiusMeters,
-                            onTap: () => Navigator.of(context).push(
-                              MaterialPageRoute(
-                                builder: (_) => ParkingResultsScreen(
-                                  filters: _filters,
-                                ),
-                              ),
-                            ),
+                                  resultCount: places.length,
+                                  summaryLabel: 'Ventana visible',
+                                  onTap: () => Navigator.of(context).push(
+                                    MaterialPageRoute(
+                                      builder: (_) => ParkingResultsScreen(
+                                        filters: _filters,
+                                      ),
+                                    ),
+                                  ),
                           )
                               : ParkingPreviewSheet(
                             place: selected,

@@ -1,4 +1,5 @@
 import '../../../core/network/api_client.dart';
+
 import 'parking_place.dart';
 import 'parking_query.dart';
 
@@ -13,6 +14,19 @@ abstract class ParkingRepository {
   /// filtros o centro antes de que llegue la respuesta.
   Future<List<ParkingPlace>> getNearby(
       ParkingQuery query, {
+        CancelToken? cancelToken,
+      });
+
+  /// Obtiene aparcamientos visibles dentro de un viewport rectangular.
+  ///
+  /// Este método se usa en la vista de mapa para consultar solo los
+  /// aparcamientos que realmente caben en la ventana visible.
+  Future<List<ParkingPlace>> getInBounds(
+      ParkingQuery query, {
+        required double minLat,
+        required double minLng,
+        required double maxLat,
+        required double maxLng,
         CancelToken? cancelToken,
       });
 

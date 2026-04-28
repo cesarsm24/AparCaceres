@@ -16,8 +16,9 @@ import 'widgets/results_header.dart';
 
 /// Pantalla de listado de resultados para los filtros activos del mapa.
 ///
-/// Permite revisar todos los aparcamientos encontrados, cambiar el criterio de
-/// ordenación y abrir el detalle de cualquier elemento.
+/// Permite revisar los aparcamientos encontrados, cambiar el criterio de
+/// ordenación y abrir el detalle de cualquier elemento. Cuando el flujo
+/// procede del mapa, respeta el viewport visible almacenado en los filtros.
 class ParkingResultsScreen extends StatefulWidget {
   const ParkingResultsScreen({super.key, required this.filters});
 
@@ -34,7 +35,7 @@ class _ParkingResultsScreenState extends State<ParkingResultsScreen> {
   @override
   void initState() {
     super.initState();
-    _placesFuture = parkingRepository.getNearby(widget.filters.toQuery());
+    _placesFuture = _loadPlaces();
   }
 
   List<ParkingPlace> _sortPlaces(List<ParkingPlace> places) {
@@ -63,12 +64,45 @@ class _ParkingResultsScreenState extends State<ParkingResultsScreen> {
   }
 
   Future<List<ParkingPlace>> _reloadPlaces() {
-    return parkingRepository.getNearby(widget.filters.toQuery());
+    return _loadPlaces();
+  }
+
+  /// Carga resultados usando viewport cuando la pantalla procede del mapa.
+  Future<List<ParkingPlace>> _loadPlaces() {
+    final query = widget.filters.toQuery();
+    final bounds = widget.filters.viewportBounds;
+
+    if (bounds != null) {
+      return parkingRepository.getInBounds(
+        query,
+        minLat: bounds.southWest.latitude,
+        minLng: bounds.southWest.longitude,
+        maxLat: bounds.northEast.latitude,
+        maxLng: bounds.northEast.longitude,
+      );
+    }
+
+    return parkingRepository.getNearby(query);
+  }
+
+  LatLng _originPoint() {
+    final center = widget.filters.center;
+    if (center != null) return center;
+
+    final bounds = widget.filters.viewportBounds;
+    if (bounds != null) {
+      return LatLng(
+        (bounds.southWest.latitude + bounds.northEast.latitude) / 2,
+        (bounds.southWest.longitude + bounds.northEast.longitude) / 2,
+      );
+    }
+
+    return locationService.position.value;
   }
 
   @override
   Widget build(BuildContext context) {
-    final origin = widget.filters.center ?? locationService.position.value;
+    final origin = _originPoint();
 
     return Scaffold(
       backgroundColor: AppColors.pageBackground,

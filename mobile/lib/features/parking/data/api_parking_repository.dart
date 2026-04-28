@@ -20,30 +20,40 @@ class ApiParkingRepository implements ParkingRepository {
       ParkingQuery query, {
         CancelToken? cancelToken,
       }) async {
-    final filters = _filterParams(query);
-    final Map<String, dynamic> params;
-    final String path;
-
-    if (query.center == null) {
-      path = '/parkings';
-      params = filters;
-    } else {
-      path = '/parkings/nearby';
-      params = {
-        'lat': query.center!.latitude.toString(),
-        'lng': query.center!.longitude.toString(),
-        'radiusMeters': query.radiusMeters.toString(),
-        ...filters,
-      };
-    }
-
-    final json = await _client.getJson(
-      path,
-      query: params,
+    return _getPlaces(
+      path: query.center == null ? '/parkings' : '/parkings/nearby',
+      queryParams: query.center == null
+          ? _filterParams(query)
+          : {
+              ..._filterParams(query),
+              'lat': query.center!.latitude.toString(),
+              'lng': query.center!.longitude.toString(),
+              'radiusMeters': query.radiusMeters.toString(),
+            },
       cancelToken: cancelToken,
     );
+  }
 
-    return parseListResponse<ParkingPlace>(json, ParkingPlace.fromJson);
+  @override
+  Future<List<ParkingPlace>> getInBounds(
+    ParkingQuery query, {
+    required double minLat,
+    required double minLng,
+    required double maxLat,
+    required double maxLng,
+    CancelToken? cancelToken,
+  }) {
+    return _getPlaces(
+      path: '/parkings/in-bounds',
+      queryParams: {
+        ..._filterParams(query),
+        'minLat': minLat.toString(),
+        'minLng': minLng.toString(),
+        'maxLat': maxLat.toString(),
+        'maxLng': maxLng.toString(),
+      },
+      cancelToken: cancelToken,
+    );
   }
 
   @override
@@ -117,5 +127,20 @@ class ApiParkingRepository implements ParkingRepository {
     }
 
     return params;
+  }
+
+  Future<List<ParkingPlace>> _getPlaces(
+    {
+    required String path,
+    required Map<String, dynamic> queryParams,
+    CancelToken? cancelToken,
+  }) async {
+    final json = await _client.getJson(
+      path,
+      query: queryParams,
+      cancelToken: cancelToken,
+    );
+
+    return parseListResponse<ParkingPlace>(json, ParkingPlace.fromJson);
   }
 }
