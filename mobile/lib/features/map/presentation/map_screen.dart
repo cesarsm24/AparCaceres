@@ -236,7 +236,6 @@ class _MapScreenState extends State<MapScreen> {
       _selectedPlace = null;
       _route = null;
       _routeOrigin = null;
-      _placesFuture = _fetchPlaces();
     });
 
     _mapController.move(suggestion.position, _focusedZoom);
@@ -251,7 +250,6 @@ class _MapScreenState extends State<MapScreen> {
       _selectedPlace = null;
       _route = null;
       _routeOrigin = null;
-      _placesFuture = _fetchPlaces();
     });
 
     _mapController.move(locationService.position.value, _focusedZoom);
@@ -471,9 +469,9 @@ class _MapScreenState extends State<MapScreen> {
                             child: _OsmAttribution(),
                           ),
                           selected == null
-                              ? MapResultsSheet(
+                          ? MapResultsSheet(
                                   resultCount: places.length,
-                                  summaryLabel: 'Ventana visible',
+                                  summaryLabel: 'Resultados del mapa',
                                   onTap: () => Navigator.of(context).push(
                                     MaterialPageRoute(
                                       builder: (_) => ParkingResultsScreen(
