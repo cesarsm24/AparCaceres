@@ -1,11 +1,11 @@
-"""Endpoint de reimportación del catálogo desde los GeoJSON locales.
+"""Endpoint de reimportación del catálogo desde los GeoJSON del directorio de datos.
 
 Protección con `X-Import-Token`:
 - Si la variable de entorno `IMPORT_TOKEN` está definida, el endpoint exige
   que la petición incluya esa cabecera y que coincida (constant-time compare)
   con el valor configurado. En caso contrario responde 401.
 - Si `IMPORT_TOKEN` está vacío (default en dev), el endpoint queda abierto
-  para que sea cómodo iterar localmente.
+  para facilitar la iteración local.
 """
 
 import asyncio
@@ -55,8 +55,8 @@ _IMPORT_RESPONSE_EXAMPLE = {
 def _check_import_token(provided: Optional[str]) -> None:
     """Valida `X-Import-Token`; lanza 401 si está mal o falta cuando hace falta.
 
-    Comparación con `hmac.compare_digest` para evitar timing attacks (overkill
-    en este contexto pero es el patrón correcto y cuesta lo mismo).
+    Comparación con `hmac.compare_digest` para evitar timing attacks y seguir
+    el patrón correcto sin coste adicional.
     """
     if not IMPORT_TOKEN:
         # Sin token configurado, dev abierto.

@@ -273,9 +273,8 @@ async def add_favorite(
                 excess_until = -(FAVORITES_MAX_PER_USER + 1)
                 await rdb.zremrangebyrank(key, 0, excess_until)
             except redis.ConnectionError:
-                # Best-effort: si el cap no se aplica este request lo aplicará
-                # el siguiente. No queremos abortar el alta del favorito por
-                # esto.
+                # Si el recorte falla, el siguiente alta volverá a intentar
+                # aplicar el límite. No se aborta la operación principal.
                 logger.warning(
                     "No se pudo aplicar cap de favoritos para usuario %s",
                     user_id,

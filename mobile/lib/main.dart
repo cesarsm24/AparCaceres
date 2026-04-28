@@ -7,11 +7,9 @@ import 'features/parking/data/favorites_store.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
-  // Pre-warm el cache de favoritos contra el servidor para que el corazón
-  // aparezca relleno en los detalles antes de que el usuario abra la
-  // pantalla de favoritos. Best-effort: si falla (offline, sesión caída)
-  // seguimos sin parar el arranque; la siguiente entrada a favoritos
-  // mostrará el `ApiErrorState`.
+  // Precarga la cache de favoritos para que el estado del corazón esté
+  // disponible desde el inicio. Si la sincronización falla, el arranque
+  // continúa y la siguiente vista dependiente mostrará el error correspondiente.
   unawaited(favoritesStore.reload().catchError((_) {}));
   runApp(const AparCaceresApp());
 }

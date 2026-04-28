@@ -4,8 +4,9 @@ Replican el parsing lenient que hace Flutter en `ParkingPlace.fromJson`:
 - Valores desconocidos o vacíos de enum caen al default, no lanzan excepción.
 - Cadenas vacías o whitespace en campos opcionales se traducen a `None`.
 - Enteros opcionales admiten num, float, string parseable o `None`.
-- Coordenadas en formato GeoJSON `[lon, lat]` (¡ojo al orden!).
-- Polígonos descartan anillos con menos de 3 puntos (matches Flutter `ring.length >= 3`).
+- Coordenadas en formato GeoJSON `[lon, lat]`.
+- Polígonos descartan anillos con menos de 3 puntos, igual que Flutter
+  (`ring.length >= 3`).
 
 Mantener estas funciones SIN dependencias de Pydantic ni de FastAPI para que
 sean reutilizables desde el importador y desde los tests.
