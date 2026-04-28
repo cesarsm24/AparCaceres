@@ -1,15 +1,9 @@
-"""Instrumentación Prometheus para el servicio FastAPI.
+"""Instrumentación Prometheus del servicio FastAPI.
 
-Usa `prometheus-fastapi-instrumentator` para exponer en `/metrics` las
-métricas estándar (histograma de latencia, contador de status codes,
-inflight requests, etc.) sin tener que instrumentar manualmente cada router.
-
-`/metrics` queda fuera de los logs de acceso para no inundar el JSON con
-scrapes de Prometheus (un scrape cada 15s × 8640 al día). Por la misma
-razón también se excluye `/healthz`.
-
-Desactivable con `METRICS_ENABLED=false` (útil en tests para no arrastrar el
-estado global del cliente Prometheus entre casos).
+Configura `prometheus-fastapi-instrumentator` para exponer métricas HTTP en
+`/metrics` sin instrumentar manualmente cada router. La instrumentación puede
+desactivarse mediante `METRICS_ENABLED=false`, especialmente en tests para
+evitar estado global compartido del cliente Prometheus.
 """
 
 from __future__ import annotations
@@ -21,9 +15,11 @@ from prometheus_fastapi_instrumentator import Instrumentator
 
 
 def _env_flag(name: str, default: bool) -> bool:
+    """Interpreta una variable de entorno como valor booleano."""
     raw = os.getenv(name)
     if raw is None:
         return default
+
     return raw.strip().lower() in {"1", "true", "yes", "on"}
 
 
@@ -31,12 +27,11 @@ METRICS_ENABLED = _env_flag("METRICS_ENABLED", True)
 
 
 def instrument_app(app: FastAPI) -> None:
-    """Engancha la instrumentación al ciclo de vida de la app.
+    """Registra métricas Prometheus y expone el endpoint `/metrics`.
 
-    `should_group_status_codes=False` mantiene los códigos exactos (200, 404,
-    503...) en vez de agruparlos por familia (`2xx`/`5xx`). Más útil para
-    dashboards al precio de un poco más de cardinalidad — aceptable con la
-    docena de rutas del servicio.
+    Los códigos de estado se conservan sin agrupar para facilitar diagnósticos
+    por respuesta exacta. `/metrics` y `/healthz` se excluyen para evitar que
+    los scrapes y comprobaciones de salud contaminen las métricas de negocio.
     """
     if not METRICS_ENABLED:
         return
@@ -48,5 +43,4 @@ def instrument_app(app: FastAPI) -> None:
         env_var_name="METRICS_ENABLED",
     )
     instrumentator.instrument(app)
-    # `expose` registra el endpoint `/metrics` en el arranque.
     instrumentator.expose(app, endpoint="/metrics", include_in_schema=False)

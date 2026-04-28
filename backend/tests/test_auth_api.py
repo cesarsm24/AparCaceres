@@ -49,7 +49,7 @@ def test_create_session_503_when_secret_missing(api_client, monkeypatch):
 
     response = api_client.post("/auth/session", json={"sub": "alice"})
     assert response.status_code == 503
-    assert "FAVORITES_SECRET" in response.json()["detail"]
+    assert "configurada" in response.json()["detail"]
 
 
 # ============================================================

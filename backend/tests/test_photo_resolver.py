@@ -17,14 +17,12 @@ from __future__ import annotations
 import asyncio
 
 import httpx
-import pytest
 
 from app.infra.redis.photo_resolver import (
     _CACHE_NEGATIVE_SENTINEL,
     extract_photo_url,
     resolve_many,
 )
-
 
 # ============================================================
 # Fixtures HTML

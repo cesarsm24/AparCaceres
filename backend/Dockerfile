@@ -1,12 +1,10 @@
 # syntax=docker/dockerfile:1.7
-# ============================================================
-# Imagen del backend FastAPI de AparCáceres.
-# Build multi-stage para no acarrear el toolchain de pip al runtime.
-# ============================================================
+# Imagen runtime del backend FastAPI de AparCáceres.
+# Usa build multi-stage para separar la instalación de dependencias del
+# contenedor final y evitar incluir cachés o herramientas innecesarias.
 
 ARG PYTHON_VERSION=3.11
 
-# ---------- Stage 1: builder ----------
 FROM python:${PYTHON_VERSION}-slim AS builder
 
 ENV PIP_NO_CACHE_DIR=1 \
@@ -14,12 +12,10 @@ ENV PIP_NO_CACHE_DIR=1 \
 
 WORKDIR /build
 
-# Instalación aislada en /install para copiar solo lo necesario al runtime.
 COPY requirements.txt ./
 RUN pip install --prefix=/install -r requirements.txt
 
 
-# ---------- Stage 2: runtime ----------
 FROM python:${PYTHON_VERSION}-slim AS runtime
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
@@ -28,13 +24,12 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     APP_ENV=production \
     LOG_LEVEL=INFO
 
-# `curl` es la única utilidad extra: la usa el HEALTHCHECK del contenedor.
+# Dependencia mínima necesaria para ejecutar el healthcheck del contenedor.
 RUN apt-get update \
     && apt-get install -y --no-install-recommends curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Usuario no root con UID/GID fijos para que los volúmenes montados sean
-# predecibles desde el host.
+# UID/GID fijos para que permisos y volúmenes montados sean reproducibles.
 RUN groupadd --system --gid 1000 app \
     && useradd --system --uid 1000 --gid app --no-create-home --shell /usr/sbin/nologin app
 

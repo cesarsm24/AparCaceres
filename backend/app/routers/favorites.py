@@ -42,8 +42,8 @@ from ..core.config import (
     USER_FAVORITES_KEY_PREFIX,
     USER_FAVORITES_KEY_SUFFIX,
 )
-from ..infra.redis.importer import place_from_redis_hash
 from ..infra.redis.client import get_redis, raise_redis_503
+from ..infra.redis.importer import place_from_redis_hash
 from ..schemas import FavoriteAdded, FavoriteRemoved, ParkingPlaceOut
 
 logger = logging.getLogger(__name__)

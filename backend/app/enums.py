@@ -1,21 +1,15 @@
-"""String enums alineados 1:1 con los valores que consume Flutter.
+"""Enumeraciones públicas del contrato de aparcamientos.
 
-Referencia autoritativa: `mobile/lib/features/parking/domain/parking_place.dart`,
-métodos `_categoryFromWire`, `_vehicleTypeFromWire`, `_regulationFromWire`,
-`_geometryTypeFromWire`. Cada `.value` de abajo DEBE coincidir con uno de los
-`case 'xxx' =>` de esos switches.
-
-Heredamos de `str, Enum` para que:
-- `json.dumps(ParkingCategory.PARKING)` emita la cadena cruda.
-- Pydantic las serialice directamente como string sin `use_enum_values`.
-- Las comparaciones contra literales (`my_cat == "paid_parking"`) funcionen.
+Define los valores serializados que consume el cliente móvil. Cada valor debe
+mantenerse alineado con el modelo de dominio de Flutter para preservar la
+compatibilidad del contrato JSON.
 """
 
 from enum import Enum
 
 
 class ParkingCategory(str, Enum):
-    """Tipos de aparcamiento. Default cuando el valor wire es desconocido: PARKING."""
+    """Categoría funcional del aparcamiento."""
 
     PARKING = "parking"
     PAID_PARKING = "paid_parking"
@@ -29,7 +23,7 @@ class ParkingCategory(str, Enum):
 
 
 class ParkingVehicleType(str, Enum):
-    """Vehículos admitidos. Default: CAR."""
+    """Tipo principal de vehículo admitido."""
 
     CAR = "car"
     MOTORBIKE = "motorbike"
@@ -37,7 +31,7 @@ class ParkingVehicleType(str, Enum):
 
 
 class ParkingRegulation(str, Enum):
-    """Régimen de uso del aparcamiento. Default: FREE."""
+    """Régimen de uso asociado al aparcamiento."""
 
     FREE = "free"
     PAID = "paid"
@@ -47,7 +41,7 @@ class ParkingRegulation(str, Enum):
 
 
 class ParkingGeometryType(str, Enum):
-    """Tipo geométrico de la ubicación del aparcamiento. Default: POINT."""
+    """Geometría usada para representar la ubicación."""
 
     POINT = "point"
     POLYGON = "polygon"

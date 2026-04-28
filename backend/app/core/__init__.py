@@ -1,2 +1,4 @@
-"""Capa transversal del backend: configuración, auth, logging, métricas y límites."""
+"""Capa transversal del backend.
 
+Contiene configuración, autenticación, logging, métricas y rate limiting.
+"""

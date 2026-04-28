@@ -1,5 +1,5 @@
-# Dependencias adicionales solo para desarrollo y CI.
-# Producción usa exclusivamente requirements.txt.
+# Dependencias adicionales para desarrollo y CI.
+# Producción instala únicamente `requirements.txt`.
 
 -r requirements.txt
 
