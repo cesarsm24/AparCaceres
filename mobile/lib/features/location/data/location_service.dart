@@ -46,9 +46,8 @@ class LocationService {
 
   /// Re-fetches the device position. Requires permission to have already
   /// been granted; otherwise no-op and returns false. Fixes outside the
-  /// Cáceres bounding box are discarded and the fallback is kept — that
-  /// way an emulator pretending to be in Mountain View doesn't leak into
-  /// the UI, but a real device in Cáceres still gets a real location.
+  /// Cáceres bounding box are discarded and the fallback is kept para evitar
+  /// que posiciones no válidas contaminen la UI.
   Future<bool> refresh() async {
     if (!_granted) return false;
     try {
@@ -60,8 +59,8 @@ class LocationService {
       );
       final fix = LatLng(pos.latitude, pos.longitude);
       if (!_isWithinCaceres(fix)) {
-        // Mantenemos la posición previa (mock o último fix válido) y
-        // marcamos el flag para que la UI ofrezca el picker manual.
+        // Se conserva la posición previa y se marca el flag para ofrecer el
+        // selector manual de ubicación.
         _outsideCaceres = true;
         return false;
       }

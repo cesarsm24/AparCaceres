@@ -1,9 +1,8 @@
 """Filtros y búsqueda accent-insensitive sobre `ParkingPlaceOut`.
 
 Replica la semántica de `mobile/lib/features/search/data/parking_search.dart`
-y de `LocalParkingRepository.getNearby` (filtros por enum + minSpaces) para que
-los endpoints devuelvan exactamente el mismo subset que el cliente Flutter
-calculaba en local.
+y de los filtros que aplica el cliente Flutter para que los endpoints
+devuelvan exactamente el mismo subset que la UI espera.
 
 Funciones puras: no tocan Redis ni FastAPI -> reutilizables desde tests.
 """

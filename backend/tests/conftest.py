@@ -25,6 +25,7 @@ import os
 
 # Debe ejecutarse ANTES de importar la app (incluye `app.rate_limit`).
 os.environ.setdefault("RATE_LIMIT_ENABLED", "false")
+os.environ.setdefault("RATE_LIMIT_STORAGE_URI", "memory://")
 os.environ.setdefault("METRICS_ENABLED", "false")
 # Clave de firma fija para los tokens de favoritos. Cualquier valor sirve;
 # solo importa que sea estable durante la suite.

@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="https://URL-DEL-LOGO-AQUI" alt="Logo de AparCáceres" width="180" />
+<img src="mobile/assets/images/logo.png" alt="Logo de AparCáceres" width="180" />
 
 # AparCáceres
 

@@ -1,8 +1,8 @@
 """Tests de los helpers puros de `app.filters`.
 
 Verifican que la búsqueda accent-insensitive y los filtros AND-by-AND
-replican exactamente la semántica de `parking_search.dart` y de
-`LocalParkingRepository.getNearby` en Flutter.
+replican exactamente la semántica de la búsqueda y filtrado que consume
+Flutter.
 """
 
 from __future__ import annotations
