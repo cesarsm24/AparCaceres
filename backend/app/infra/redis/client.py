@@ -5,7 +5,7 @@ solo necesitan comandos directos (hgetall, zadd, get, setex...): no bloquean
 el event loop y aprovechan el pool entre requests.
 
 Para los flujos pesados (importer multi-fichero y las consultas de
-RediSearch encapsuladas en `app/search.py`) usamos un cliente síncrono: los
+RediSearch encapsuladas en `app/infra/redis/search.py`) usamos un cliente síncrono: los
 handlers async lo invocan vía `asyncio.to_thread`, así no arrastramos la
 conversión async de la lógica de parsing y construcción de queries, que no
 se beneficiaría del cambio.
@@ -36,7 +36,7 @@ import redis
 import redis.asyncio as aioredis
 from fastapi import FastAPI, HTTPException, Request
 
-from .config import REDIS_DB, REDIS_HOST, REDIS_PORT
+from ...core.config import REDIS_DB, REDIS_HOST, REDIS_PORT
 from .search import SearchIndexError, ensure_search_index
 
 logger = logging.getLogger(__name__)

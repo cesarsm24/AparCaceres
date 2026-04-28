@@ -18,7 +18,7 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from app.logging_config import (
+from app.core.logging import (
     REQUEST_ID_HEADER,
     JsonFormatter,
     RequestIdMiddleware,

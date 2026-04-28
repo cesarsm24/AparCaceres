@@ -35,7 +35,7 @@ from urllib.parse import urljoin
 import httpx
 import redis
 
-from .config import (
+from ...core.config import (
     PHOTO_CACHE_KEY_PREFIX,
     PHOTO_CACHE_TTL_SECONDS,
     PHOTO_FETCH_CONCURRENCY,

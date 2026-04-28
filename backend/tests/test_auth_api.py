@@ -11,7 +11,7 @@ from datetime import datetime, timedelta, timezone
 
 import jwt
 
-from app import auth as auth_module
+from app.core import auth as auth_module
 
 # ============================================================
 # POST /auth/session

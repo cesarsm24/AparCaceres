@@ -23,7 +23,7 @@ from __future__ import annotations
 
 import os
 
-# Debe ejecutarse ANTES de importar la app (incluye `app.rate_limit`).
+# Debe ejecutarse ANTES de importar la app (incluye `app.core.rate_limit`).
 os.environ.setdefault("RATE_LIMIT_ENABLED", "false")
 os.environ.setdefault("RATE_LIMIT_STORAGE_URI", "memory://")
 os.environ.setdefault("METRICS_ENABLED", "false")
@@ -381,7 +381,7 @@ def fake_redis() -> FakeRedis:
 @pytest.fixture
 def auth_headers():
     """Devuelve un helper `make(sub)` que produce las cabeceras Bearer."""
-    from app.auth import issue_token
+    from app.core.auth import issue_token
 
     def make(sub: str) -> dict[str, str]:
         token, _ = issue_token(sub)
@@ -405,7 +405,7 @@ def _build_test_app(fake_redis: FakeRedis) -> FastAPI:
     así que las inspecciones directas (`fake_redis.hashes`) ven los cambios
     hechos por cualquiera de los dos.
     """
-    from app.rate_limit import limiter
+    from app.core.rate_limit import limiter
     from app.routers import auth, favorites, health, imports, parkings
 
     app = FastAPI()
@@ -587,7 +587,7 @@ def seeded_client(
     Cada feature se empareja con su `SourceProfile` para que los ids sean
     namespaced (`{sourceDataset}:{mslink}`), igual que en producción.
     """
-    from app.importer import SOURCE_REGISTRY, run_import_sources
+    from app.infra.redis.importer import SOURCE_REGISTRY, run_import_sources
 
     # Bucket por filename para conservar el agrupamiento por dataset que usa
     # `run_import_sources`.

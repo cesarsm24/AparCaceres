@@ -20,11 +20,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 
-from app.config import CORS_ALLOW_ALL, CORS_ORIGINS, LOG_LEVEL
-from app.logging_config import RequestIdMiddleware, configure_logging
-from app.metrics import instrument_app
-from app.rate_limit import limiter
-from app.redis_client import lifespan
+from app.core.config import CORS_ALLOW_ALL, CORS_ORIGINS, LOG_LEVEL
+from app.core.logging import RequestIdMiddleware, configure_logging
+from app.core.metrics import instrument_app
+from app.core.rate_limit import limiter
+from app.infra.redis.client import lifespan
 from app.routers import auth, favorites, health, imports, parkings, photos
 
 configure_logging(LOG_LEVEL)

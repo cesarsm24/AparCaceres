@@ -16,11 +16,11 @@ from typing import Optional
 import redis
 from fastapi import APIRouter, Depends, Header, HTTPException, Request, Response
 
-from ..config import DATA_DIR, IMPORT_TOKEN
-from ..importer import run_import_dir
-from ..rate_limit import RATE_LIMIT_IMPORT, limiter
-from ..redis_client import get_redis_sync, raise_redis_503
-from ..search import SearchIndexError
+from ..core.config import DATA_DIR, IMPORT_TOKEN
+from ..core.rate_limit import RATE_LIMIT_IMPORT, limiter
+from ..infra.redis.client import get_redis_sync, raise_redis_503
+from ..infra.redis.importer import run_import_dir
+from ..infra.redis.search import SearchIndexError
 
 logger = logging.getLogger(__name__)
 

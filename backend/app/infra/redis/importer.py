@@ -35,7 +35,7 @@ from typing import Any, Iterable, Iterator, Optional
 import redis
 
 from . import photo_resolver
-from .config import (
+from ...core.config import (
     CACHE_VERSION_KEY,
     FETCH_PHOTOS,
     PARKING_KEY_PREFIX,
@@ -43,14 +43,14 @@ from .config import (
     STAGING_INDEX_NAME,
     STAGING_KEY_PREFIX,
 )
-from .enums import (
+from ...enums import (
     ParkingCategory,
     ParkingGeometryType,
     ParkingRegulation,
     ParkingVehicleType,
 )
-from .normalization import coerce_line_string, coerce_polygon
-from .schemas import ParkingPlaceOut
+from ...normalization import coerce_line_string, coerce_polygon
+from ...schemas import ParkingPlaceOut
 from .search import (
     build_location,
     build_search_text,

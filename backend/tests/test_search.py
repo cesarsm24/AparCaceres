@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from app.schemas import ParkingPlaceNearbyOut
-from app.search import _ft_nearby_rows
+from app.infra.redis.search import _ft_nearby_rows
 
 # Hashes simulados que devuelve `FT.AGGREGATE … LOAD *` para cada miembro:
 # misma estructura que los hashes `parking:{id}` reales, más el campo

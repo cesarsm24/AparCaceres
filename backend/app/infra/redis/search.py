@@ -15,18 +15,18 @@ from typing import Iterable, Optional
 import redis
 from redis.exceptions import ResponseError
 
-from .config import (
+from ...core.config import (
     PARKING_KEY_PREFIX,
     SEARCH_INDEX_NAME,
 )
-from .enums import (
+from ...enums import (
     ParkingCategory,
     ParkingGeometryType,
     ParkingRegulation,
     ParkingVehicleType,
 )
-from .filters import apply_filters, normalize_for_search
-from .schemas import ParkingFacetsOut, ParkingPlaceNearbyOut, ParkingPlaceOut
+from ...filters import apply_filters, normalize_for_search
+from ...schemas import ParkingFacetsOut, ParkingPlaceNearbyOut, ParkingPlaceOut
 
 _EARTH_RADIUS_M = 6_371_000.0
 _TEXT_TOKEN_RE = re.compile(r"[a-z0-9_]+")

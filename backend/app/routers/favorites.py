@@ -1,6 +1,6 @@
 """Favoritos persistentes por usuario.
 
-Autenticación: cada request pasa por `require_user` (`app.auth`), que valida
+Autenticación: cada request pasa por `require_user` (`app.core.auth`), que valida
 un JWT firmado (`Authorization: Bearer <token>` o `X-Session-Token: <token>`)
 y devuelve el `sub` del token. El cliente obtiene el token llamando a
 `POST /auth/session`. Esto sustituye al `X-User-Id` opaco previo: ahora el
@@ -34,16 +34,16 @@ import redis
 import redis.asyncio as aioredis
 from fastapi import APIRouter, Depends, HTTPException
 
-from ..auth import require_user
-from ..config import (
+from ..core.auth import require_user
+from ..core.config import (
     FAVORITES_MAX_PER_USER,
     FAVORITES_TTL_SECONDS,
     PARKING_KEY_PREFIX,
     USER_FAVORITES_KEY_PREFIX,
     USER_FAVORITES_KEY_SUFFIX,
 )
-from ..importer import place_from_redis_hash
-from ..redis_client import get_redis, raise_redis_503
+from ..infra.redis.importer import place_from_redis_hash
+from ..infra.redis.client import get_redis, raise_redis_503
 from ..schemas import FavoriteAdded, FavoriteRemoved, ParkingPlaceOut
 
 logger = logging.getLogger(__name__)

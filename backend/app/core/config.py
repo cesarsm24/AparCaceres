@@ -7,7 +7,7 @@ from dotenv import load_dotenv
 
 # backend/ (raíz del servicio). Usamos __file__ para que las rutas funcionen sea cual
 # sea el cwd desde el que se lance uvicorn.
-BACKEND_DIR = Path(__file__).resolve().parent.parent
+BACKEND_DIR = Path(__file__).resolve().parent.parent.parent
 
 # Carga variables desde backend/.env si existe.
 load_dotenv(BACKEND_DIR / ".env")
