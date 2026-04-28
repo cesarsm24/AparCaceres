@@ -19,6 +19,9 @@ El proyecto utiliza datos abiertos municipales y pone el foco en **Redis Stack**
 ```
 AparCaceres/
 ├── backend/    API REST en FastAPI + Redis Stack
+│   ├── app/core/        Configuración, auth, logging, métricas y rate limit
+│   ├── app/infra/redis/ Integración con Redis Stack, búsqueda e importador
+│   └── app/routers/     Endpoints HTTP por dominio
 └── mobile/     Cliente móvil en Flutter (Material 3)
 ```
 
@@ -61,6 +64,11 @@ Total activo esperado: `7314` features.
 Requisitos:
 - Python `>=3.11`
 - Redis Stack con RediSearch habilitado
+
+Estructura interna principal:
+- `app/core/` concentra la configuración, autenticación, logging, métricas y rate limiting.
+- `app/infra/redis/` contiene el cliente Redis, la búsqueda, el importador y la resolución de fotos.
+- `app/routers/` expone la capa HTTP y mantiene la lógica de negocio fuera de los handlers.
 
 ### Ejecución local sin Docker
 
