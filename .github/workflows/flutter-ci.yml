@@ -1,0 +1,51 @@
+# ============================================================
+# CI del frontend Flutter AparCáceres.
+# - flutter analyze para detectar problemas de estilo y tipado.
+# - flutter test para validar la suite de widget, core y data.
+# ============================================================
+
+name: flutter-ci
+
+on:
+  push:
+    branches: [develop, main]
+    paths:
+      - "mobile/**"
+      - ".github/workflows/flutter-ci.yml"
+  pull_request:
+    branches: [develop, main]
+    paths:
+      - "mobile/**"
+      - ".github/workflows/flutter-ci.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: flutter-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    defaults:
+      run:
+        working-directory: mobile
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configurar Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Obtener dependencias
+        run: flutter pub get
+
+      - name: Analizar código
+        run: flutter analyze
+
+      - name: Ejecutar tests
+        run: flutter test
