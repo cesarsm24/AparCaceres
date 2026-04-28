@@ -907,20 +907,16 @@ def _run_import_paired(
         # explícito en el GeoJSON. Para esos, preferimos `urlFicha`
         # (`fichatoponimia.php`) sobre `urlVia` (`fichacalle.php`) porque la
         # primera suele traer la foto del propio toponímico/aparcamiento; la
-        # segunda cae a la foto de la calle como mejor esfuerzo. Aun así,
-        # probamos ambas URLs cuando existen porque en varios datasets la foto
-        # real solo aparece en una de las dos páginas.
-        ficha_tasks: list[tuple[str, list[str]]] = []
+        # segunda cae a la foto de la calle como mejor esfuerzo. Solo usamos
+        # `urlVia` cuando no existe `urlFicha`, porque la foto que realmente
+        # nos interesa es la de la ficha principal.
+        ficha_tasks: list[tuple[str, str]] = []
         for place in valid_places:
             if place.imageUrl:
                 continue
-            candidate_urls = [
-                url
-                for url in (place.urlFicha, place.urlVia)
-                if url
-            ]
-            if candidate_urls:
-                ficha_tasks.append((place.id, candidate_urls))
+            ficha = place.urlFicha or place.urlVia
+            if ficha:
+                ficha_tasks.append((place.id, ficha))
 
         if ficha_tasks:
             try:
