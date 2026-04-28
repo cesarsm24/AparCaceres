@@ -141,8 +141,9 @@ hash-tags (prematuro sin métricas).
 - Documentación operativa en `docs/operations.md`: topología nginx + TLS,
   configuración de variables en producción, runbook rápido y procedimiento
   de restore desde backup.
-- Script `scripts/redis-backup.sh`: BGSAVE + copia de `dump.rdb` y
-  `appendonlydir/` con retención configurable, listo para cron.
+- Procedimiento de backup de Redis documentado sin helper versionado:
+  snapshot manual con `BGSAVE`, copia de `dump.rdb` y `appendonlydir/`,
+  y sincronización off-site definida en la guía operativa.
 - Tests para `GET /healthz`, `RequestIdMiddleware` y versionado de
   `cache:version` (cierre de la fase 1 que se coló en esta rama).
 

@@ -312,8 +312,8 @@ La guía operativa vive en [`docs/operations.md`](docs/operations.md):
   nginx con TLS y propagación de `X-Request-ID`,
 - variables de entorno mínimas en producción (`FAVORITES_SECRET`,
   `IMPORT_TOKEN`, `RATE_LIMIT_ENABLED`, `METRICS_ENABLED`...),
-- backups de Redis (script `scripts/redis-backup.sh`, cron de retención y
-  sincronización off-site con `rclone`),
+- backups de Redis y procedimiento de restore documentados en
+  [`docs/operations.md`](docs/operations.md),
 - procedimiento de restore desde un snapshot,
 - runbook rápido con los síntomas más comunes y por dónde mirar primero.
 

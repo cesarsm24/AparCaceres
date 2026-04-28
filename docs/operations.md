@@ -147,21 +147,22 @@ Esperado:
 
 ### 4.1 Manual
 
-`scripts/redis-backup.sh` (en este repo) lanza `BGSAVE` y copia el `dump.rdb`
-y el `appendonlydir/` a un directorio destino con timestamp. Para correrlo
-puntualmente:
+Para generar un snapshot puntual del volumen de Redis:
 
 ```bash
-./scripts/redis-backup.sh /var/backups/aparcaceres
+TIMESTAMP=$(date -u +"%Y-%m-%dT%H-%M-%SZ")
+SNAPSHOT_DIR="/var/backups/aparcaceres/$TIMESTAMP"
+mkdir -p "$SNAPSHOT_DIR"
+docker compose exec redis redis-cli BGSAVE
+docker compose cp redis:/data/dump.rdb "$SNAPSHOT_DIR/dump.rdb"
+docker compose cp redis:/data/appendonlydir "$SNAPSHOT_DIR/appendonlydir"
 ```
 
 ### 4.2 Automatizado (cron en el host)
 
-```cron
-# /etc/cron.d/aparcaceres-redis-backup
-# Backup diario a las 03:00, retención 14 días.
-0 3 * * * deploy /opt/aparcaceres/scripts/redis-backup.sh /var/backups/aparcaceres 14 >> /var/log/aparcaceres-backup.log 2>&1
-```
+Si se automatiza fuera del repositorio, conviene envolver los comandos
+anteriores en un job del sistema de despliegue con la política de retención
+que corresponda al entorno.
 
 ### 4.3 Off-site (S3 / object storage)
 
