@@ -15,7 +15,6 @@ import '../../parking/data/parking_repository_provider.dart';
 import '../../parking/domain/parking_place.dart';
 import '../../parking/domain/parking_query.dart';
 import '../../parking_detail/presentation/parking_detail_screen.dart';
-import '../../search/presentation/search_screen.dart';
 import 'widgets/home_search_bar.dart';
 import 'widgets/location_actions.dart';
 import 'widgets/quick_access_row.dart';
@@ -92,13 +91,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     AppSpacing.lg,
                   ),
                   children: [
-                    HomeSearchBar(
-                      onTap: () => Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) => const SearchScreen(),
-                        ),
-                      ),
-                    ),
+                    HomeSearchBar(onTap: () => _pickLocation(context)),
                     const SizedBox(height: AppSpacing.lg),
                     const SectionTitle(AppStrings.sectionQuickAccess),
                     const SizedBox(height: AppSpacing.md),
