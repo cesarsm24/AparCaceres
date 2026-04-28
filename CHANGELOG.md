@@ -21,6 +21,21 @@ testcontainers (CI ya tiene Redis Stack como service) y cluster con
 hash-tags (prematuro sin métricas).
 
 ### Added (Fase 3)
+- **Resolución de fotos durante el import**: nuevo módulo
+  `app/photo_resolver.py` que descarga las fichas del SIG municipal
+  (`fichatoponimia.php` / `fichacalle.php`) y extrae la `<img>` de
+  `/fotosOriginales/...` con un regex acotado. El importador la invoca
+  para los places que no traen `URL_FOTO` explícita (todos menos
+  `movilidad_reducida` y `parking_bicis`), con concurrencia controlada
+  por semáforo (`PHOTO_FETCH_CONCURRENCY=20`) y caché Redis aparte
+  (`parking_photo:{id}`, TTL 90 días) que cachea también el "no hay
+  foto" como sentinel vacío para no rescraperar fichas estériles.
+  Fallos de red o ficha 404 se tratan como "sin foto" sin abortar el
+  import. Configurable por env (`FETCH_PHOTOS=true|false`,
+  `PHOTO_FETCH_CONCURRENCY`, `PHOTO_FETCH_TIMEOUT_SECONDS`,
+  `PHOTO_CACHE_TTL_SECONDS`). El summary del importer expone
+  `photos_resolved`. Cliente móvil sin cambios (`ParkingThumbnail` ya
+  consume `imageUrl` y cae al placeholder cuando es `None`).
 - **Caché de `/parkings/nearby` con filtros de baja cardinalidad**: la clave
   canónica incorpora ahora `vehicleType`/`category`/`regulation`/`dataset`/
   `minSpaces` ordenados alfabéticamente, así que la combinación típica del
@@ -155,6 +170,9 @@ hash-tags (prematuro sin métricas).
 - `slowapi==0.1.9`, `prometheus-fastapi-instrumentator==7.0.0`,
   `PyJWT==2.10.1` añadidas como directas. Lockfile actualizado con sus
   transitivas.
+- `httpx>=0.27,<1` movida a runtime (antes solo en `requirements-dev`
+  para `TestClient`). La usa el resolutor de fotos para scrapear
+  fichas SIG con cliente async + timeouts.
 
 ### Hardening (Redis quick wins)
 - **Socket timeouts en los clientes Redis** (`socket_timeout=5s`,
