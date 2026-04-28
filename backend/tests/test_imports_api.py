@@ -90,7 +90,10 @@ def test_import_increments_cache_version_for_nearby_namespacing(
 
     initial_version = int(fake_redis.get(CACHE_VERSION_KEY) or "0")
 
-    response = seeded_client.post("/import-parkings")
+    response = seeded_client.post(
+        "/import-parkings",
+        headers={"X-Import-Token": imports_router.IMPORT_TOKEN},
+    )
     assert response.status_code == 200
 
     new_version = int(fake_redis.get(CACHE_VERSION_KEY))

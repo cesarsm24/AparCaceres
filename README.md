@@ -77,7 +77,7 @@ cd backend
 python3.11 -m venv .venv311
 . .venv311/bin/activate
 pip install -r requirements-dev.txt
-cp .env.example .env   # ajustar APP_ENV, CORS_ORIGINS, etc.
+cp .env.example .env   # ajustar CORS_ORIGINS, FAVORITES_SECRET, IMPORT_TOKEN, etc.
 pytest
 uvicorn main:app --reload
 ```
@@ -88,22 +88,20 @@ Tras la primera arrancada hay que poblar el catálogo:
 curl -X POST http://localhost:8000/import-parkings
 ```
 
-### Ejecución con Docker (recomendada para staging)
+### Ejecución con Docker Compose
 
-`docker-compose.yml` levanta Redis Stack con AOF persistente y la API conectada
-a él. Reproducible en cualquier máquina con Docker:
+`docker-compose.yml` levanta Redis Stack con AOF persistente, la API y el
+frontend web. Es la ruta pensada para un despliegue reproducible con Docker:
 
 ```bash
+cp backend/.env.example backend/.env
+# Completar backend/.env con CORS_ORIGINS, FAVORITES_SECRET e IMPORT_TOKEN.
 docker compose up -d --build
+docker compose logs -f bootstrap
 docker compose exec api curl -s http://localhost:8000/healthz | jq
-curl -X POST http://localhost:8000/import-parkings
 docker compose down       # parar; conserva el volumen redis-data
 docker compose down -v    # parar y BORRAR los datos persistentes
 ```
-
-Antes de levantar el stack con Docker, definir `FAVORITES_SECRET` en el
-entorno o en `backend/.env` para que la autenticación de favoritos quede
-operativa.
 
 ### CORS
 
@@ -113,7 +111,7 @@ le afecta. Solo hace falta declarar orígenes para Flutter web
 
 | Entorno      | `CORS_ORIGINS` recomendado                                    |
 |--------------|---------------------------------------------------------------|
-| Desarrollo   | `http://localhost:3000,http://localhost:5000,http://localhost:8080` (también sirve dejar la variable vacía con `APP_ENV=development`, que aplica esa lista) |
+| Compose local| `http://localhost:5000` si el frontend se sirve desde el puerto expuesto |
 | Staging      | URL pública del Flutter web de staging                        |
 | Producción   | Lista explícita de dominios reales. Nunca `*`                 |
 
@@ -189,7 +187,9 @@ Los listados devuelven:
 }
 ```
 
-`POST /import-parkings` acepta `X-Import-Token` si `IMPORT_TOKEN` está configurado. En desarrollo queda abierto si la variable está vacía.
+`POST /import-parkings` exige `X-Import-Token` en el stack de Compose. El
+contenedor `bootstrap` reutiliza la misma clave para ejecutar la primera
+importación tras el arranque.
 
 ## Despliegue, TLS y backups
 

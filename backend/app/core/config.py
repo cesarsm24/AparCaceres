@@ -71,12 +71,28 @@ CORS_ORIGINS = [o.strip() for o in _CORS_RAW.split(",") if o.strip()]
 # `*` solo tiene sentido cuando se usa solo (no se mezcla con orígenes concretos).
 CORS_ALLOW_ALL = CORS_ORIGINS == ["*"]
 
+
+def _looks_like_example_value(value: str) -> bool:
+    return value.startswith("<") and value.endswith(">")
+
+
+if _CORS_ENV == "production":
+    if not CORS_ORIGINS:
+        raise RuntimeError("CORS_ORIGINS debe definirse en producción")
+    if CORS_ALLOW_ALL:
+        raise RuntimeError("CORS_ORIGINS no puede ser '*' en producción")
+
 # TTL de la caché de /parkings/nearby en segundos. 0 = caché desactivada.
 CACHE_NEARBY_TTL = int(os.getenv("CACHE_NEARBY_TTL", "60"))
 # Token requerido para `POST /import-parkings`. Si está vacío, el endpoint
 # acepta cualquier petición (útil en desarrollo). En producción conviene fijar
 # un valor en el .env y enviar `X-Import-Token` desde el cliente que reimporta.
 IMPORT_TOKEN = os.getenv("IMPORT_TOKEN", "").strip()
+if _CORS_ENV == "production":
+    if not IMPORT_TOKEN:
+        raise RuntimeError("IMPORT_TOKEN debe definirse en producción")
+    if _looks_like_example_value(IMPORT_TOKEN):
+        raise RuntimeError("IMPORT_TOKEN debe reemplazar el valor de ejemplo")
 # Límite duro por defecto en endpoints que pueden devolver muchos resultados.
 # El cliente puede subirlo hasta MAX_PARKING_LIMIT con el query param `limit`.
 DEFAULT_PARKING_LIMIT = int(os.getenv("DEFAULT_PARKING_LIMIT", "100"))
@@ -84,6 +100,12 @@ MAX_PARKING_LIMIT = int(os.getenv("MAX_PARKING_LIMIT", "500"))
 # Nivel de logging raíz del proceso. Se aplica desde `main.py` vía
 # `configure_logging(LOG_LEVEL)`.
 LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO").upper()
+if _CORS_ENV == "production":
+    favorites_secret = os.getenv("FAVORITES_SECRET", "").strip()
+    if not favorites_secret:
+        raise RuntimeError("FAVORITES_SECRET debe definirse en producción")
+    if _looks_like_example_value(favorites_secret):
+        raise RuntimeError("FAVORITES_SECRET debe reemplazar el valor de ejemplo")
 
 # ---------- Resolución de fotos durante el import ----------
 # Muchos datasets municipales no traen `URL_FOTO`, pero la URL de ficha

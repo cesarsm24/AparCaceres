@@ -1,8 +1,9 @@
 # Operaciones del backend AparCáceres
 
-Guía operativa para desplegar y mantener el backend en staging y producción.
-Asume el stack `docker compose` del repo (`docker-compose.yml`) más un
-reverse proxy (nginx en los ejemplos; Traefik / Caddy serían equivalentes).
+Guía operativa para desplegar y mantener el backend en producción.
+Asume el stack `docker compose` del repo (`docker-compose.yml`) con la
+configuración del backend en `backend/.env`, más un reverse proxy (nginx en
+los ejemplos; Traefik / Caddy serían equivalentes).
 
 ## 1. Topología de despliegue recomendada
 

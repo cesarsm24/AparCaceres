@@ -4,8 +4,8 @@ Protección con `X-Import-Token`:
 - Si la variable de entorno `IMPORT_TOKEN` está definida, el endpoint exige
   que la petición incluya esa cabecera y que coincida (constant-time compare)
   con el valor configurado. En caso contrario responde 401.
-- Si `IMPORT_TOKEN` está vacío (default en dev), el endpoint queda abierto
-  para facilitar la iteración local.
+- En producción, la configuración valida que `IMPORT_TOKEN` exista antes de
+  arrancar el servicio.
 """
 
 import asyncio

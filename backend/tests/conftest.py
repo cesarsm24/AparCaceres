@@ -27,6 +27,10 @@ import os
 os.environ.setdefault("RATE_LIMIT_ENABLED", "false")
 os.environ.setdefault("RATE_LIMIT_STORAGE_URI", "memory://")
 os.environ.setdefault("METRICS_ENABLED", "false")
+# Valores explícitos para que la configuración de producción no quede
+# ambigua durante la suite.
+os.environ.setdefault("CORS_ORIGINS", "http://localhost:5000")
+os.environ.setdefault("IMPORT_TOKEN", "test-import-token")
 # Clave de firma fija para los tokens de favoritos. Cualquier valor sirve;
 # solo importa que sea estable durante la suite.
 os.environ.setdefault("FAVORITES_SECRET", "test-secret-do-not-leak")
