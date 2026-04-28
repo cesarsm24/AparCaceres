@@ -8,12 +8,10 @@
 #   docker compose up -d              # arranca los servicios
 #   docker compose logs -f api        # tail del backend
 #   docker compose logs -f web        # tail del frontend Flutter web
+#   docker compose logs -f bootstrap  # tail del import inicial
 #   docker compose exec api curl -s http://localhost:8000/healthz | jq
 #   docker compose down               # parar (mantiene el volumen)
 #   docker compose down -v            # parar y BORRAR los datos persistentes
-#
-# Tras la primera arrancada hay que poblar el catálogo:
-#   curl -X POST http://localhost:8000/import-parkings
 # ============================================================
 
 services:
@@ -77,6 +75,26 @@ services:
     ports:
       - "127.0.0.1:8000:8000"
 
+  bootstrap:
+    image: aparcaceres-api:0.2.0-dev
+    container_name: aparcaceres-bootstrap
+    restart: "no"
+    depends_on:
+      redis:
+        condition: service_healthy
+      api:
+        condition: service_started
+    environment:
+      IMPORT_TOKEN: ""
+    command:
+      - /bin/sh
+      - -ec
+      - |
+        until curl --fail --silent --show-error http://api:8000/ >/dev/null; do
+          sleep 2
+        done
+        curl --fail --silent --show-error -X POST http://api:8000/import-parkings
+
   web:
     build:
       context: ./mobile
@@ -89,6 +107,8 @@ services:
     depends_on:
       api:
         condition: service_started
+      bootstrap:
+        condition: service_completed_successfully
     ports:
       - "127.0.0.1:5000:80"
 
