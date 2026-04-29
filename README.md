@@ -77,6 +77,45 @@ Servicios expuestos en local:
 
 ---
 
+## 📱 Arranque del cliente Flutter
+
+El frontend móvil se ejecuta fuera de Docker, contra el backend que ya esté arriba en `localhost:8000`. El flujo es idéntico para emulador Android y para dispositivo real conectado por USB.
+
+**Requisitos previos:** Flutter SDK, Android SDK con `adb` en el `PATH` y, para dispositivo físico, depuración USB activada.
+
+1. Levantar el backend (sección anterior) y comprobar que `http://localhost:8000/healthz` responde.
+2. Conectar el dispositivo o arrancar el emulador y verificar que aparece:
+
+   ```bash
+   adb devices
+   ```
+
+3. Redirigir el puerto del dispositivo al backend del host. Funciona tanto en emulador como en dispositivo real:
+
+   ```bash
+   adb reverse tcp:8000 tcp:8000
+   ```
+
+   `adb reverse` debe repetirse al reconectar el cable o reiniciar `adb`.
+
+4. Ejecutar la app:
+
+   ```bash
+   cd mobile
+   flutter pub get
+   flutter run
+   ```
+
+   Si hay varios dispositivos disponibles, seleccionar con `flutter run -d <id>` (lista con `flutter devices`).
+
+> **Sin `adb reverse` en emulador.** Como alternativa, puede arrancarse con `flutter run --dart-define=ANDROID_EMULATOR=true` para que la app use `10.0.2.2` (la puerta de enlace al host del emulador) en lugar de `localhost`.
+
+Para iOS, web y escritorio no se requiere redirección: `flutter run` se conecta directamente a `localhost:8000`.
+
+<div style="margin-top: 2.5rem"></div>
+
+---
+
 ## 🗂️ Fuente de datos
 
 El catálogo parte de datos abiertos municipales publicados por el Ayuntamiento de Cáceres en el portal [Open Data Cáceres](https://opendata.caceres.es/datosabiertos/catalogo/es/dataset/).
