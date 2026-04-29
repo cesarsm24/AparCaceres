@@ -120,9 +120,9 @@ class _HomeScreenState extends State<HomeScreen> {
                     else if (snapshot.hasError)
                       ApiErrorState(
                         error: snapshot.error!,
-                        onRetry: () => setState(
-                              () => _suggestionsFuture = _fetchSuggestions(),
-                        ),
+                        onRetry: () => setState(() {
+                          _suggestionsFuture = _fetchSuggestions();
+                        }),
                       )
                     else if (suggestions.isEmpty)
                         const _EmptyState()
