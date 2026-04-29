@@ -20,7 +20,12 @@ class ApiConfig {
   static String get baseUrl {
     if (_envBaseUrl.isNotEmpty) return _stripTrailingSlash(_envBaseUrl);
     if (kIsWeb) return 'http://localhost:8000';
-    if (Platform.isAndroid) return 'http://10.0.2.2:8000';
+    if (Platform.isAndroid) {
+      // Emulador: `flutter run --dart-define=ANDROID_EMULATOR=true`
+      // Dispositivo real: requiere `adb reverse tcp:8000 tcp:8000`
+      const isEmulator = bool.fromEnvironment('ANDROID_EMULATOR', defaultValue: false);
+      return isEmulator ? 'http://10.0.2.2:8000' : 'http://localhost:8000';
+    }
     return 'http://localhost:8000';
   }
 

@@ -31,6 +31,7 @@ build/
 CLAUDE.md
 informe.md
 .claude/
+docker-compose.override.yml
 
 # Ficheros de datos opcionales
 *.sqlite3
