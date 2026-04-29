@@ -193,6 +193,14 @@ El detalle técnico está en [`docs/redis.md`](docs/redis.md).
 
 ---
 
+## ⚖️ Licencia
+
+Este proyecto se distribuye bajo [`PolyForm Noncommercial 1.0.0`](LICENSE). El uso comercial no está permitido sin autorización expresa de los autores.
+
+<div style="margin-top: 2.5rem"></div>
+
+---
+
 ## 👥 Autores
 
 | Autor | GitHub |
