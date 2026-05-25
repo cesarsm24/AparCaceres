@@ -35,6 +35,10 @@ RUN groupadd --system --gid 1000 app \
 
 WORKDIR /app
 
+RUN mkdir -p /app/photo-cache \
+    && touch /app/photo-cache/.keep \
+    && chown -R app:app /app/photo-cache
+
 COPY --from=builder /install /usr/local
 COPY --chown=app:app main.py ./
 COPY --chown=app:app app ./app

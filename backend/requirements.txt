@@ -19,6 +19,7 @@ httpx==0.28.1
 idna==3.13
 limits==3.13.0
 packaging==24.2
+pillow==11.3.0
 prometheus-client==0.21.1
 prometheus-fastapi-instrumentator==7.0.0
 pydantic==2.13.3

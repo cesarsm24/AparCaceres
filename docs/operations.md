@@ -131,11 +131,13 @@ El endpoint `/metrics` (Prometheus) no se expone públicamente. Se accede desde 
 
 ---
 
-## 💾 Persistencia de Redis
+## 💾 Persistencia y volúmenes
 
 `docker-compose.yml` configura AOF (`--appendonly yes --appendfsync everysec`) y RDB (`--save 900 1 --save 300 10`). El volumen nombrado `redis-data` sobrevive a `docker compose down` y solo se pierde con `docker compose down -v`.
 
 Esto cubre persistencia del servicio, no un sistema de backup formal. Si el despliegue requiere snapshots externos, retención o restore operativo, esa capa debe añadirse fuera del proyecto.
+
+El volumen `photo-cache` guarda miniaturas generadas por `/photo-proxy?size=thumb`. Es una caché local derivada de imágenes públicas del SIG, por lo que puede reconstruirse si se borra; no sustituye a Redis ni requiere backup obligatorio.
 
 Comprobaciones rápidas tras un deploy:
 
@@ -194,6 +196,11 @@ FETCH_PHOTOS=true
 PHOTO_FETCH_CONCURRENCY=20
 PHOTO_FETCH_TIMEOUT_SECONDS=5.0
 PHOTO_CACHE_TTL_SECONDS=7776000
+
+# Miniaturas generadas por el proxy de fotos. Se guardan en el volumen local
+# photo-cache y se recalculan si el volumen se borra.
+PHOTO_PROXY_CACHE_DIR=/app/photo-cache
+PHOTO_THUMBNAIL_MAX_SIZE=180
 ```
 
 Los secretos (`IMPORT_TOKEN`, `FAVORITES_SECRET`) deben generarse con `openssl rand -hex 32` y guardarse en el gestor de secretos del orquestador. El `.env` con valores reales no debe commitearse.
@@ -210,5 +217,6 @@ Los secretos (`IMPORT_TOKEN`, `FAVORITES_SECRET`) deben generarse con `openssl r
 | 503 solo en `/parkings*` | `redis-cli FT.INFO idx:parkings_search` → reimport si falta el índice |
 | Respuestas vacías tras un import | Doble buffer en swap; reintentar en ~5 s |
 | Caché de nearby aparece antigua | `redis-cli GET cache:version` debería haber incrementado |
+| Miniaturas lentas en primera carga | Primer acceso genera `photo-cache`; la segunda carga debería salir local |
 | 401 en `/users/me/favorites` | Cliente sin Bearer válido o `FAVORITES_SECRET` cambiado |
 | 429 en `/parkings/nearby` | Cliente excediendo `RATE_LIMIT_NEARBY`; revisar logs de nginx |

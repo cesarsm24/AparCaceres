@@ -33,10 +33,11 @@ flowchart LR
     U -->|HTTP| A[FastAPI]
     W -->|HTTP| A
     A -->|lecturas / escrituras| R[(Redis Stack)]
+    A -->|miniaturas cacheadas| P[(photo-cache)]
     B[Bootstrap de importación] -->|POST /import-parkings| A
 ```
 
-Los servicios de `docker compose` son:
+Las piezas principales de `docker compose` son:
 
 | Servicio | Descripción |
 |---|---|
@@ -44,6 +45,7 @@ Los servicios de `docker compose` son:
 | `api` | Backend FastAPI |
 | `bootstrap` | Importación inicial del catálogo |
 | `web` | Frontend Flutter servido por nginx |
+| `photo-cache` | Volumen local para miniaturas generadas por el proxy |
 
 <div style="margin-top: 2.5rem"></div>
 
@@ -86,6 +88,7 @@ Los routers orquestan el ciclo de vida de cada petición:
 | `GET` | `/parkings/in-bounds` | Aparcamientos por bounding box |
 | `GET` | `/parkings/facets` | Facetas de búsqueda |
 | `GET` | `/users/me/favorites` | Favoritos del usuario autenticado |
+| `GET` | `/photo-proxy` | Proxy de fotos SIG y miniaturas cacheadas |
 | `POST` | `/import-parkings` | Importación del catálogo desde GeoJSON |
 | `GET` | `/healthz` | Estado del servicio |
 
@@ -97,6 +100,7 @@ La capa `app/infra/redis/` concentra la parte sensible del backend:
 - Consulta con RediSearch.
 - Importador con doble buffer (staging → swap).
 - Resolución de fotos desde el SIG municipal.
+- Proxy de fotos con miniaturas cacheadas en volumen local.
 
 Esta separación evita dispersar claves, índices y decisiones de persistencia por todo el código.
 
@@ -115,6 +119,8 @@ lib/
 ```
 
 La aplicación se conecta al backend por HTTP, no directamente a Redis. El frontend mantiene su propia capa de estado y deja que el backend resuelva el contrato de datos.
+
+Las miniaturas de listados y mapa usan `/photo-proxy?size=thumb`, de modo que el cliente no descarga imágenes originales completas para tarjetas pequeñas. El detalle mantiene la imagen original, proxificada solo cuando la plataforma lo necesita.
 
 <div style="margin-top: 2.5rem"></div>
 
@@ -172,6 +178,10 @@ El dominio es acotado y la complejidad real reside en el modelado sobre Redis. U
 ### Dobles de prueba aislados
 
 Los fallbacks en memoria quedan restringidos a tests. El código de producción no contiene lógica equivalente, lo que evita divergencias entre entornos.
+
+### Miniaturas fuera de Redis
+
+Redis conserva la URL de foto resuelta, no los bytes de imagen. Las miniaturas generadas por el proxy se guardan en un volumen local para no convertir Redis en almacenamiento binario y reducir peticiones repetidas al SIG.
 
 <div style="margin-top: 2.5rem"></div>
 

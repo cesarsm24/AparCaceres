@@ -69,6 +69,10 @@ services:
       RATE_LIMIT_ENABLED: "true"
       METRICS_ENABLED: "true"
       FETCH_PHOTOS: "true"
+      PHOTO_PROXY_CACHE_DIR: /app/photo-cache
+      PHOTO_THUMBNAIL_MAX_SIZE: "180"
+    volumes:
+      - photo-cache:/app/photo-cache
     ports:
       - "127.0.0.1:8000:8000"
 
@@ -115,3 +119,6 @@ volumes:
   redis-data:
   # Volumen nombrado: persiste favoritos y catálogo entre reinicios.
   # `docker compose down` lo conserva; `docker compose down -v` lo borra.
+  photo-cache:
+  # Volumen nombrado: persiste miniaturas generadas por /photo-proxy?size=thumb.
+  # `docker compose down -v` lo borra junto con el catálogo de evaluación.

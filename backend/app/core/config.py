@@ -102,6 +102,13 @@ PHOTO_CACHE_TTL_SECONDS = int(
 )
 PHOTO_CACHE_KEY_PREFIX = "parking_photo:"
 
+# Caché local del proxy de fotos. Se usa para miniaturas generadas a partir de
+# imágenes públicas del SIG y se monta como volumen en Docker Compose.
+PHOTO_PROXY_CACHE_DIR = Path(
+    os.getenv("PHOTO_PROXY_CACHE_DIR", "/app/photo-cache")
+)
+PHOTO_THUMBNAIL_MAX_SIZE = int(os.getenv("PHOTO_THUMBNAIL_MAX_SIZE", "180"))
+
 # Tope defensivo para evitar crecimiento indefinido del sorted set por usuario.
 FAVORITES_MAX_PER_USER = int(os.getenv("FAVORITES_MAX_PER_USER", "500"))
 

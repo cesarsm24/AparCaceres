@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/config/api_config.dart';
 import '../../../../theme/app_colors.dart';
 import '../../../parking/domain/parking_place.dart';
 import '../../../parking/presentation/parking_ui.dart';
@@ -15,7 +16,9 @@ class DetailHeaderImage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final imageUrl = place.imageUrl;
+    final imageUrl = ApiConfig.rewriteImageUrlForCurrentPlatform(
+      place.imageUrl,
+    );
 
     return Container(
       height: 220,
@@ -25,16 +28,16 @@ class DetailHeaderImage extends StatelessWidget {
       child: imageUrl == null || imageUrl.isEmpty
           ? Icon(place.category.icon, size: 72, color: place.category.color)
           : Image.network(
-        imageUrl,
-        width: double.infinity,
-        height: 220,
-        fit: BoxFit.cover,
-        errorBuilder: (_, _, _) => Icon(
-          place.category.icon,
-          size: 72,
-          color: place.category.color,
-        ),
-      ),
+              imageUrl,
+              width: double.infinity,
+              height: 220,
+              fit: BoxFit.cover,
+              errorBuilder: (_, _, _) => Icon(
+                place.category.icon,
+                size: 72,
+                color: place.category.color,
+              ),
+            ),
     );
   }
 }

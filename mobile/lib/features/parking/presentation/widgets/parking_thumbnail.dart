@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/config/api_config.dart';
 import '../../../../theme/app_colors.dart';
 import '../../../../theme/app_spacing.dart';
 import '../../domain/parking_place.dart';
@@ -23,7 +24,10 @@ class ParkingThumbnail extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final imageUrl = place.imageUrl;
+    final imageUrl = ApiConfig.rewriteImageUrlForCurrentPlatform(
+      place.imageUrl,
+      thumbnail: true,
+    );
 
     return ClipRRect(
       borderRadius: BorderRadius.circular(borderRadius),
@@ -34,10 +38,10 @@ class ParkingThumbnail extends StatelessWidget {
         child: imageUrl == null || imageUrl.isEmpty
             ? _Placeholder(place: place)
             : Image.network(
-          imageUrl,
-          fit: BoxFit.cover,
-          errorBuilder: (_, _, _) => _Placeholder(place: place),
-        ),
+                imageUrl,
+                fit: BoxFit.cover,
+                errorBuilder: (_, _, _) => _Placeholder(place: place),
+              ),
       ),
     );
   }

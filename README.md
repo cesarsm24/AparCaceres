@@ -29,10 +29,10 @@ AparCáceres permite consultar aparcamientos públicos de Cáceres por mapa, cer
 
 | Capa | Tecnología | Responsabilidad |
 |---|---|---|
-| Backend | FastAPI | API, autenticación de favoritos, importación y contrato OpenAPI |
-| Frontend | Flutter | UI móvil/web, mapa, búsqueda, favoritos y rutas |
+| Backend | FastAPI | API, autenticación de favoritos, importación, proxy de fotos y contrato OpenAPI |
+| Frontend | Flutter | UI móvil/web, mapa, búsqueda, favoritos, rutas y miniaturas |
 | Datos | Redis Stack | Catálogo, RediSearch, geoespacial, caché y favoritos |
-| Despliegue | Docker Compose | Stack reproducible con API, Redis, bootstrap y web |
+| Despliegue | Docker Compose | Stack reproducible con API, Redis, bootstrap, web y volúmenes |
 
 <div style="margin-top: 2.5rem"></div>
 
@@ -153,6 +153,7 @@ El frontend consume el backend por HTTP y no accede directamente a Redis. Los fl
 | Centrar ubicación o dirección buscada | `GET /parkings/nearby` |
 | Categorías disponibles | `GET /parkings/categories` |
 | Detalle | `GET /parkings/{id}` |
+| Fotos SIG | `GET /photo-proxy` |
 | Favoritos | `GET/PUT/DELETE /users/me/favorites` |
 | Importación inicial | `POST /import-parkings` |
 
@@ -174,6 +175,7 @@ Resumen de piezas:
 | `user:{sub}:favorites` | Favoritos ordenados por fecha |
 | `cache:nearby:v{version}:...` | Caché versionada de consultas cercanas |
 | `parking_photo:{id}` | Foto resuelta o caché negativa |
+| `photo-cache` | Volumen local de miniaturas servidas por `/photo-proxy?size=thumb` |
 
 El detalle técnico está en [`docs/redis.md`](docs/redis.md).
 

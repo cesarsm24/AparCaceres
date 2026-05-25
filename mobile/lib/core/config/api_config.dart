@@ -30,18 +30,21 @@ class ApiConfig {
   /// Identificador de cliente enviado en `User-Agent`.
   static const String userAgent = 'AparCaceres/1.0 (mobile)';
 
-  /// Reescribe imágenes del SIG mediante el proxy del backend en Flutter web.
+  /// Reescribe imágenes del SIG mediante el proxy del backend cuando conviene.
   ///
-  /// El proxy evita bloqueos CORS del navegador. En plataformas nativas se
-  /// conserva la URL original porque la carga de imágenes no está sujeta al
-  /// mismo modelo de CORS.
-  static String? rewriteImageUrlForCurrentPlatform(String? rawUrl) {
+  /// En miniaturas siempre usamos el proxy para obtener la versión reducida.
+  /// En imagen original solo lo hacemos en web, donde evita bloqueos CORS.
+  static String? rewriteImageUrlForCurrentPlatform(
+    String? rawUrl, {
+    bool thumbnail = false,
+  }) {
     if (rawUrl == null || rawUrl.isEmpty) return rawUrl;
-    if (!kIsWeb) return rawUrl;
     if (!rawUrl.contains('sig.caceres.es')) return rawUrl;
+    if (!thumbnail && !kIsWeb) return rawUrl;
 
     final encoded = Uri.encodeQueryComponent(rawUrl);
-    return '$baseUrl/photo-proxy?u=$encoded';
+    final size = thumbnail ? '&size=thumb' : '';
+    return '$baseUrl/photo-proxy?u=$encoded$size';
   }
 
   static String _stripTrailingSlash(String value) {

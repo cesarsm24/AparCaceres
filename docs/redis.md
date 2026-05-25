@@ -112,6 +112,8 @@ Las consultas cercanas se cachean con claves `cache:nearby:v{version}:...`. La c
 
 Las fotos resueltas se almacenan en `parking_photo:{id}`. El valor puede ser una URL válida resuelta desde la ficha municipal o un sentinel vacío que indica que ya se comprobó y no existe foto útil. Ese sentinel evita repetir scraping sobre fichas que no contienen una imagen aprovechable.
 
+Redis no almacena los bytes de las imágenes. Las miniaturas usadas por el frontend se generan en `/photo-proxy?size=thumb` y se guardan en el volumen local `photo-cache`. Así Redis mantiene datos e índices, mientras que el almacenamiento binario queda fuera del motor de búsqueda.
+
 <div style="margin-top: 2.5rem"></div>
 
 ---
@@ -161,7 +163,7 @@ El backend valida que el aparcamiento exista antes de escribir en el sorted set,
 | RediSearch | Búsqueda textual, filtros por tag, geosearch, facetas y ordenación por distancia |
 | Sorted sets | Favoritos por usuario con orden temporal estable |
 | Claves con versión | Invalidación rápida de caché sin operaciones globales costosas |
-| Expiración y caché negativa | Fotos resueltas y consultas frecuentes |
+| Expiración y caché negativa | URLs de fotos resueltas y consultas frecuentes |
 
 <div style="margin-top: 2.5rem"></div>
 
@@ -172,6 +174,7 @@ El backend valida que el aparcamiento exista antes de escribir en el sorted set,
 - Redis Stack debe estar disponible en producción, ya que la búsqueda depende de RediSearch.
 - La capa de consulta no ofrece fallback en memoria en producción; si el índice falta o el módulo no está presente, el backend falla de forma explícita.
 - El importador puede continuar aunque falle la resolución de fotos, dado que esa parte no debe bloquear la carga del catálogo.
+- Las miniaturas del proxy usan un volumen local y no forman parte del modelo Redis.
 - El volumen de Redis debe persistirse y respaldarse fuera del contenedor si el despliegue va a ser duradero.
 
 <div style="margin-top: 2.5rem"></div>
