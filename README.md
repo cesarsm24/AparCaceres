@@ -1,66 +1,209 @@
 <div align="center">
 
-<img width="1254" height="1254" alt="Logotipo AparCáceres" src="https://github.com/user-attachments/assets/7c7066e0-978d-4adb-9049-593985eb5e37" />
+<img src="mobile/assets/images/logo_transparente.png" alt="Logo de AparCáceres" width="250" />
 
-# AparCáceres
+<p>
+Aplicación móvil para la consulta de aparcamientos en Cáceres con Flutter, FastAPI y Redis Stack.
+</p>
 
-Localizador de aparcamientos públicos de Cáceres por proximidad.
+<p>
+  <img alt="backend-ci" src="https://img.shields.io/badge/backend--ci-ruff%20%2B%20pytest-2EA44F?logo=githubactions&logoColor=white" />
+  <img alt="flutter-ci" src="https://img.shields.io/badge/flutter--ci-analyze%20%2B%20test-02569B?logo=githubactions&logoColor=white" />
+  <img alt="Python 3.11" src="https://img.shields.io/badge/Python-3.11-3776AB?logo=python&logoColor=white" />
+  <img alt="FastAPI" src="https://img.shields.io/badge/FastAPI-backend-009688?logo=fastapi&logoColor=white" />
+  <img alt="Flutter" src="https://img.shields.io/badge/Flutter-frontend-02569B?logo=flutter&logoColor=white" />
+  <img alt="Redis Stack" src="https://img.shields.io/badge/Redis%20Stack-data%20engine-DC382D?logo=redis&logoColor=white" />
+  <img alt="Docker Compose" src="https://img.shields.io/badge/Docker%20Compose-deploy-2496ED?logo=docker&logoColor=white" />
+</p>
 
 </div>
 
-## Descripción
 
-AparCáceres es una aplicación web que permite buscar los aparcamientos públicos más cercanos a una ubicación dentro de la ciudad de Cáceres.
+<div style="margin-top: 2.5rem"></div>
 
-El proyecto utiliza datos abiertos municipales y pone el foco en el uso de **RedisDB** como base de datos principal para realizar consultas geoespaciales rápidas y eficientes.
+---
 
-## Objetivo
+## 🧭 Visión general
 
-Permitir al usuario:
-- buscar aparcamientos cercanos por latitud, longitud y radio
-- ver los resultados ordenados por distancia
-- visualizar los aparcamientos en un mapa
-- consultar información básica de cada aparcamiento
+AparCáceres permite consultar aparcamientos públicos de Cáceres por mapa, cercanía, filtros, categoría y favoritos. El sistema está preparado para ejecutarse de forma reproducible con `docker compose` y mantiene una separación clara entre experiencia de usuario, contrato HTTP y persistencia.
 
-## Fuente de datos
+| Capa | Tecnología | Responsabilidad |
+|---|---|---|
+| Backend | FastAPI | API, autenticación de favoritos, importación y contrato OpenAPI |
+| Frontend | Flutter | UI móvil/web, mapa, búsqueda, favoritos y rutas |
+| Datos | Redis Stack | Catálogo, RediSearch, geoespacial, caché y favoritos |
+| Despliegue | Docker Compose | Stack reproducible con API, Redis, bootstrap y web |
 
-- Open Data Cáceres  
-  https://opendata.caceres.es/datosabiertos/catalogo/dataset/aparcamientos-y-parking
+<div style="margin-top: 2.5rem"></div>
 
-## Tecnologías previstas
+---
 
-- **RedisDB** para almacenamiento geoespacial
-- Backend con Node.js / Express o FastAPI
-- Frontend web
-- Leaflet para el mapa
-- Datos en GeoJSON o CSV
+## 🚀 Arranque con Docker Compose
 
-## RedisDB en el proyecto
+El flujo principal del proyecto es levantar todo el stack desde la raíz:
 
-RedisDB es la pieza central del sistema.
+```bash
+cp backend/.env.example backend/.env
+openssl rand -hex 32
+openssl rand -hex 32
+```
 
-Se utilizará para:
-- almacenar coordenadas de aparcamientos
-- realizar búsquedas por proximidad
-- guardar metadatos básicos
-- cachear búsquedas repetidas con TTL
+Después de generar los secretos, completar en `backend/.env`:
 
-Ejemplo de claves:
-- `geo:parkings`
-- `parking:{id}`
-- `cache:nearby:{...}`
+```env
+CORS_ORIGINS=http://localhost:5000
+IMPORT_TOKEN=<token-generado>
+FAVORITES_SECRET=<secreto-generado>
+```
 
-## API mínima
+Levantar el entorno:
 
-- `GET /parkings/nearby` → devuelve aparcamientos cercanos
-- `GET /parkings/{id}` → devuelve el detalle de un aparcamiento
-- `POST /import-parkings` → carga el dataset en RedisDB
+```bash
+docker compose up -d --build
+docker compose logs -f bootstrap
+docker compose exec api curl -s http://localhost:8000/healthz
+```
 
-## Estado
+Servicios expuestos en local:
 
-Proyecto en fase inicial.
+| Servicio | URL |
+|---|---|
+| Frontend web | `http://localhost:5000` |
+| Backend API | `http://localhost:8000` |
+| OpenAPI | `http://localhost:8000/docs` |
+| Healthcheck | `http://localhost:8000/healthz` |
 
-## Autores
+<div style="margin-top: 2.5rem"></div>
 
-- César Sánchez Montes
-- Miguel Ángel Campón Iglesias
+---
+
+## 🗂️ Fuente de datos
+
+El catálogo parte de datos abiertos municipales publicados por el Ayuntamiento de Cáceres en el portal [Open Data Cáceres](https://opendata.caceres.es/datosabiertos/catalogo/es/dataset/).
+
+El importador procesa datasets GeoJSON relacionados con aparcamientos, movilidad reducida, zona azul, carga y descarga, bicicletas y motos. La normalización concreta de esos datasets se documenta en [`docs/redis.md`](docs/redis.md) y en la capa de importación del backend.
+
+<div style="margin-top: 2.5rem"></div>
+
+---
+
+## 🧱 Estructura
+
+```text
+AparCaceres/
+├── backend/              # FastAPI + Redis Stack
+│   ├── app/core/         # Configuración, auth, logging, métricas y rate limit
+│   ├── app/infra/redis/  # Cliente Redis, RediSearch, importador y fotos
+│   ├── app/routers/      # Endpoints HTTP por dominio
+│   └── tests/            # Suite pytest
+├── mobile/               # Frontend Flutter
+│   ├── lib/core/         # Configuración, red y sesión
+│   ├── lib/features/     # Funcionalidades de aplicación
+│   └── test/             # Suite Flutter
+├── docs/                 # Arquitectura, operación y Redis
+└── docker-compose.yml    # Stack reproducible
+```
+
+<div style="margin-top: 2.5rem"></div>
+
+---
+
+## 🧪 Calidad
+
+El repositorio incluye CI separada para backend y frontend:
+
+| Workflow | Validaciones |
+|---|---|
+| `backend-ci` | `ruff check`, Redis Stack real y `pytest -q` |
+| `flutter-ci` | `flutter analyze` y `flutter test` |
+
+Workflows:
+
+| Workflow | Archivo |
+|---|---|
+| `backend-ci` | [`.github/workflows/backend-ci.yml`](.github/workflows/backend-ci.yml) |
+| `flutter-ci` | [`.github/workflows/flutter-ci.yml`](.github/workflows/flutter-ci.yml) |
+
+Comandos locales:
+
+```bash
+cd backend
+ruff check app tests main.py
+pytest -q
+```
+
+```bash
+cd mobile
+flutter analyze
+flutter test
+```
+
+<div style="margin-top: 2.5rem"></div>
+
+---
+
+## 🗺️ Integración frontend-backend
+
+El frontend consume el backend por HTTP y no accede directamente a Redis. Los flujos principales están alineados con los endpoints de producción:
+
+| Flujo | Endpoint principal |
+|---|---|
+| Catálogo general | `GET /parkings` |
+| Mapa por movimiento manual | `GET /parkings/in-bounds` |
+| Centrar ubicación o dirección buscada | `GET /parkings/nearby` |
+| Categorías disponibles | `GET /parkings/categories` |
+| Detalle | `GET /parkings/{id}` |
+| Favoritos | `GET/PUT/DELETE /users/me/favorites` |
+| Importación inicial | `POST /import-parkings` |
+
+<div style="margin-top: 2.5rem"></div>
+
+---
+
+## 🧠 Redis Stack
+
+Redis Stack actúa como almacenamiento canónico y motor de consulta. El backend aprovecha hashes, sorted sets, RediSearch, campos geoespaciales, rangos numéricos, caché con versión y expiración de claves.
+
+Resumen de piezas:
+
+| Pieza | Uso |
+|---|---|
+| `parking:{id}` | Catálogo activo normalizado |
+| `idx:parkings_search` | Índice RediSearch de producción |
+| `parking_v2:{id}` | Generación temporal durante importación |
+| `user:{sub}:favorites` | Favoritos ordenados por fecha |
+| `cache:nearby:v{version}:...` | Caché versionada de consultas cercanas |
+| `parking_photo:{id}` | Foto resuelta o caché negativa |
+
+El detalle técnico está en [`docs/redis.md`](docs/redis.md).
+
+<div style="margin-top: 2.5rem"></div>
+
+---
+
+## 📚 Documentación
+
+| Documento | Contenido |
+|---|---|
+| [`docs/architecture.md`](docs/architecture.md) | Arquitectura, capas, flujos y decisiones de diseño |
+| [`docs/operations.md`](docs/operations.md) | Despliegue, variables, TLS, persistencia y runbook |
+| [`docs/redis.md`](docs/redis.md) | Modelo de datos, índices, búsquedas, caché e importación |
+
+<div style="margin-top: 2.5rem"></div>
+
+---
+
+## ⚖️ Licencia
+
+Este proyecto se distribuye bajo [`PolyForm Noncommercial 1.0.0`](LICENSE). El uso comercial no está permitido sin autorización expresa de los autores.
+
+<div style="margin-top: 2.5rem"></div>
+
+---
+
+## 👥 Autores
+
+| Autor | GitHub |
+|---|---|
+| César Sánchez Montes | [@cesarsm24](https://github.com/cesarsm24) |
+| Miguel Ángel Campón Iglesias | [@Miguelit011](https://github.com/Miguelit011) |

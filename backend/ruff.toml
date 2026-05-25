@@ -1,0 +1,19 @@
+# Configuración de Ruff para el backend.
+# Mantiene un conjunto de reglas limitado a errores, imports y patrones de bug
+# frecuentes, evitando cambios estilísticos amplios en esta fase.
+
+target-version = "py311"
+line-length = 100
+
+extend-exclude = ["venv", ".venv"]
+
+[lint]
+select = ["E", "F", "I", "B"]
+ignore = [
+    "E501",  # Longitud de línea gestionada fuera del lint automático.
+    "B008",  # FastAPI usa llamadas como valores por defecto en Depends/Header/Query.
+    "B905",  # Usado solo donde las longitudes están garantizadas por construcción.
+]
+
+[lint.per-file-ignores]
+"tests/*" = ["E402"]

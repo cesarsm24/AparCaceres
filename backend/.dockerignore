@@ -1,0 +1,22 @@
+# Reduce el contexto de build y evita copiar artefactos locales o secretos.
+
+venv/
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+.env
+.env.*
+!.env.example
+
+tests/
+*.egg-info/
+
+*.md
+.idea/
+.vscode/

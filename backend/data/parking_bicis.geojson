@@ -1,0 +1,1162 @@
+{
+	"type" : "FeatureCollection",
+	"name" : "parking_bicis",
+	"features" : [
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Point",
+				"coordinates" : [ -6.3729966477, 39.4707513881 ]
+			},
+			"properties" : {
+				"CODIGO_VIA" : "134",
+				"TIPO_VIA" : "CALLE",
+				"NOMBRE_VIA" : "COLON",
+				"NUCLEO" : "CACERES",
+				"PLAZAS" : "5",
+				"URL" : "https://sig.caceres.es/fotosOriginales/PARKING_BICIS/134_1.JPG",
+				"URL_FICHA" : "https://sig.caceres.es/serweb/fichasig/fichaparkingbicis.php?mslink=3",
+				"URL_VIA" : "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=134"
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Point",
+				"coordinates" : [ -6.3675954276, 39.4689669537 ]
+			},
+			"properties" : {
+				"CODIGO_VIA" : "194",
+				"TIPO_VIA" : "CALLE",
+				"NOMBRE_VIA" : "FUENTE FRIA",
+				"NUCLEO" : "CACERES",
+				"PLAZAS" : "3",
+				"URL" : "https://sig.caceres.es/fotosOriginales/PARKING_BICIS/194_1.JPG",
+				"URL_FICHA" : "https://sig.caceres.es/serweb/fichasig/fichaparkingbicis.php?mslink=4",
+				"URL_VIA" : "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=194"
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Point",
+				"coordinates" : [ -6.3675008522, 39.4689690455 ]
+			},
+			"properties" : {
+				"CODIGO_VIA" : "194",
+				"TIPO_VIA" : "CALLE",
+				"NOMBRE_VIA" : "FUENTE FRIA",
+				"NUCLEO" : "CACERES",
+				"PLAZAS" : "2",
+				"URL" : "https://sig.caceres.es/fotosOriginales/PARKING_BICIS/194_2.JPG",
+				"URL_FICHA" : "https://sig.caceres.es/serweb/fichasig/fichaparkingbicis.php?mslink=5",
+				"URL_VIA" : "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=194"
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Point",
+				"coordinates" : [ -6.3601937446, 39.4882706897 ]
+			},
+			"properties" : {
+				"CODIGO_VIA" : "239",
+				"TIPO_VIA" : "AVDA",
+				"NOMBRE_VIA" : "HEROES DE BALER",
+				"NUCLEO" : "CACERES",
+				"PLAZAS" : "5",
+				"URL" : "https://sig.caceres.es/fotosOriginales/PARKING_BICIS/239_1.JPG",
+				"URL_FICHA" : "https://sig.caceres.es/serweb/fichasig/fichaparkingbicis.php?mslink=6",
+				"URL_VIA" : "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=239"
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Point",
+				"coordinates" : [ -6.3828942765, 39.4676267646 ]
+			},
+			"properties" : {
+				"CODIGO_VIA" : "268",
+				"TIPO_VIA" : "CALLE",
+				"NOMBRE_VIA" : "JUAN XIII",
+				"NUCLEO" : "CACERES",
+				"PLAZAS" : "5",
+				"URL" : "https://sig.caceres.es/fotosOriginales/PARKING_BICIS/268_1.JPG",
+				"URL_FICHA" : "https://sig.caceres.es/serweb/fichasig/fichaparkingbicis.php?mslink=7",
+				"URL_VIA" : "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=268"
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Point",
+				"coordinates" : [ -6.3675230307, 39.4809155494 ]
+			},
+			"properties" : {
+				"CODIGO_VIA" : "284",
+				"TIPO_VIA" : "CALLE",
+				"NOMBRE_VIA" : "LOPE DE VEGA",
+				"NUCLEO" : "CACERES",
+				"PLAZAS" : "5",
+				"URL" : "https://sig.caceres.es/fotosOriginales/PARKING_BICIS/284_1.JPG",
+				"URL_FICHA" : "https://sig.caceres.es/serweb/fichasig/fichaparkingbicis.php?mslink=8",
+				"URL_VIA" : "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=284"
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Point",
+				"coordinates" : [ -6.3850048942, 39.4680395834 ]
+			},
+			"properties" : {
+				"CODIGO_VIA" : "537",
+				"TIPO_VIA" : "AVDA",
+				"NOMBRE_VIA" : "VIRGEN DE GUADALUPE",
+				"NUCLEO" : "CACERES",
+				"PLAZAS" : "5",
+				"URL" : "https://sig.caceres.es/fotosOriginales/PARKING_BICIS/537_1.JPG",
+				"URL_FICHA" : "https://sig.caceres.es/serweb/fichasig/fichaparkingbicis.php?mslink=9",
+				"URL_VIA" : "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=537"
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Point",
+				"coordinates" : [ -6.3806282526, 39.4713132847 ]
+			},
+			"properties" : {
+				"CODIGO_VIA" : "537",
+				"TIPO_VIA" : "AVDA",
+				"NOMBRE_VIA" : "VIRGEN DE GUADALUPE",
+				"NUCLEO" : "CACERES",
+				"PLAZAS" : "5",
+				"URL" : "https://sig.caceres.es/fotosOriginales/PARKING_BICIS/537_2.JPG",
+				"URL_FICHA" : "https://sig.caceres.es/serweb/fichasig/fichaparkingbicis.php?mslink=10",
+				"URL_VIA" : "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=537"
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Point",
+				"coordinates" : [ -6.3824726357, 39.4602002223 ]
+			},
+			"properties" : {
+				"CODIGO_VIA" : "541",
+				"TIPO_VIA" : "AVDA",
+				"NOMBRE_VIA" : "VIRGEN DE LA MONTAÃ‘A",
+				"NUCLEO" : "CACERES",
+				"PLAZAS" : "5",
+				"URL" : "https://sig.caceres.es/fotosOriginales/PARKING_BICIS/541_1.JPG",
+				"URL_FICHA" : "https://sig.caceres.es/serweb/fichasig/fichaparkingbicis.php?mslink=11",
+				"URL_VIA" : "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=541"
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Point",
+				"coordinates" : [ -6.3728426084, 39.4677283384 ]
+			},
+			"properties" : {
+				"CODIGO_VIA" : "869",
+				"TIPO_VIA" : "CALLE",
+				"NOMBRE_VIA" : "SANTA LUISA DE MARILLAC",
+				"NUCLEO" : "CACERES",
+				"PLAZAS" : "5",
+				"URL" : "https://sig.caceres.es/fotosOriginales/PARKING_BICIS/869_1.JPG",
+				"URL_FICHA" : "https://sig.caceres.es/serweb/fichasig/fichaparkingbicis.php?mslink=12",
+				"URL_VIA" : "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=869"
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Point",
+				"coordinates" : [ -6.379991511, 39.4792315362 ]
+			},
+			"properties" : {
+				"CODIGO_VIA" : "966",
+				"TIPO_VIA" : "CALLE",
+				"NOMBRE_VIA" : "ESCAMPLEROS",
+				"NUCLEO" : "CACERES",
+				"PLAZAS" : "5",
+				"URL" : "https://sig.caceres.es/fotosOriginales/PARKING_BICIS/966_1.JPG",
+				"URL_FICHA" : "https://sig.caceres.es/serweb/fichasig/fichaparkingbicis.php?mslink=13",
+				"URL_VIA" : "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=966"
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Point",
+				"coordinates" : [ -6.3518502577, 39.4625271388 ]
+			},
+			"properties" : {
+				"CODIGO_VIA" : "1024",
+				"TIPO_VIA" : "CTRA",
+				"NOMBRE_VIA" : "DE LA MONTAÃ‘A",
+				"NUCLEO" : "CACERES",
+				"PLAZAS" : "5",
+				"URL" : "https://sig.caceres.es/fotosOriginales/PARKING_BICIS/1024_1.JPG",
+				"URL_FICHA" : "https://sig.caceres.es/serweb/fichasig/fichaparkingbicis.php?mslink=14",
+				"URL_VIA" : "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=1024"
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Point",
+				"coordinates" : [ -6.3858356614, 39.4713591025 ]
+			},
+			"properties" : {
+				"CODIGO_VIA" : "1125",
+				"TIPO_VIA" : "AVDA",
+				"NOMBRE_VIA" : "RODRIGUEZ DE LEDESMA",
+				"NUCLEO" : "CACERES",
+				"PLAZAS" : "3",
+				"URL" : "https://sig.caceres.es/fotosOriginales/PARKING_BICIS/1125_1.JPG",
+				"URL_FICHA" : "https://sig.caceres.es/serweb/fichasig/fichaparkingbicis.php?mslink=15",
+				"URL_VIA" : "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=1125"
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Point",
+				"coordinates" : [ -6.3859586307, 39.4712103405 ]
+			},
+			"properties" : {
+				"CODIGO_VIA" : "1125",
+				"TIPO_VIA" : "AVDA",
+				"NOMBRE_VIA" : "RODRIGUEZ DE LEDESMA",
+				"NUCLEO" : "CACERES",
+				"PLAZAS" : "2",
+				"URL" : "https://sig.caceres.es/fotosOriginales/PARKING_BICIS/1125_2.JPG",
+				"URL_FICHA" : "https://sig.caceres.es/serweb/fichasig/fichaparkingbicis.php?mslink=16",
+				"URL_VIA" : "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=1125"
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Point",
+				"coordinates" : [ -6.3848400002, 39.4724290187 ]
+			},
+			"properties" : {
+				"CODIGO_VIA" : "1125",
+				"TIPO_VIA" : "AVDA",
+				"NOMBRE_VIA" : "RODRIGUEZ DE LEDESMA",
+				"NUCLEO" : "CACERES",
+				"PLAZAS" : "5",
+				"URL" : "https://sig.caceres.es/fotosOriginales/PARKING_BICIS/1125_3.JPG",
+				"URL_FICHA" : "https://sig.caceres.es/serweb/fichasig/fichaparkingbicis.php?mslink=17",
+				"URL_VIA" : "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=1125"
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Point",
+				"coordinates" : [ -6.3785114792, 39.4612867704 ]
+			},
+			"properties" : {
+				"CODIGO_VIA" : "1288",
+				"TIPO_VIA" : "AVDA",
+				"NOMBRE_VIA" : "DE LA HISPANIDAD",
+				"NUCLEO" : "CACERES",
+				"PLAZAS" : "1",
+				"URL" : "https://sig.caceres.es/fotosOriginales/PARKING_BICIS/1288_1.JPG",
+				"URL_FICHA" : "https://sig.caceres.es/serweb/fichasig/fichaparkingbicis.php?mslink=18",
+				"URL_VIA" : "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=1288"
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Point",
+				"coordinates" : [ -6.3785234283, 39.4611232597 ]
+			},
+			"properties" : {
+				"CODIGO_VIA" : "1288",
+				"TIPO_VIA" : "AVDA",
+				"NOMBRE_VIA" : "DE LA HISPANIDAD",
+				"NUCLEO" : "CACERES",
+				"PLAZAS" : "1",
+				"URL" : "https://sig.caceres.es/fotosOriginales/PARKING_BICIS/1288_2.JPG",
+				"URL_FICHA" : "https://sig.caceres.es/serweb/fichasig/fichaparkingbicis.php?mslink=19",
+				"URL_VIA" : "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=1288"
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Point",
+				"coordinates" : [ -6.378288185, 39.4613837132 ]
+			},
+			"properties" : {
+				"CODIGO_VIA" : "1288",
+				"TIPO_VIA" : "AVDA",
+				"NOMBRE_VIA" : "DE LA HISPANIDAD",
+				"NUCLEO" : "CACERES",
+				"PLAZAS" : "4",
+				"URL" : "https://sig.caceres.es/fotosOriginales/PARKING_BICIS/1288_3.JPG",
+				"URL_FICHA" : "https://sig.caceres.es/serweb/fichasig/fichaparkingbicis.php?mslink=20",
+				"URL_VIA" : "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=1288"
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Point",
+				"coordinates" : [ -6.3671001502, 39.4632407379 ]
+			},
+			"properties" : {
+				"CODIGO_VIA" : "1427",
+				"TIPO_VIA" : "RONDA",
+				"NOMBRE_VIA" : "DE SAN FRANCISCO",
+				"NUCLEO" : "CACERES",
+				"PLAZAS" : "5",
+				"URL" : "https://sig.caceres.es/fotosOriginales/PARKING_BICIS/1427_1.JPG",
+				"URL_FICHA" : "https://sig.caceres.es/serweb/fichasig/fichaparkingbicis.php?mslink=21",
+				"URL_VIA" : "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=1427"
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Point",
+				"coordinates" : [ -6.3707461284, 39.4682201017 ]
+			},
+			"properties" : {
+				"CODIGO_VIA" : "1541",
+				"TIPO_VIA" : "CALLE",
+				"NOMBRE_VIA" : "HERMANOS ROMERO RUIZ",
+				"NUCLEO" : "CACERES",
+				"PLAZAS" : "5",
+				"URL" : "https://sig.caceres.es/fotosOriginales/PARKING_BICIS/1541_1.JPG",
+				"URL_FICHA" : "https://sig.caceres.es/serweb/fichasig/fichaparkingbicis.php?mslink=22",
+				"URL_VIA" : "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=1541"
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Point",
+				"coordinates" : [ -6.3796532153, 39.4611227028 ]
+			},
+			"properties" : {
+				"CODIGO_VIA" : "1635",
+				"TIPO_VIA" : "AVDA",
+				"NOMBRE_VIA" : "ISABEL DE MOCTEZUMA",
+				"NUCLEO" : "CACERES",
+				"PLAZAS" : "5",
+				"URL" : "https://sig.caceres.es/fotosOriginales/PARKING_BICIS/1635_1.JPG",
+				"URL_FICHA" : "https://sig.caceres.es/serweb/fichasig/fichaparkingbicis.php?mslink=23",
+				"URL_VIA" : "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=1635"
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Point",
+				"coordinates" : [ -6.3788240343, 39.4723936587 ]
+			},
+			"properties" : {
+				"CODIGO_VIA" : "2286",
+				"TIPO_VIA" : "AVDA",
+				"NOMBRE_VIA" : "CLARA CAMPOAMOR",
+				"NUCLEO" : "CACERES",
+				"PLAZAS" : "5",
+				"URL" : "https://sig.caceres.es/fotosOriginales/PARKING_BICIS/2286_1.JPG",
+				"URL_FICHA" : "https://sig.caceres.es/serweb/fichasig/fichaparkingbicis.php?mslink=24",
+				"URL_VIA" : "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=2286"
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Point",
+				"coordinates" : [ -6.3857610883, 39.4659226788 ]
+			},
+			"properties" : {
+				"CODIGO_VIA" : "2363",
+				"TIPO_VIA" : "CALLE",
+				"NOMBRE_VIA" : "ANTONIO FLORIANO CUMBREÃ‘O",
+				"NUCLEO" : "CACERES",
+				"PLAZAS" : "5",
+				"URL" : "https://sig.caceres.es/fotosOriginales/PARKING_BICIS/2363_1.JPG",
+				"URL_FICHA" : "https://sig.caceres.es/serweb/fichasig/fichaparkingbicis.php?mslink=25",
+				"URL_VIA" : "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=2363"
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Point",
+				"coordinates" : [ -6.3746403921, 39.468935425 ]
+			},
+			"properties" : {
+				"CODIGO_VIA" : "24",
+				"TIPO_VIA" : "CALLE",
+				"NOMBRE_VIA" : "ALVARO LOPEZ NUÃ‘EZ",
+				"NUCLEO" : "CACERES",
+				"PLAZAS" : "1",
+				"URL" : "https://sig.caceres.es/fotosOriginales/PARKING_BICIS/24_2.JPG",
+				"URL_FICHA" : "https://sig.caceres.es/serweb/fichasig/fichaparkingbicis.php?mslink=2",
+				"URL_VIA" : "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=24"
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Point",
+				"coordinates" : [ -6.3747420095, 39.4689098834 ]
+			},
+			"properties" : {
+				"CODIGO_VIA" : "24",
+				"TIPO_VIA" : "CALLE",
+				"NOMBRE_VIA" : "ALVARO LOPEZ NUÃ‘EZ",
+				"NUCLEO" : "CACERES",
+				"PLAZAS" : "1",
+				"URL" : "https://sig.caceres.es/fotosOriginales/PARKING_BICIS/24_1.JPG",
+				"URL_FICHA" : "https://sig.caceres.es/serweb/fichasig/fichaparkingbicis.php?mslink=1",
+				"URL_VIA" : "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=24"
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Point",
+				"coordinates" : [ -6.3729919721, 39.4757030533 ]
+			},
+			"properties" : {
+				"CODIGO_VIA" : "2967",
+				"TIPO_VIA" : "PLAZA",
+				"NOMBRE_VIA" : "DE LA CONCEPDION",
+				"NUCLEO" : "CACERES",
+				"PLAZAS" : "5",
+				"URL" : "https://sig.caceres.es/fotosOriginales/PARKING_BICIS/2967_1.JPG",
+				"URL_FICHA" : "https://sig.caceres.es/serweb/fichasig/fichaparkingbicis.php?mslink=26",
+				"URL_VIA" : "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=2967"
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Point",
+				"coordinates" : [ -6.3790875941, 39.4691849929 ]
+			},
+			"properties" : {
+				"CODIGO_VIA" : "3048",
+				"TIPO_VIA" : "AVDA",
+				"NOMBRE_VIA" : "DE ESPAÃ‘A",
+				"NUCLEO" : "CACERES",
+				"PLAZAS" : "5",
+				"URL" : "https://sig.caceres.es/fotosOriginales/PARKING_BICIS/3048_1.JPG",
+				"URL_FICHA" : "https://sig.caceres.es/serweb/fichasig/fichaparkingbicis.php?mslink=27",
+				"URL_VIA" : "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=3048"
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Point",
+				"coordinates" : [ -6.3995118911, 39.4733132081 ]
+			},
+			"properties" : {
+				"CODIGO_VIA" : "3145",
+				"TIPO_VIA" : "AVDA",
+				"NOMBRE_VIA" : "JESUS DELGADO VALHONDO",
+				"NUCLEO" : "CACERES",
+				"PLAZAS" : "2",
+				"URL" : "https://sig.caceres.es/fotosOriginales/PARKING_BICIS/3145_1.JPG",
+				"URL_FICHA" : "https://sig.caceres.es/serweb/fichasig/fichaparkingbicis.php?mslink=28",
+				"URL_VIA" : "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=3145"
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Point",
+				"coordinates" : [ -6.3996401712, 39.4736795847 ]
+			},
+			"properties" : {
+				"CODIGO_VIA" : "3145",
+				"TIPO_VIA" : "AVDA",
+				"NOMBRE_VIA" : "JESUS DELGADO VALHONDO",
+				"NUCLEO" : "CACERES",
+				"PLAZAS" : "3",
+				"URL" : "https://sig.caceres.es/fotosOriginales/PARKING_BICIS/3145_2.JPG",
+				"URL_FICHA" : "https://sig.caceres.es/serweb/fichasig/fichaparkingbicis.php?mslink=29",
+				"URL_VIA" : "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=3145"
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Point",
+				"coordinates" : [ -6.3718462477, 39.4688624489 ]
+			},
+			"properties" : {
+				"CODIGO_VIA" : "3252",
+				"TIPO_VIA" : "CALLE",
+				"NOMBRE_VIA" : "JESUS ASUNCION",
+				"NUCLEO" : "CACERES",
+				"PLAZAS" : "5",
+				"URL" : "https://sig.caceres.es/fotosOriginales/PARKING_BICIS/3252_1.JPG",
+				"URL_FICHA" : "https://sig.caceres.es/serweb/fichasig/fichaparkingbicis.php?mslink=30",
+				"URL_VIA" : "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=3252"
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Point",
+				"coordinates" : [ -6.3668904292, 39.4815367853 ]
+			},
+			"properties" : {
+				"CODIGO_VIA" : "3425",
+				"TIPO_VIA" : "AVDA",
+				"NOMBRE_VIA" : "DE LA UNIVERSIDAD",
+				"NUCLEO" : "CACERES",
+				"PLAZAS" : "5",
+				"URL" : "https://sig.caceres.es/fotosOriginales/PARKING_BICIS/3425_1.JPG",
+				"URL_FICHA" : "https://sig.caceres.es/serweb/fichasig/fichaparkingbicis.php?mslink=31",
+				"URL_VIA" : "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=3425"
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Point",
+				"coordinates" : [ -6.3800962654, 39.4631139093 ]
+			},
+			"properties" : {
+				"CODIGO_VIA" : "3426",
+				"TIPO_VIA" : "CALLE",
+				"NOMBRE_VIA" : "ITALIA",
+				"NUCLEO" : "CACERES",
+				"PLAZAS" : "5",
+				"URL" : "https://sig.caceres.es/fotosOriginales/PARKING_BICIS/3426_1.JPG",
+				"URL_FICHA" : "https://sig.caceres.es/serweb/fichasig/fichaparkingbicis.php?mslink=32",
+				"URL_VIA" : "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=3426"
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Point",
+				"coordinates" : [ -6.391647159, 39.4692802742 ]
+			},
+			"properties" : {
+				"CODIGO_VIA" : "3446",
+				"TIPO_VIA" : "CALLE",
+				"NOMBRE_VIA" : "LONDRES",
+				"NUCLEO" : "CACERES",
+				"PLAZAS" : "5",
+				"URL" : "https://sig.caceres.es/fotosOriginales/PARKING_BICIS/3446_1.JPG",
+				"URL_FICHA" : "https://sig.caceres.es/serweb/fichasig/fichaparkingbicis.php?mslink=33",
+				"URL_VIA" : "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=3446"
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Point",
+				"coordinates" : [ -6.3885394348, 39.4682114932 ]
+			},
+			"properties" : {
+				"CODIGO_VIA" : "3446",
+				"TIPO_VIA" : "CALLE",
+				"NOMBRE_VIA" : "LONDRES",
+				"NUCLEO" : "CACERES",
+				"PLAZAS" : "5",
+				"URL" : "https://sig.caceres.es/fotosOriginales/PARKING_BICIS/3446_2.JPG",
+				"URL_FICHA" : "https://sig.caceres.es/serweb/fichasig/fichaparkingbicis.php?mslink=34",
+				"URL_VIA" : "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=3446"
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Point",
+				"coordinates" : [ -6.3872987476, 39.4678770368 ]
+			},
+			"properties" : {
+				"CODIGO_VIA" : "3446",
+				"TIPO_VIA" : "CALLE",
+				"NOMBRE_VIA" : "LONDRES",
+				"NUCLEO" : "CACERES",
+				"PLAZAS" : "5",
+				"URL" : "https://sig.caceres.es/fotosOriginales/PARKING_BICIS/3446_3.JPG",
+				"URL_FICHA" : "https://sig.caceres.es/serweb/fichasig/fichaparkingbicis.php?mslink=35",
+				"URL_VIA" : "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=3446"
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Point",
+				"coordinates" : [ -6.3955327596, 39.469677774 ]
+			},
+			"properties" : {
+				"CODIGO_VIA" : "3456",
+				"TIPO_VIA" : "CALLE",
+				"NOMBRE_VIA" : "ROA BASTOS",
+				"NUCLEO" : "CACERES",
+				"PLAZAS" : "5",
+				"URL" : "https://sig.caceres.es/fotosOriginales/PARKING_BICIS/3456_1.JPG",
+				"URL_FICHA" : "https://sig.caceres.es/serweb/fichasig/fichaparkingbicis.php?mslink=36",
+				"URL_VIA" : "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=3456"
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Point",
+				"coordinates" : [ -6.4024346595, 39.4644184782 ]
+			},
+			"properties" : {
+				"CODIGO_VIA" : "3464",
+				"TIPO_VIA" : "CALLE",
+				"NOMBRE_VIA" : "CLAVEL",
+				"NUCLEO" : "CACERES",
+				"PLAZAS" : "5",
+				"URL" : "https://sig.caceres.es/fotosOriginales/PARKING_BICIS/3464_1.JPG",
+				"URL_FICHA" : "https://sig.caceres.es/serweb/fichasig/fichaparkingbicis.php?mslink=37",
+				"URL_VIA" : "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=3464"
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Point",
+				"coordinates" : [ -6.3738748194, 39.4679639157 ]
+			},
+			"properties" : {
+				"CODIGO_VIA" : "3528",
+				"TIPO_VIA" : "CALLE",
+				"NOMBRE_VIA" : "MEDICO SORAPAN",
+				"NUCLEO" : "CACERES",
+				"PLAZAS" : "5",
+				"URL" : "https://sig.caceres.es/fotosOriginales/PARKING_BICIS/3528_1.JPG",
+				"URL_FICHA" : "https://sig.caceres.es/serweb/fichasig/fichaparkingbicis.php?mslink=38",
+				"URL_VIA" : "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=3528"
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Point",
+				"coordinates" : [ -6.3810792947, 39.4756556019 ]
+			},
+			"properties" : {
+				"CODIGO_VIA" : "3534",
+				"TIPO_VIA" : "CALLE",
+				"NOMBRE_VIA" : "JOSE LUIS COTALLO",
+				"NUCLEO" : "CACERES",
+				"PLAZAS" : "5",
+				"URL" : "https://sig.caceres.es/fotosOriginales/PARKING_BICIS/3534_1.JPG",
+				"URL_FICHA" : "https://sig.caceres.es/serweb/fichasig/fichaparkingbicis.php?mslink=39",
+				"URL_VIA" : "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=3534"
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Point",
+				"coordinates" : [ -6.3909098872, 39.4711184594 ]
+			},
+			"properties" : {
+				"CODIGO_VIA" : "3600",
+				"TIPO_VIA" : "CALLE",
+				"NOMBRE_VIA" : "PICOS DE EUROPA",
+				"NUCLEO" : "CACERES",
+				"PLAZAS" : "5",
+				"URL" : "https://sig.caceres.es/fotosOriginales/PARKING_BICIS/3600_1.JPG",
+				"URL_FICHA" : "https://sig.caceres.es/serweb/fichasig/fichaparkingbicis.php?mslink=40",
+				"URL_VIA" : "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=3600"
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Point",
+				"coordinates" : [ -6.3932445748, 39.4719254313 ]
+			},
+			"properties" : {
+				"CODIGO_VIA" : "3605",
+				"TIPO_VIA" : "CALLE",
+				"NOMBRE_VIA" : "DOÃ‘ANA",
+				"NUCLEO" : "CACERES",
+				"PLAZAS" : "5",
+				"URL" : "https://sig.caceres.es/fotosOriginales/PARKING_BICIS/3605_1.JPG",
+				"URL_FICHA" : "https://sig.caceres.es/serweb/fichasig/fichaparkingbicis.php?mslink=41",
+				"URL_VIA" : "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=3605"
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Point",
+				"coordinates" : [ -6.379667316, 39.4607376237 ]
+			},
+			"properties" : {
+				"CODIGO_VIA" : "3625",
+				"TIPO_VIA" : "AVDA",
+				"NOMBRE_VIA" : "PIERRE DE COUBERTIN",
+				"NUCLEO" : "CACERES",
+				"PLAZAS" : "5",
+				"URL" : "https://sig.caceres.es/fotosOriginales/PARKING_BICIS/3625_1.JPG",
+				"URL_FICHA" : "https://sig.caceres.es/serweb/fichasig/fichaparkingbicis.php?mslink=42",
+				"URL_VIA" : "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=3625"
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Point",
+				"coordinates" : [ -6.3787784764, 39.4588798721 ]
+			},
+			"properties" : {
+				"CODIGO_VIA" : "3625",
+				"TIPO_VIA" : "AVDA",
+				"NOMBRE_VIA" : "PIERRE DE COUBERTIN",
+				"NUCLEO" : "CACERES",
+				"PLAZAS" : "8",
+				"URL" : "https://sig.caceres.es/fotosOriginales/PARKING_BICIS/3625_2.JPG",
+				"URL_FICHA" : "https://sig.caceres.es/serweb/fichasig/fichaparkingbicis.php?mslink=43",
+				"URL_VIA" : "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=3625"
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Point",
+				"coordinates" : [ -6.3793883565, 39.4566597094 ]
+			},
+			"properties" : {
+				"CODIGO_VIA" : "3636",
+				"TIPO_VIA" : "CALLE",
+				"NOMBRE_VIA" : "OAXACA",
+				"NUCLEO" : "CACERES",
+				"PLAZAS" : "3",
+				"URL" : "https://sig.caceres.es/fotosOriginales/PARKING_BICIS/3636_1.JPG",
+				"URL_FICHA" : "https://sig.caceres.es/serweb/fichasig/fichaparkingbicis.php?mslink=44",
+				"URL_VIA" : "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=3636"
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Point",
+				"coordinates" : [ -6.3794260487, 39.4566029029 ]
+			},
+			"properties" : {
+				"CODIGO_VIA" : "3636",
+				"TIPO_VIA" : "CALLE",
+				"NOMBRE_VIA" : "OAXACA",
+				"NUCLEO" : "CACERES",
+				"PLAZAS" : "2",
+				"URL" : "https://sig.caceres.es/fotosOriginales/PARKING_BICIS/3636_2.JPG",
+				"URL_FICHA" : "https://sig.caceres.es/serweb/fichasig/fichaparkingbicis.php?mslink=45",
+				"URL_VIA" : "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=3636"
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Point",
+				"coordinates" : [ -6.3801411268, 39.474394304 ]
+			},
+			"properties" : {
+				"CODIGO_VIA" : "3656",
+				"TIPO_VIA" : "CALLE",
+				"NOMBRE_VIA" : "ABILIO RODRIGUEZ ROSILLO",
+				"NUCLEO" : "CACERES",
+				"PLAZAS" : "5",
+				"URL" : "https://sig.caceres.es/fotosOriginales/PARKING_BICIS/3656_1.JPG",
+				"URL_FICHA" : "https://sig.caceres.es/serweb/fichasig/fichaparkingbicis.php?mslink=46",
+				"URL_VIA" : "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=3656"
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Point",
+				"coordinates" : [ -6.3678578404, 39.4860405651 ]
+			},
+			"properties" : {
+				"CODIGO_VIA" : "3732",
+				"TIPO_VIA" : "CALLE",
+				"NOMBRE_VIA" : "MIGUEL ANGEL ORTI BELMONTE",
+				"NUCLEO" : "CACERES",
+				"PLAZAS" : "5",
+				"URL" : "https://sig.caceres.es/fotosOriginales/PARKING_BICIS/3732_1.JPG",
+				"URL_FICHA" : "https://sig.caceres.es/serweb/fichasig/fichaparkingbicis.php?mslink=47",
+				"URL_VIA" : "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=3732"
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Point",
+				"coordinates" : [ -6.3760526182, 39.4594930311 ]
+			},
+			"properties" : {
+				"CODIGO_VIA" : "3763",
+				"TIPO_VIA" : "CALLE",
+				"NOMBRE_VIA" : "MEJICO",
+				"NUCLEO" : "CACERES",
+				"PLAZAS" : "5",
+				"URL" : "https://sig.caceres.es/fotosOriginales/PARKING_BICIS/3763_1.JPG",
+				"URL_FICHA" : "https://sig.caceres.es/serweb/fichasig/fichaparkingbicis.php?mslink=48",
+				"URL_VIA" : "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=3763"
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Point",
+				"coordinates" : [ -6.3720984979, 39.4742280229 ]
+			},
+			"properties" : {
+				"CODIGO_VIA" : "3174",
+				"TIPO_VIA" : "PLAZA",
+				"NOMBRE_VIA" : "DE LAS PIÃ‘UELAS",
+				"NUCLEO" : "CACERES",
+				"PLAZAS" : "12",
+				"URL" : "https://sig.caceres.es/fotosOriginales/PARKING_BICIS/3174_1.JPG",
+				"URL_FICHA" : "https://sig.caceres.es/serweb/fichasig/fichaparkingbicis.php?mslink=56",
+				"URL_VIA" : "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=3174"
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Point",
+				"coordinates" : [ -6.3793424351, 39.4689016476 ]
+			},
+			"properties" : {
+				"CODIGO_VIA" : "878",
+				"TIPO_VIA" : "PLAZA",
+				"NOMBRE_VIA" : "DE AMERICA",
+				"NUCLEO" : "CACERES",
+				"PLAZAS" : "6",
+				"URL" : "https://sig.caceres.es/fotosOriginales/PARKING_BICIS/878_1.JPG",
+				"URL_FICHA" : "https://sig.caceres.es/serweb/fichasig/fichaparkingbicis.php?mslink=57",
+				"URL_VIA" : "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=878"
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Point",
+				"coordinates" : [ -6.3737461514, 39.4641447908 ]
+			},
+			"properties" : {
+				"CODIGO_VIA" : "3809",
+				"TIPO_VIA" : "AVDA",
+				"NOMBRE_VIA" : "PABLO NARANJO PORRAS",
+				"NUCLEO" : "CACERES",
+				"PLAZAS" : "3",
+				"URL" : "https://sig.caceres.es/fotosOriginales/PARKING_BICIS/3809_1.JPG",
+				"URL_FICHA" : "https://sig.caceres.es/serweb/fichasig/fichaparkingbicis.php?mslink=49",
+				"URL_VIA" : "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=3809"
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Point",
+				"coordinates" : [ -6.3696206461, 39.4667861082 ]
+			},
+			"properties" : {
+				"CODIGO_VIA" : "3868",
+				"TIPO_VIA" : "CALLE",
+				"NOMBRE_VIA" : "MUÃ‘OZ TORRERO",
+				"NUCLEO" : "CACERES",
+				"PLAZAS" : "5",
+				"URL" : "https://sig.caceres.es/fotosOriginales/PARKING_BICIS/3868_1.JPG",
+				"URL_FICHA" : "https://sig.caceres.es/serweb/fichasig/fichaparkingbicis.php?mslink=50",
+				"URL_VIA" : "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=3868"
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Point",
+				"coordinates" : [ -6.3583862899, 39.5005052859 ]
+			},
+			"properties" : {
+				"CODIGO_VIA" : "3878",
+				"TIPO_VIA" : "CALLE",
+				"NOMBRE_VIA" : "LOS TRIGALES",
+				"NUCLEO" : "CACERES",
+				"PLAZAS" : "5",
+				"URL" : "https://sig.caceres.es/fotosOriginales/PARKING_BICIS/3878_1.JPG",
+				"URL_FICHA" : "https://sig.caceres.es/serweb/fichasig/fichaparkingbicis.php?mslink=51",
+				"URL_VIA" : "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=3878"
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Point",
+				"coordinates" : [ -6.4201408088, 39.4846772161 ]
+			},
+			"properties" : {
+				"CODIGO_VIA" : "3994",
+				"TIPO_VIA" : "CALLE",
+				"NOMBRE_VIA" : "ESQUILADORES",
+				"NUCLEO" : "CACERES",
+				"PLAZAS" : "5",
+				"URL" : "https://sig.caceres.es/fotosOriginales/PARKING_BICIS/3994_1.JPG",
+				"URL_FICHA" : "https://sig.caceres.es/serweb/fichasig/fichaparkingbicis.php?mslink=52",
+				"URL_VIA" : "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=3994"
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Point",
+				"coordinates" : [ -6.3849551747, 39.4620030086 ]
+			},
+			"properties" : {
+				"CODIGO_VIA" : "4018",
+				"TIPO_VIA" : "AVDA",
+				"NOMBRE_VIA" : "JUAN PABLO II",
+				"NUCLEO" : "CACERES",
+				"PLAZAS" : "5",
+				"URL" : "https://sig.caceres.es/fotosOriginales/PARKING_BICIS/4018_1.JPG",
+				"URL_FICHA" : "https://sig.caceres.es/serweb/fichasig/fichaparkingbicis.php?mslink=53",
+				"URL_VIA" : "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=4018"
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Point",
+				"coordinates" : [ -6.3641391541, 39.5035006301 ]
+			},
+			"properties" : {
+				"CODIGO_VIA" : "4121",
+				"TIPO_VIA" : "CALLE",
+				"NOMBRE_VIA" : "CLAUDIO PTOLOMEO",
+				"NUCLEO" : "CACERES",
+				"PLAZAS" : "5",
+				"URL" : "https://sig.caceres.es/fotosOriginales/PARKING_BICIS/4121_1.JPG",
+				"URL_FICHA" : "https://sig.caceres.es/serweb/fichasig/fichaparkingbicis.php?mslink=54",
+				"URL_VIA" : "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=4121"
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Point",
+				"coordinates" : [ -6.3693588349, 39.4623672241 ]
+			},
+			"properties" : {
+				"CODIGO_VIA" : "4225",
+				"TIPO_VIA" : "CALLE",
+				"NOMBRE_VIA" : "TURNO DE OFICIO",
+				"NUCLEO" : "CACERES",
+				"PLAZAS" : "5",
+				"URL" : "https://sig.caceres.es/fotosOriginales/PARKING_BICIS/4225_1.JPG",
+				"URL_FICHA" : "https://sig.caceres.es/serweb/fichasig/fichaparkingbicis.php?mslink=55",
+				"URL_VIA" : "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=4225"
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Point",
+				"coordinates" : [ -6.3775379818, 39.4720068145 ]
+			},
+			"properties" : {
+				"CODIGO_VIA" : "2286",
+				"TIPO_VIA" : "AVDA",
+				"NOMBRE_VIA" : "CLARA CAMPOAMOR",
+				"NUCLEO" : "CACERES",
+				"PLAZAS" : "6",
+				"URL" : "https://sig.caceres.es/fotosOriginales/PARKING_BICIS/2286_2.JPG",
+				"URL_FICHA" : "https://sig.caceres.es/serweb/fichasig/fichaparkingbicis.php?mslink=58",
+				"URL_VIA" : "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=2286"
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Point",
+				"coordinates" : [ -6.3786784414, 39.472868922 ]
+			},
+			"properties" : {
+				"CODIGO_VIA" : "3584",
+				"TIPO_VIA" : "PLAZA",
+				"NOMBRE_VIA" : "DE HERNAN CORTES",
+				"NUCLEO" : "CACERES",
+				"PLAZAS" : "6",
+				"URL" : "https://sig.caceres.es/fotosOriginales/PARKING_BICIS/3584_1.JPG",
+				"URL_FICHA" : "https://sig.caceres.es/serweb/fichasig/fichaparkingbicis.php?mslink=59",
+				"URL_VIA" : "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=3584"
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Point",
+				"coordinates" : [ -6.382466478, 39.4602001737 ]
+			},
+			"properties" : {
+				"CODIGO_VIA" : "3641",
+				"TIPO_VIA" : "CALLE",
+				"NOMBRE_VIA" : "TUNEZ",
+				"NUCLEO" : "CACERES",
+				"PLAZAS" : "12",
+				"URL" : "https://sig.caceres.es/fotosOriginales/PARKING_BICIS/3641_1.JPG",
+				"URL_FICHA" : "https://sig.caceres.es/serweb/fichasig/fichaparkingbicis.php?mslink=60",
+				"URL_VIA" : "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=3641"
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Point",
+				"coordinates" : [ -6.3935925843, 39.4717636911 ]
+			},
+			"properties" : {
+				"CODIGO_VIA" : "3604",
+				"TIPO_VIA" : "CALLE",
+				"NOMBRE_VIA" : "DOÃ‘ANA",
+				"NUCLEO" : "CACERES",
+				"PLAZAS" : "6",
+				"URL" : "https://sig.caceres.es/fotosOriginales/PARKING_BICIS/3604_1.JPG",
+				"URL_FICHA" : "https://sig.caceres.es/serweb/fichasig/fichaparkingbicis.php?mslink=61",
+				"URL_VIA" : "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=3604"
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Point",
+				"coordinates" : [ -6.3842508456, 39.4678271224 ]
+			},
+			"properties" : {
+				"CODIGO_VIA" : "3626",
+				"TIPO_VIA" : "CALLE",
+				"NOMBRE_VIA" : "PADRE ELADIO MOZAS",
+				"NUCLEO" : "CACERES",
+				"PLAZAS" : "6",
+				"URL" : "https://sig.caceres.es/fotosOriginales/PARKING_BICIS/3626_1.JPG",
+				"URL_FICHA" : "https://sig.caceres.es/serweb/fichasig/fichaparkingbicis.php?mslink=62",
+				"URL_VIA" : "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=3626"
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Point",
+				"coordinates" : [ -6.3836154034, 39.4703302396 ]
+			},
+			"properties" : {
+				"CODIGO_VIA" : "1125",
+				"TIPO_VIA" : "AVDA",
+				"NOMBRE_VIA" : "RODRIGUEZ DE LEDESMA",
+				"NUCLEO" : "CACERES",
+				"PLAZAS" : "3",
+				"URL" : "https://sig.caceres.es/fotosOriginales/PARKING_BICIS/1125_4.JPG",
+				"URL_FICHA" : "https://sig.caceres.es/serweb/fichasig/fichaparkingbicis.php?mslink=63",
+				"URL_VIA" : "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=1125"
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Point",
+				"coordinates" : [ -6.3647820558, 39.4913283599 ]
+			},
+			"properties" : {
+				"CODIGO_VIA" : "3662",
+				"TIPO_VIA" : "CALLE",
+				"NOMBRE_VIA" : "CAYETANO POLO \"POLITO\"",
+				"NUCLEO" : "CACERES",
+				"PLAZAS" : "6",
+				"URL" : "https://sig.caceres.es/fotosOriginales/PARKING_BICIS/3662_1.JPG",
+				"URL_FICHA" : "https://sig.caceres.es/serweb/fichasig/fichaparkingbicis.php?mslink=64",
+				"URL_VIA" : "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=3662"
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Point",
+				"coordinates" : [ -6.3648883389, 39.491189513 ]
+			},
+			"properties" : {
+				"CODIGO_VIA" : "3662",
+				"TIPO_VIA" : "CALLE",
+				"NOMBRE_VIA" : "CAYETANO POLO \"POLITO\"",
+				"NUCLEO" : "CACERES",
+				"PLAZAS" : "6",
+				"URL" : "https://sig.caceres.es/fotosOriginales/PARKING_BICIS/3662_2.JPG",
+				"URL_FICHA" : "https://sig.caceres.es/serweb/fichasig/fichaparkingbicis.php?mslink=65",
+				"URL_VIA" : "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=3662"
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Point",
+				"coordinates" : [ -6.3650925391, 39.4913856699 ]
+			},
+			"properties" : {
+				"CODIGO_VIA" : "3662",
+				"TIPO_VIA" : "CALLE",
+				"NOMBRE_VIA" : "CAYETANO POLO \"POLITO\"",
+				"NUCLEO" : "CACERES",
+				"PLAZAS" : "6",
+				"URL" : "https://sig.caceres.es/fotosOriginales/PARKING_BICIS/3662_3.JPG",
+				"URL_FICHA" : "https://sig.caceres.es/serweb/fichasig/fichaparkingbicis.php?mslink=66",
+				"URL_VIA" : "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=3662"
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Point",
+				"coordinates" : [ -6.3638089174, 39.4908259388 ]
+			},
+			"properties" : {
+				"CODIGO_VIA" : "3663",
+				"TIPO_VIA" : "CALLE",
+				"NOMBRE_VIA" : "ANA MARISCAL",
+				"NUCLEO" : "CACERES",
+				"PLAZAS" : "6",
+				"URL" : "https://sig.caceres.es/fotosOriginales/PARKING_BICIS/3663_1.JPG",
+				"URL_FICHA" : "https://sig.caceres.es/serweb/fichasig/fichaparkingbicis.php?mslink=67",
+				"URL_VIA" : "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=3663"
+			}
+		},
+		{
+			"type" : "Feature",
+			"geometry" : {
+				"type" : "Point",
+				"coordinates" : [ -6.3775623399, 39.4691366173 ]
+			},
+			"properties" : {
+				"CODIGO_VIA" : "3539",
+				"TIPO_VIA" : "CALLE",
+				"NOMBRE_VIA" : "PROFESOR RODRIGUEZ MOÑINO",
+				"NUCLEO" : "CACERES",
+				"PLAZAS" : "9",
+				"URL" : "https://sig.caceres.es/fotosOriginales/PARKING_BICIS/3539_1.JPG",
+				"URL_FICHA" : "https://sig.caceres.es/serweb/fichasig/fichaparkingbicis.php?mslink=68",
+				"URL_VIA" : "https://sig.caceres.es/serweb/fichasig/fichacalle.php?codigo=3539"
+			}
+		}
+	]
+}

@@ -1,0 +1,117 @@
+# ============================================================
+# Stack reproducible para AparCáceres.
+# Levanta Redis Stack (Redis + RediSearch) con persistencia AOF, la API
+# FastAPI, un bootstrap de importación inicial y el frontend web.
+#
+# El backend lee su configuración sensible desde `backend/.env`.
+# ============================================================
+#
+# Comandos habituales:
+#   docker compose up -d              # arranca los servicios
+#   docker compose logs -f api        # logs del backend
+#   docker compose logs -f web        # logs del frontend Flutter web
+#   docker compose logs -f bootstrap  # logs del import inicial
+#   docker compose down               # para los servicios y conserva el volumen
+#   docker compose down -v            # para los servicios y BORRA los datos persistentes
+# ============================================================
+
+services:
+  redis:
+    image: redis/redis-stack-server:7.4.0-v0
+    container_name: aparcaceres-redis
+    restart: unless-stopped
+    # AOF garantiza durabilidad por escritura: no se pierden favoritos ante un
+    # reinicio. `everysec` equilibra rendimiento y seguridad.
+    command:
+      - "redis-stack-server"
+      - "--appendonly"
+      - "yes"
+      - "--appendfsync"
+      - "everysec"
+      - "--save"
+      - "900 1"
+      - "--save"
+      - "300 10"
+    ports:
+      # Expuesto solo en localhost del host para poder inspeccionar Redis en
+      # despliegues controlados sin publicarlo en la red local.
+      - "127.0.0.1:6379:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "PING"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
+
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    image: aparcaceres-api:0.2.0-dev
+    container_name: aparcaceres-api
+    restart: unless-stopped
+    env_file:
+      - ./backend/.env
+    depends_on:
+      redis:
+        condition: service_healthy
+    environment:
+      APP_ENV: production
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      REDIS_DB: "0"
+      LOG_LEVEL: INFO
+      CACHE_NEARBY_TTL: "60"
+      DEFAULT_PARKING_LIMIT: "100"
+      MAX_PARKING_LIMIT: "500"
+      RATE_LIMIT_ENABLED: "true"
+      METRICS_ENABLED: "true"
+      FETCH_PHOTOS: "true"
+    ports:
+      - "127.0.0.1:8000:8000"
+
+  bootstrap:
+    image: aparcaceres-api:0.2.0-dev
+    pull_policy: never
+    container_name: aparcaceres-bootstrap
+    restart: "no"
+    env_file:
+      - ./backend/.env
+    depends_on:
+      redis:
+        condition: service_healthy
+      api:
+        condition: service_started
+    command:
+      - /bin/sh
+      - -ec
+      - |
+        until curl --fail --silent --show-error http://api:8000/ >/dev/null; do
+          sleep 2
+        done
+        curl --fail --silent --show-error -X POST http://api:8000/import-parkings \
+          -H "X-Import-Token: $$IMPORT_TOKEN"
+
+  web:
+    build:
+      context: ./mobile
+      dockerfile: Dockerfile
+      args:
+        API_BASE_URL: ${API_BASE_URL:-http://localhost:8000}
+    image: aparcaceres-web:0.2.0-dev
+    container_name: aparcaceres-web
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_started
+      bootstrap:
+        condition: service_completed_successfully
+    ports:
+      - "127.0.0.1:5000:80"
+
+volumes:
+  redis-data:
+  # Volumen nombrado: persiste favoritos y catálogo entre reinicios.
+  # `docker compose down` lo conserva; `docker compose down -v` lo borra.

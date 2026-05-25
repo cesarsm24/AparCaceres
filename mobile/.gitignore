@@ -1,0 +1,45 @@
+# Miscelánea
+*.class
+*.log
+*.pyc
+*.swp
+.DS_Store
+.atom/
+.build/
+.buildlog/
+.history
+.svn/
+.swiftpm/
+migrate_working_dir/
+
+# Relacionado con IntelliJ
+*.iml
+*.ipr
+*.iws
+.idea/
+
+# La carpeta .vscode contiene configuración de ejecución y tareas que puedes
+# querer incluir en control de versiones, así que esta línea queda comentada
+# por defecto.
+#.vscode/
+
+# Flutter / Dart / Pub
+**/doc/api/
+**/ios/Flutter/.last_build_id
+.dart_tool/
+.flutter-plugins-dependencies
+.pub-cache/
+.pub/
+/build/
+/coverage/
+
+# Simbolicación
+app.*.symbols
+
+# Ofuscación
+app.*.map.json
+
+# Artefactos de compilación de Android Studio
+/android/app/debug
+/android/app/profile
+/android/app/release
