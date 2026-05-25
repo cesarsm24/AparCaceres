@@ -41,12 +41,7 @@ void main() {
       handler: (http.Request req) async {
         calls.add(jsonDecode(req.body) as Map<String, dynamic>);
         return http.Response(
-          jsonEncode(
-            _sessionResponse(
-              'jwt-fresh',
-              DateTime.utc(2026, 5, 1),
-            ),
-          ),
+          jsonEncode(_sessionResponse('jwt-fresh', DateTime.utc(2026, 5, 1))),
           200,
         );
       },
@@ -67,9 +62,7 @@ void main() {
       handler: (_) async {
         calls++;
         return http.Response(
-          jsonEncode(
-            _sessionResponse('jwt-1', DateTime.utc(2026, 5, 1)),
-          ),
+          jsonEncode(_sessionResponse('jwt-1', DateTime.utc(2026, 5, 1))),
           200,
         );
       },
@@ -126,9 +119,7 @@ void main() {
         calls++;
         await Future<void>.delayed(const Duration(milliseconds: 5));
         return http.Response(
-          jsonEncode(
-            _sessionResponse('jwt-1', DateTime.utc(2026, 5, 1)),
-          ),
+          jsonEncode(_sessionResponse('jwt-1', DateTime.utc(2026, 5, 1))),
           200,
         );
       },
@@ -152,12 +143,7 @@ void main() {
     final first = _session(
       handler: (http.Request req) async {
         return http.Response(
-          jsonEncode(
-            _sessionResponse(
-              'jwt-1',
-              DateTime.utc(2026, 5, 1),
-            ),
-          ),
+          jsonEncode(_sessionResponse('jwt-1', DateTime.utc(2026, 5, 1))),
           200,
         );
       },
@@ -171,12 +157,7 @@ void main() {
       handler: (http.Request req) async {
         secondCall = jsonDecode(req.body) as Map<String, dynamic>;
         return http.Response(
-          jsonEncode(
-            _sessionResponse(
-              'jwt-2',
-              DateTime.utc(2026, 6, 1),
-            ),
-          ),
+          jsonEncode(_sessionResponse('jwt-2', DateTime.utc(2026, 6, 1))),
           200,
         );
       },
@@ -188,5 +169,32 @@ void main() {
 
     expect(secondCall, isNotNull);
     expect(secondCall!['sub'], 'first-sub');
+  });
+
+  test('invalidateToken refreshes JWT while preserving sub', () async {
+    var calls = 0;
+    final bodies = <Map<String, dynamic>>[];
+    final session = _session(
+      handler: (http.Request req) async {
+        calls++;
+        bodies.add(jsonDecode(req.body) as Map<String, dynamic>);
+        return http.Response(
+          jsonEncode(_sessionResponse('jwt-$calls', DateTime.utc(2026, 6, 1))),
+          200,
+        );
+      },
+      now: () => DateTime.utc(2026, 4, 1),
+      subGenerator: () => 'stable-sub',
+    );
+
+    expect(await session.tokenForRequest(), 'jwt-1');
+
+    await session.invalidateToken();
+
+    expect(await session.tokenForRequest(), 'jwt-2');
+    expect(bodies.map((body) => body['sub']).toList(), [
+      'stable-sub',
+      'stable-sub',
+    ]);
   });
 }

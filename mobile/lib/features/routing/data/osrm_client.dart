@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:http/http.dart' as http;
 import 'package:latlong2/latlong.dart';
 
@@ -10,21 +11,23 @@ import '../domain/route_path.dart';
 /// Solicita una ruta entre origen y destino y normaliza la geometría GeoJSON
 /// `[lon, lat]` a `LatLng` para que pueda pintarse directamente en el mapa.
 class OsrmClient {
-  OsrmClient({http.Client? client, String? userAgent})
-      : _client = client ?? http.Client(),
-        _userAgent = userAgent ?? _defaultUserAgent;
+  OsrmClient({http.Client? client, String? userAgent, bool? sendUserAgent})
+    : _client = client ?? http.Client(),
+      _userAgent = userAgent ?? _defaultUserAgent,
+      _sendUserAgent = sendUserAgent ?? !kIsWeb;
 
   static const String _defaultUserAgent = 'AparCaceres/1.0 (mobile app)';
   static const String _host = 'router.project-osrm.org';
 
   final http.Client _client;
   final String _userAgent;
+  final bool _sendUserAgent;
 
   Future<RoutePath> route(
-      String profile,
-      LatLng origin,
-      LatLng destination,
-      ) async {
+    String profile,
+    LatLng origin,
+    LatLng destination,
+  ) async {
     final coords =
         '${origin.longitude},${origin.latitude};'
         '${destination.longitude},${destination.latitude}';
@@ -35,10 +38,12 @@ class OsrmClient {
       'steps': 'false',
     });
 
-    final response = await _client.get(
-      uri,
-      headers: {'User-Agent': _userAgent, 'Accept': 'application/json'},
-    );
+    final headers = <String, String>{
+      'Accept': 'application/json',
+      if (_sendUserAgent) 'User-Agent': _userAgent,
+    };
+
+    final response = await _client.get(uri, headers: headers);
 
     if (response.statusCode != 200) {
       throw OsrmException('OSRM HTTP ${response.statusCode}');
@@ -60,14 +65,16 @@ class OsrmClient {
     final route = routes.first as Map<String, dynamic>;
     final geometry = route['geometry'] as Map<String, dynamic>;
     final coordinatesJson = geometry['coordinates'] as List;
-    final coordinates = coordinatesJson.map((point) {
-      final pair = point as List;
+    final coordinates = coordinatesJson
+        .map((point) {
+          final pair = point as List;
 
-      return LatLng(
-        (pair[1] as num).toDouble(),
-        (pair[0] as num).toDouble(),
-      );
-    }).toList(growable: false);
+          return LatLng(
+            (pair[1] as num).toDouble(),
+            (pair[0] as num).toDouble(),
+          );
+        })
+        .toList(growable: false);
 
     return RoutePath(
       coordinates: coordinates,

@@ -11,6 +11,9 @@ import 'api_exceptions.dart';
 /// Proveedor de token de sesión para peticiones autenticadas.
 typedef TokenProvider = Future<String?> Function();
 
+/// Callback invocado cuando el backend rechaza un token autenticado.
+typedef AuthInvalidator = Future<void> Function();
+
 /// Token de cancelación cooperativa para descartar una petición en curso.
 ///
 /// La cancelación no aborta necesariamente el socket subyacente de
@@ -34,18 +37,19 @@ class CancelToken {
 /// timeout, cancelación cooperativa, decodificación JSON y traducción de
 /// errores de transporte a excepciones del dominio de red.
 class ApiClient {
-  ApiClient({http.Client? httpClient, this.tokenProvider})
-      : _http = httpClient ?? http.Client();
+  ApiClient({http.Client? httpClient, this.tokenProvider, this.authInvalidator})
+    : _http = httpClient ?? http.Client();
 
   final http.Client _http;
   final TokenProvider? tokenProvider;
+  final AuthInvalidator? authInvalidator;
 
   Future<dynamic> getJson(
-      String path, {
-        Map<String, dynamic>? query,
-        bool requiresAuth = false,
-        CancelToken? cancelToken,
-      }) {
+    String path, {
+    Map<String, dynamic>? query,
+    bool requiresAuth = false,
+    CancelToken? cancelToken,
+  }) {
     return _send(
       method: 'GET',
       path: path,
@@ -56,12 +60,12 @@ class ApiClient {
   }
 
   Future<dynamic> postJson(
-      String path, {
-        Object? body,
-        Map<String, dynamic>? query,
-        bool requiresAuth = false,
-        CancelToken? cancelToken,
-      }) {
+    String path, {
+    Object? body,
+    Map<String, dynamic>? query,
+    bool requiresAuth = false,
+    CancelToken? cancelToken,
+  }) {
     return _send(
       method: 'POST',
       path: path,
@@ -73,12 +77,12 @@ class ApiClient {
   }
 
   Future<dynamic> putJson(
-      String path, {
-        Object? body,
-        Map<String, dynamic>? query,
-        bool requiresAuth = false,
-        CancelToken? cancelToken,
-      }) {
+    String path, {
+    Object? body,
+    Map<String, dynamic>? query,
+    bool requiresAuth = false,
+    CancelToken? cancelToken,
+  }) {
     return _send(
       method: 'PUT',
       path: path,
@@ -90,11 +94,11 @@ class ApiClient {
   }
 
   Future<dynamic> deleteJson(
-      String path, {
-        Map<String, dynamic>? query,
-        bool requiresAuth = false,
-        CancelToken? cancelToken,
-      }) {
+    String path, {
+    Map<String, dynamic>? query,
+    bool requiresAuth = false,
+    CancelToken? cancelToken,
+  }) {
     return _send(
       method: 'DELETE',
       path: path,
@@ -115,20 +119,31 @@ class ApiClient {
     CancelToken? cancelToken,
   }) async {
     final uri = _buildUri(path, query);
-    final headers = await _buildHeaders(
-      requiresAuth: requiresAuth,
-      hasBody: body != null,
-    );
     final encodedBody = body == null ? null : jsonEncode(body);
 
     final stopwatch = Stopwatch()..start();
-    final http.Response response;
+    http.Response response;
 
     try {
+      var headers = await _buildHeaders(
+        requiresAuth: requiresAuth,
+        hasBody: body != null,
+      );
       response = await _race(
         _dispatch(method, uri, headers, encodedBody),
         cancelToken,
       );
+      if (_shouldRetryWithFreshToken(response, requiresAuth)) {
+        await authInvalidator!.call();
+        headers = await _buildHeaders(
+          requiresAuth: true,
+          hasBody: body != null,
+        );
+        response = await _race(
+          _dispatch(method, uri, headers, encodedBody),
+          cancelToken,
+        );
+      }
     } on TimeoutException {
       throw const ApiTimeoutException('Request timed out');
     } on SocketException catch (e) {
@@ -144,12 +159,19 @@ class ApiClient {
     return _decode(response);
   }
 
+  bool _shouldRetryWithFreshToken(http.Response response, bool requiresAuth) {
+    return requiresAuth &&
+        response.statusCode == 401 &&
+        tokenProvider != null &&
+        authInvalidator != null;
+  }
+
   Future<http.Response> _dispatch(
-      String method,
-      Uri uri,
-      Map<String, String> headers,
-      String? encodedBody,
-      ) {
+    String method,
+    Uri uri,
+    Map<String, String> headers,
+    String? encodedBody,
+  ) {
     final Future<http.Response> future;
 
     switch (method) {
@@ -173,9 +195,9 @@ class ApiClient {
   }
 
   Future<http.Response> _race(
-      Future<http.Response> request,
-      CancelToken? cancelToken,
-      ) {
+    Future<http.Response> request,
+    CancelToken? cancelToken,
+  ) {
     if (cancelToken == null) return request;
     if (cancelToken.isCancelled) {
       return Future<http.Response>.error(const ApiCancelledException());
@@ -184,7 +206,7 @@ class ApiClient {
     return Future.any<http.Response>([
       request,
       cancelToken.whenCancelled.then<http.Response>(
-            (_) => throw const ApiCancelledException(),
+        (_) => throw const ApiCancelledException(),
       ),
     ]);
   }
@@ -281,11 +303,11 @@ class ApiClient {
   }
 
   void _logResponse(
-      String method,
-      Uri uri,
-      http.Response response,
-      Duration elapsed,
-      ) {
+    String method,
+    Uri uri,
+    http.Response response,
+    Duration elapsed,
+  ) {
     final cache = response.headers['x-cache'];
     final total = response.headers['x-total-count'];
     final rate = response.headers['x-ratelimit-remaining'];
@@ -300,7 +322,7 @@ class ApiClient {
 
     debugPrint(
       '[api] $method ${uri.path} -> ${response.statusCode} '
-          'in ${elapsed.inMilliseconds}ms$suffix',
+      'in ${elapsed.inMilliseconds}ms$suffix',
     );
   }
 }

@@ -7,6 +7,7 @@ import 'network/api_client.dart';
 /// diferida para evitar dependencias de orden durante la inicialización global.
 final ApiClient sharedApiClient = ApiClient(
   tokenProvider: () => authSession.tokenForRequest(),
+  authInvalidator: () => authSession.invalidateToken(),
 );
 
 /// Sesión de autenticación compartida por la aplicación.

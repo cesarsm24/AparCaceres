@@ -28,10 +28,10 @@ class AuthSession {
     String Function()? subGenerator,
     Duration refreshLeeway = const Duration(days: 1),
   }) : _apiClient = apiClient,
-        _prefsLoader = prefsLoader ?? SharedPreferences.getInstance,
-        _now = now ?? DateTime.now,
-        _subGenerator = subGenerator ?? _defaultSubGenerator,
-        _refreshLeeway = refreshLeeway;
+       _prefsLoader = prefsLoader ?? SharedPreferences.getInstance,
+       _now = now ?? DateTime.now,
+       _subGenerator = subGenerator ?? _defaultSubGenerator,
+       _refreshLeeway = refreshLeeway;
 
   static const String _kSubKey = 'aparcaceres.auth.sub';
   static const String _kTokenKey = 'aparcaceres.auth.token';
@@ -73,6 +73,19 @@ class AuthSession {
     await prefs.remove(_kTokenKey);
     await prefs.remove(_kExpiresAtKey);
     _cached = null;
+    _inFlight = null;
+  }
+
+  /// Descarta solo el JWT local y conserva la identidad del usuario.
+  ///
+  /// Se usa cuando el backend responde 401 porque el token fue emitido con una
+  /// clave anterior. Mantener el `sub` evita perder la asociación de favoritos.
+  Future<void> invalidateToken() async {
+    final prefs = await _prefsLoader();
+    await prefs.remove(_kTokenKey);
+    await prefs.remove(_kExpiresAtKey);
+    _cached = null;
+    _inFlight = null;
   }
 
   bool _isFresh(_CachedToken token) {
@@ -107,14 +120,18 @@ class AuthSession {
     );
 
     if (response is! Map<String, dynamic>) {
-      throw ApiException('Unexpected /auth/session shape: ${response.runtimeType}');
+      throw ApiException(
+        'Unexpected /auth/session shape: ${response.runtimeType}',
+      );
     }
 
     final token = response['token'];
     final expiresAtRaw = response['expiresAt'];
 
     if (token is! String || expiresAtRaw is! String) {
-      throw const ApiException('Missing token or expiresAt in /auth/session response');
+      throw const ApiException(
+        'Missing token or expiresAt in /auth/session response',
+      );
     }
 
     final expiresAt = DateTime.parse(expiresAtRaw).toUtc();

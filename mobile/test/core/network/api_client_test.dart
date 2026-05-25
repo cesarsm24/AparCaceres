@@ -9,8 +9,16 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 
-ApiClient _client(MockClientHandler handler, {TokenProvider? tokenProvider}) {
-  return ApiClient(httpClient: MockClient(handler), tokenProvider: tokenProvider);
+ApiClient _client(
+  MockClientHandler handler, {
+  TokenProvider? tokenProvider,
+  AuthInvalidator? authInvalidator,
+}) {
+  return ApiClient(
+    httpClient: MockClient(handler),
+    tokenProvider: tokenProvider,
+    authInvalidator: authInvalidator,
+  );
 }
 
 void main() {
@@ -40,13 +48,10 @@ void main() {
 
     test('injects bearer token when requiresAuth is true', () async {
       Map<String, String>? captured;
-      final client = _client(
-        (http.Request req) async {
-          captured = req.headers;
-          return http.Response('[]', 200);
-        },
-        tokenProvider: () async => 'jwt-abc',
-      );
+      final client = _client((http.Request req) async {
+        captured = req.headers;
+        return http.Response('[]', 200);
+      }, tokenProvider: () async => 'jwt-abc');
 
       await client.getJson('/users/me/favorites', requiresAuth: true);
 
@@ -55,25 +60,50 @@ void main() {
 
     test('omits Authorization when token provider returns null', () async {
       Map<String, String>? captured;
-      final client = _client(
-        (http.Request req) async {
-          captured = req.headers;
-          return http.Response('[]', 200);
-        },
-        tokenProvider: () async => null,
-      );
+      final client = _client((http.Request req) async {
+        captured = req.headers;
+        return http.Response('[]', 200);
+      }, tokenProvider: () async => null);
 
       await client.getJson('/users/me/favorites', requiresAuth: true);
 
       expect(captured!.containsKey('Authorization'), isFalse);
     });
 
+    test('invalidates token and retries once on authenticated 401', () async {
+      final authorizations = <String?>[];
+      var invalidations = 0;
+      var issued = 0;
+      var calls = 0;
+
+      final client = _client(
+        (http.Request req) async {
+          calls++;
+          authorizations.add(req.headers['Authorization']);
+          if (calls == 1) {
+            return http.Response(jsonEncode({'detail': 'invalid token'}), 401);
+          }
+
+          return http.Response('[]', 200);
+        },
+        tokenProvider: () async => 'jwt-${++issued}',
+        authInvalidator: () async => invalidations++,
+      );
+
+      final result = await client.getJson(
+        '/users/me/favorites',
+        requiresAuth: true,
+      );
+
+      expect(result, isA<List>());
+      expect(invalidations, 1);
+      expect(authorizations, ['Bearer jwt-1', 'Bearer jwt-2']);
+    });
+
     test('maps 4xx into ApiException with FastAPI detail', () async {
       final client = _client(
-        (_) async => http.Response(
-          jsonEncode({'detail': 'parking not found'}),
-          404,
-        ),
+        (_) async =>
+            http.Response(jsonEncode({'detail': 'parking not found'}), 404),
       );
 
       await expectLater(
@@ -87,9 +117,7 @@ void main() {
     });
 
     test('maps 5xx into ApiUnavailableException', () async {
-      final client = _client(
-        (_) async => http.Response('upstream boom', 503),
-      );
+      final client = _client((_) async => http.Response('upstream boom', 503));
 
       await expectLater(
         client.getJson('/parkings'),
@@ -115,9 +143,7 @@ void main() {
     });
 
     test('maps timeout into ApiTimeoutException', () async {
-      final client = _client(
-        (_) async => throw TimeoutException('slow'),
-      );
+      final client = _client((_) async => throw TimeoutException('slow'));
 
       await expectLater(
         client.getJson('/parkings'),
@@ -125,20 +151,22 @@ void main() {
       );
     });
 
-    test('cancellation wins the race and throws ApiCancelledException',
-        () async {
-      final completer = Completer<http.Response>();
-      final client = _client((_) => completer.future);
+    test(
+      'cancellation wins the race and throws ApiCancelledException',
+      () async {
+        final completer = Completer<http.Response>();
+        final client = _client((_) => completer.future);
 
-      final cancelToken = CancelToken();
-      final pending = client.getJson('/parkings', cancelToken: cancelToken);
-      cancelToken.cancel();
+        final cancelToken = CancelToken();
+        final pending = client.getJson('/parkings', cancelToken: cancelToken);
+        cancelToken.cancel();
 
-      await expectLater(pending, throwsA(isA<ApiCancelledException>()));
-      // El handler todavía no ha resuelto: la cancelación corre antes.
-      expect(completer.isCompleted, isFalse);
-      completer.complete(http.Response('[]', 200));
-    });
+        await expectLater(pending, throwsA(isA<ApiCancelledException>()));
+        // El handler todavía no ha resuelto: la cancelación corre antes.
+        expect(completer.isCompleted, isFalse);
+        completer.complete(http.Response('[]', 200));
+      },
+    );
 
     test('pre-cancelled token short-circuits before dispatch', () async {
       var dispatched = false;
@@ -174,21 +202,18 @@ void main() {
 
   group('parseListResponse', () {
     test('reads items from envelope shape', () {
-      final result = parseListResponse<int>(
-        {'items': [1, 2, 3].map((i) => {'v': i}).toList(), 'total': 3},
-        (m) => m['v'] as int,
-      );
+      final result = parseListResponse<int>({
+        'items': [1, 2, 3].map((i) => {'v': i}).toList(),
+        'total': 3,
+      }, (m) => m['v'] as int);
       expect(result, [1, 2, 3]);
     });
 
     test('reads items from flat list shape', () {
-      final result = parseListResponse<String>(
-        [
-          {'name': 'a'},
-          {'name': 'b'},
-        ],
-        (m) => m['name'] as String,
-      );
+      final result = parseListResponse<String>([
+        {'name': 'a'},
+        {'name': 'b'},
+      ], (m) => m['name'] as String);
       expect(result, ['a', 'b']);
     });
 
@@ -201,10 +226,9 @@ void main() {
 
     test('throws ApiException when items is not a list of objects', () {
       expect(
-        () => parseListResponse<int>(
-          {'items': [1, 2, 3]},
-          (_) => 0,
-        ),
+        () => parseListResponse<int>({
+          'items': [1, 2, 3],
+        }, (_) => 0),
         throwsA(isA<ApiException>()),
       );
     });
